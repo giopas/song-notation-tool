@@ -30,9 +30,7 @@ Compatible with **macOS**, **Windows**, and **Linux**.
 
 ## 📸 Screenshots
 
-![Song Notation Tool — Dark Theme](screenshots/song_writer_dark.png)
-
-![Song Notation Tool — Light Theme](screenshots/song_writer_light.png)
+![Song Notation Tool](screenshots/song_notation_screenshot.png)
 
 ---
 

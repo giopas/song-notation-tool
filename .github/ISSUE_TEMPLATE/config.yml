@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Python / Tkinter documentation
+    url: https://docs.python.org/3/library/tkinter.html
+    about: Standard library reference for the UI framework used by this tool
+  - name: Python downloads
+    url: https://www.python.org/downloads/
+    about: Get the latest Python (3.8+ required)

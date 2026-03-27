@@ -21,6 +21,17 @@ old/
 tests/
 *.bak
 
+# Old version files (keep only the latest)
+song_writer_v.0.[0-9].py
+song_writer_v.0.1[0-4].py
+
+# Helper/automation scripts
+*.command
+
+# Sample exports and project saves (user data, not code)
+*.sng
+20Minutes_-_Third_State.*
+
 # Editor
 .vscode/
 .idea/

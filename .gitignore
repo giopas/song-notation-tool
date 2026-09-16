@@ -15,10 +15,8 @@ build/
 .venv
 venv/
 
-# Old/test files — never publish these
-Old and tests/
+# Old/local scratch files — never publish these
 old/
-tests/
 *.bak
 
 # Old version files (keep only the latest)
@@ -28,13 +26,20 @@ song_writer_v.0.1[0-4].py
 # Helper/automation scripts
 *.command
 
-# Sample exports and project saves (user data, not code)
+# Sample exports and project saves (user data, not code) —
+# but keep the curated examples/ folder, which ships with the repo.
 *.sng
 Sample_Band_-_Sample_Song.*
+!examples/*.sng
+!examples/sample_song.*
+
+# Test artifacts (the tests/ source is tracked; caches are not)
+.pytest_cache/
 
 # Editor
 .vscode/
 .idea/
 *.swp
 *~
+
 Old - do not commit/

@@ -1,6 +1,6 @@
 # Song Notation Tool — v0.16 design
 
-**Foundation release.** New data model, chart grammar, render-time transposition, compact exports, repo hygiene. No UI rewrite — that is [v0.17](DESIGN_v0.17.md).
+**Foundation release.** New data model, chart grammar, render-time transposition, compact exports, repo hygiene. No UI rewrite — that is [v0.17](DESIGN_v0_17.md).
 
 ---
 

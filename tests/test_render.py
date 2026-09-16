@@ -69,3 +69,123 @@ def test_render_chart_row_block_ref_shows_repeat():
     items = [make_block_ref("riff1", repeat=3)]
     _, sym_line = render_chart_row(items, label="Chorus")
     assert "riff1" in sym_line and "x3" in sym_line
+
+
+# ==============================================================================
+#  mark_spans / has_coda  (section 6 — endings and the coda box)
+# ==============================================================================
+
+from render import mark_spans, has_coda, estimate_section_lines, estimate_page_count
+from model import make_mark
+
+
+def test_mark_spans_empty_for_no_endings():
+    items = [make_token("A"), make_token("B")]
+    assert mark_spans(items) == []
+
+
+def test_mark_spans_resolves_two_endings():
+    items = [
+        make_token("A"), make_token("B"),
+        make_mark("ending_1"), make_token("C"),
+        make_mark("ending_2"), make_token("D"),
+    ]
+    spans = mark_spans(items)
+    assert spans == [("1", 3, 3), ("2", 5, 5)]
+
+
+def test_mark_spans_last_ending_runs_to_end_of_section():
+    items = [make_mark("ending_1"), make_token("A"), make_token("B")]
+    assert mark_spans(items) == [("1", 1, 2)]
+
+
+def test_mark_spans_ignores_empty_span():
+    # Two ending marks back to back with nothing between them.
+    items = [make_mark("ending_1"), make_mark("ending_2"), make_token("A")]
+    assert mark_spans(items) == [("2", 2, 2)]
+
+
+def test_has_coda_true_only_when_coda_mark_present():
+    assert has_coda([make_token("A"), make_mark("coda")]) is True
+    assert has_coda([make_token("A")]) is False
+    assert has_coda([]) is False
+
+
+# ==============================================================================
+#  Page-count estimate (section 3.1)
+# ==============================================================================
+
+def test_estimate_section_lines_zero_for_empty_section():
+    assert estimate_section_lines({"items": [], "annotation": "", "render": "chart"}) == 0
+
+
+def test_estimate_section_lines_counts_chart_rows():
+    sec = {"items": [make_token("A", 5), make_token("B", 7)],
+           "annotation": "", "render": "chart"}
+    # 1 label + 2 chart rows + 1 trailing blank
+    assert estimate_section_lines(sec) == 4
+
+
+def test_estimate_section_lines_includes_annotation():
+    sec = {"items": [make_token("A", 5)], "annotation": "stacco sul secondo",
+           "render": "chart"}
+    assert estimate_section_lines(sec) == 5
+
+
+def test_estimate_page_count_at_least_one_for_nonempty_doc():
+    doc = {"sections": [
+        {"items": [make_token("A", 5)], "annotation": "", "render": "chart"},
+    ]}
+    assert estimate_page_count(doc) == 1
+
+
+def test_estimate_page_count_zero_sections_is_one_page():
+    assert estimate_page_count({"sections": []}) == 1
+
+
+def test_estimate_page_count_grows_with_many_sections():
+    sec = {"items": [make_token("A", 5)] * 20, "annotation": "", "render": "chart"}
+    doc = {"sections": [dict(sec) for _ in range(40)]}
+    assert estimate_page_count(doc, lines_per_page=10) > 1
+
+
+# ==============================================================================
+#  resolve_display_items — render-time, non-destructive transpose (section 5)
+# ==============================================================================
+
+from render import resolve_display_items
+from model import make_token, make_group, make_block_ref
+
+
+def test_resolve_display_items_noop_at_zero_offset():
+    items = [make_token("A", 5)]
+    out = resolve_display_items(items, 0)
+    assert out == items
+    assert out is not items or out == items  # no crash either way
+
+
+def test_resolve_display_items_shifts_token_fret_and_symbol():
+    items = [make_token("A", 5)]
+    out = resolve_display_items(items, 2)
+    assert out[0]["fret"] == 7
+    assert out[0]["symbol"] == "B"
+
+
+def test_resolve_display_items_does_not_mutate_input():
+    items = [make_token("A", 5)]
+    resolve_display_items(items, 2)
+    assert items[0]["fret"] == 5
+    assert items[0]["symbol"] == "A"
+
+
+def test_resolve_display_items_recurses_into_groups():
+    items = [make_group([make_token("A", 5), make_token("E", 7)])]
+    out = resolve_display_items(items, 2)
+    assert out[0]["items"][0]["fret"] == 7
+    assert out[0]["items"][1]["fret"] == 9
+
+
+def test_resolve_display_items_leaves_block_ref_unchanged():
+    items = [make_block_ref("riff1", repeat=3)]
+    out = resolve_display_items(items, 5)
+    assert out == items

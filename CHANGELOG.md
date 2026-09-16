@@ -4,6 +4,63 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.17.0] — 2026-09-16
+
+### Added
+- **Song map** — the section listbox + single-section editor split is
+  replaced by a scrollable list of rendered section rows (fret line over
+  symbol line), the whole song visible at once. Click a row to focus it.
+- **Chart editor bar** — one live-parsing text field is now the entire
+  editing surface for `render:"chart"` sections: type, it re-renders on
+  a ~150ms debounce, a parse error leaves the last valid render on
+  screen and shows inline instead of clearing anything. Tab commits and
+  advances to the next section; Escape reverts; Enter commits and adds
+  a new section below.
+- **Riff library strip** — create/rename/delete riffs from the UI for
+  the first time (the `block_ref` grammar already existed; there was no
+  editor for `blocks`). Editing a riff updates every referencing section
+  because there is only one copy of the data. Deleting a referenced
+  riff is blocked and names the referencing sections.
+- **Promote to riff (Ctrl/Cmd+R)** — select a run in the chart editor
+  bar and turn it into a named riff in place.
+- **Duplicate as reference (Ctrl/Cmd+D)** — inserts a `section_ref`
+  rather than a copy, removing the duplicate-page failure mode the old
+  copy dialog produced.
+- **Reordering** — drag a row by its name, or Alt+↑ / Alt+↓. No dialog.
+- **Stage View (Ctrl/Cmd+P)** — full-window, high-contrast, read-only,
+  built from the same row renderer as TXT/PDF.
+- **Live page-count indicator** in the header, and a page-break-before-
+  section rule in the PDF builder so a section is never split across a
+  page.
+- `songmap.py` — pure, unit-tested riff/reorder/promote/duplicate logic.
+- `render.py`: `resolve_display_items()`, `mark_spans()`, `has_coda()`,
+  `estimate_page_count()` / `estimate_section_lines()`.
+
+### Changed
+- The UI now reads/writes the v0.16 document model (`self.doc`, shaped
+  like `model.py`'s schema) directly. The v0.15-era `Section` class and
+  its `layers` dict are retired; `.sng` files still round-trip through
+  `model.migrate_document()` for anything saved by an older version.
+- **Transpose is non-destructive** — the Transpose dialog sets a
+  `document`/`section` offset instead of rewriting stored fret numbers;
+  every renderer resolves it at display time. A `+n` then `-n` round
+  trip is exact by construction.
+- Export dialogs dropped the "include layers" checkboxes (chords/notes/
+  lyrics no longer exist as separate layers — a chart line already
+  carries chord/note symbols); "include instruments" stays.
+- Marks (`|:`, `:|`, 1st/2nd endings, segno, coda, D.C./D.S., `simile`)
+  now actually render, inline, wherever they sit in a chart line — in
+  the map, TXT, and PDF alike.
+
+### Removed
+- The v0.15 section-link dialog (`link_id`) — superseded by
+  `=sectionname` references typed directly in the chart line, and by
+  Ctrl/Cmd+D.
+- The custom-drawn scrollbar indicator canvases (v0.6) — replaced with
+  standard `ttk.Scrollbar`s.
+
+See `RELEASE_NOTES_v0.17.0.md` for what's deferred from `DESIGN_v0_17.md`.
+
 ## [0.16.0] — 2026-09-16
 
 ### Added

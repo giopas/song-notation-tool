@@ -28,30 +28,28 @@ serves that, not by difficulty.
 | v0.14 | Minor stability and layout fixes |
 | v0.15 | Ongoing refinements before this changelog existed |
 | **v0.16** | **Foundation release** — new data model, chart grammar, non-destructive render-time transposition, compact exports, v0.15 migration, repo hygiene. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.17** | **Song map + chart editor bar** — the UI rewrite: whole-song map, live-parsing chart editor, riff library with usage tracking, reordering, non-destructive transpose end to end, Stage View, page-break-safe PDF. See [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v0.17.0.md](RELEASE_NOTES_v0.17.0.md). |
 
 ---
 
-## 🔜 Toward the one-page chart (v0.17+)
+## 🔜 Next up (v0.17.1+)
 
-These are the items that directly close the gap between "the app can
-export a song" and "the export looks like the reference sheets":
+Deferred out of v0.17 — see `RELEASE_NOTES_v0.17.0.md` for the full list
+and why:
 
-- [ ] **Chart row inline editor with live re-render** — the v0.16 chart
-      field validates on confirm; it should show the rendered two-line
-      chart (fret over symbol) as you type
-- [ ] **Song map whole-song view** — see every section's chart line on one
-      screen, the way the handwritten page shows the whole song at once
-- [ ] **Riff library panel** — create, name, and reuse `block`s from the
-      UI (the model and grammar already support `block_ref`; there's no
-      editor for `blocks` yet)
-- [ ] **Mark and ending rendering** — `|:`, `:|`, 1st/2nd endings, segno,
-      coda, `simile` (`%`) parse today (`grammar.py`) but don't render in
-      TXT/PDF output yet
-- [ ] **One-page pagination** — compact mode drops empty strings and
-      collapses references, but doesn't yet guarantee a fit; needs real
-      pagination logic against the Portrait A4 target
-- [ ] **Stage/print view** — a distraction-free, large-type render meant to
-      be read from a music stand, not edited
+- [ ] **Graphical ending brackets and a boxed coda block** — `render.py`
+      already resolves the spans (`mark_spans()`, `has_coda()`); nothing
+      draws them yet beyond inline text tokens
+- [ ] **Autocomplete in the chart editor bar** — `=` for section names,
+      bare identifiers for riff names
+- [ ] **Tab-grid measure copy/paste** and a per-measure beats picker
+      (both existed pre-v0.17; dropped in the rewrite for time)
+- [ ] **§11's architecture fork** — Tkinter vs. Flask + browser SPA,
+      still open; the pure-data layers (`model`/`grammar`/`transpose`/
+      `render`) don't care either way
+- [ ] **Real one-page-in-five-minutes measurement** — the page estimate
+      and Enter/Tab-driven entry are built toward the target, not yet
+      benchmarked against an actual song
 
 ## 💡 Other ideas
 

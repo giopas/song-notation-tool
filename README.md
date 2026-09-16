@@ -20,28 +20,37 @@ installs required**. Compatible with **macOS**, **Windows**, and **Linux**.
 
 ## ✨ Features
 
-- **Chart grammar** — type a line like `5A 5D [5A 5D]x2 riff1 x3` instead
-  of filling in a measure grid cell by cell
-- **Section-based layout** — Intro, Verse, Chorus, Bridge, Solo, and more,
-  arranged in a scrollable left panel
-- **Four notation layers per section** — Tab, Chords, Notes, Lyrics — each
-  togglable independently
+- **Song map** — every section on screen at once as a rendered chart row
+  (fret line over symbol line), not one section at a time
+- **Chart grammar editor bar** — type a line like `5A 5D [5A 5D]x2 riff1
+  x3` and it live-renders as you type; a parse error never clears the
+  row, it just shows inline
+- **Riff library** — name a recurring riff once, reference it by name
+  from any section, and edit it once to update every section that uses
+  it; deleting a riff still in use is blocked
+- **Promote to riff** (Ctrl/Cmd+R) — select a run in the editor bar and
+  turn it into a named riff in place
+- **Duplicate as reference** (Ctrl/Cmd+D) — `=sectionname` rather than a
+  copy, so a repeated section never duplicates its content
+- **Drag or Alt+↑/↓ to reorder** sections — no dialog
+- **Tab grid** for the occasional fully-notated bar — the rest of the
+  song stays in the compact chart grammar
 - **Guitar & Bass tunings** — 6-string, 7-string, 4/5-string bass, with
   Drop D variants
-- **Variable beats per measure** — 8, 16, 32, or 64 beats; configurable per
-  section
-- **Non-destructive transposition** — shift the whole song or a section by
-  any number of semitones; transposing up and back down is exact
-- **Section linking / references** — a repeated section doesn't duplicate
-  its content in the saved file or the export
+- **Non-destructive transposition** — shift the whole song or a section
+  by any number of semitones, resolved at display/export time; +n then
+  −n round-trips exactly because nothing is ever rewritten
+- **Marks** — barlines, 1st/2nd endings, segno, coda, D.C./D.S., `simile`
+- **Stage View** (Ctrl/Cmd+P) — full-window, high-contrast, read-only
+- **Live page-count indicator**, and a PDF export that never splits a
+  section across a page break
 - **Compact export** — empty strings are dropped, references aren't
   expanded, and PDF targets one page (Portrait A4 default)
-- **Copy & paste sections** — duplicate any section with a single dialog
 - **Light / Dark theme** — switch on the fly
 - **Export** — save as `.txt` (plain text) or `.pdf` (formatted sheet with
   footer)
 - **Project files** — save/load sessions as `.sng` (plain JSON,
-  human-readable); old `.sng` files from earlier versions load without loss
+  human-readable); `.sng` files from earlier versions load without loss
 - **Zero dependencies** — pure Python standard library, works out of the box
 
 ---
@@ -89,8 +98,9 @@ See [ROADMAP.md](ROADMAP.md) for planned features, and
 ## 🛠️ Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for how sessions on this project are
-run, and the current `DESIGN_v0_16.md` for the data model, chart grammar,
-and transposition rules this release is built on.
+run, `DESIGN_v0_16.md` for the data model, chart grammar, and
+transposition rules, and `DESIGN_v0_17.md` for the song map / riff
+library / chart editor bar this release is built on.
 
 Run the test suite with:
 

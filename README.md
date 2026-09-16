@@ -5,26 +5,46 @@
 
 ---
 
-A lightweight desktop app for sketching guitar and bass songs by section — tabs, chords, notes, and lyrics in one place. Built entirely with Python's standard library (Tkinter), so **no pip installs required**.
+## What this produces
 
-Compatible with **macOS**, **Windows**, and **Linux**.
+A one-page stage chart, in the same compact vocabulary the author already
+uses on paper: fret numbers over chord symbols, repeat counts, named riffs
+referenced by name, and back-references so a repeated chorus isn't written
+out twice.
+
+*(See `examples/` for a before/after — a migrated project file next to the
+hand-written chart it's reproducing.)*
+
+Built entirely with Python's standard library (Tkinter), so **no pip
+installs required**. Compatible with **macOS**, **Windows**, and **Linux**.
 
 ---
 
 ## ✨ Features
 
-- **Section-based layout** — Intro, Verse, Chorus, Bridge, Solo, and more, arranged in a scrollable left panel
-- **Four notation layers per section** — Tab, Chords, Notes, Lyrics — each togglable independently
-- **Guitar & Bass tunings** — 6-string, 7-string, 4/5-string bass, with Drop D variants
-- **Variable beats per measure** — 8, 16, 32, or 64 beats; configurable per section
-- **Chromatic transposition** — Shift the entire song or individual sections by any number of semitones
-- **Section linking** — Link sections so edits propagate automatically (great for repeated choruses)
-- **Copy & paste sections** — Duplicate any section with a single dialog
-- **Light / Dark theme** — Switch on the fly
-- **Export** — Save as `.txt` (plain text) or `.pdf` (formatted sheet with footer)
-- **Project files** — Save/load sessions as `.sng` (plain JSON, human-readable)
-- **Hamburger menu** — Compact topbar for narrow windows; all file actions always accessible
-- **Zero dependencies** — Pure Python standard library, works out of the box
+- **Chart grammar** — type a line like `5A 5D [5A 5D]x2 riff1 x3` instead
+  of filling in a measure grid cell by cell
+- **Section-based layout** — Intro, Verse, Chorus, Bridge, Solo, and more,
+  arranged in a scrollable left panel
+- **Four notation layers per section** — Tab, Chords, Notes, Lyrics — each
+  togglable independently
+- **Guitar & Bass tunings** — 6-string, 7-string, 4/5-string bass, with
+  Drop D variants
+- **Variable beats per measure** — 8, 16, 32, or 64 beats; configurable per
+  section
+- **Non-destructive transposition** — shift the whole song or a section by
+  any number of semitones; transposing up and back down is exact
+- **Section linking / references** — a repeated section doesn't duplicate
+  its content in the saved file or the export
+- **Compact export** — empty strings are dropped, references aren't
+  expanded, and PDF targets one page (Portrait A4 default)
+- **Copy & paste sections** — duplicate any section with a single dialog
+- **Light / Dark theme** — switch on the fly
+- **Export** — save as `.txt` (plain text) or `.pdf` (formatted sheet with
+  footer)
+- **Project files** — save/load sessions as `.sng` (plain JSON,
+  human-readable); old `.sng` files from earlier versions load without loss
+- **Zero dependencies** — pure Python standard library, works out of the box
 
 ---
 
@@ -38,7 +58,7 @@ Compatible with **macOS**, **Windows**, and **Linux**.
 
 ```bash
 # No install needed — just run:
-python3 song_writer_v.0.15.py
+python3 song_writer.py
 ```
 
 Requires Python 3.8+ with Tkinter (included in most Python distributions).
@@ -58,11 +78,29 @@ Requires Python 3.8+ with Tkinter (included in most Python distributions).
 | `.txt` | Plain-text export, readable in any editor |
 | `.pdf` | Formatted export with title, artist, date footer |
 
+See `examples/` for a sample of each.
+
 ---
 
 ## 🗺️ Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned features and version history.
+See [ROADMAP.md](ROADMAP.md) for planned features, and
+[CHANGELOG.md](CHANGELOG.md) for what's already shipped.
+
+---
+
+## 🛠️ Development
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for how sessions on this project are
+run, and the current `DESIGN_v0_16.md` for the data model, chart grammar,
+and transposition rules this release is built on.
+
+Run the test suite with:
+
+```bash
+pip install pytest
+python3 -m pytest tests/
+```
 
 ---
 

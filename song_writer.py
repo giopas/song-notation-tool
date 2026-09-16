@@ -45,6 +45,12 @@ import zlib      # PDF page stream compression (FlateDecode)
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
+# v0.16 — pure-data modules (no Tk dependency): schema/migration, the chart
+# grammar, render-time transposition, and shared export helpers.
+import render
+import grammar
+from grammar import ParseError as ChartParseError
+
 # ── macOS: suppress deprecation noise ────────────────────────────────────────
 if platform.system() == "Darwin":
     os.environ['SYSTEM_VERSION_COMPAT'] = '0'
@@ -53,7 +59,7 @@ if platform.system() == "Darwin":
 # ==============================================================================
 #  VERSION — single source of truth; bumped here propagates everywhere
 # ==============================================================================
-APP_VERSION = "0.15"
+APP_VERSION = "0.16"
 APP_TITLE   = f"Song Notation Tool  v{APP_VERSION}"
 
 # ==============================================================================
@@ -100,16 +106,10 @@ FONT_MONO = ("Courier New", 10)   # inside measure cells
 #  Used for transposing notes/chords layers and for the root-note picker.
 # ==============================================================================
 
-# Canonical chromatic scale — sharp spelling is the primary form.
-# Index 0 = A, following the A-based cycle used in guitar/bass notation.
-CHROMATIC = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"]
-
-# Flat aliases → canonical sharp equivalent
-ENHARMONIC = {
-    "Bb": "A#", "Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#",
-    # Also accept lowercase "b" variants
-    "Bb": "A#", "bb": "A#",
-}
+# Canonical chromatic scale and its enharmonic aliases now live in
+# transpose.py (single source of truth — see v0.16 bug fix #2: this dict
+# used to define "Bb" twice and was missing lowercase db/eb/gb/ab).
+from transpose import CHROMATIC, ENHARMONIC  # noqa: E402
 
 # Complete display list shown in the root-note picker dropdown.
 # Enharmonic pairs are shown as "A# / Bb" so users can identify either name.
@@ -239,7 +239,13 @@ def _validate_tab_entry(entry_widget, beats):
         tok_clean = tok.strip()
         if not tok_clean:
             continue
-        if all(c in _VALID_TOKEN_CHARS for c in tok_clean):
+        # v0.16 bug fix #1: reject leading zeros ("01") and frets over
+        # MAX_FRET, in both the chart grammar (grammar.py) and here.
+        if re.fullmatch(r'0\d+', tok_clean):
+            cleaned.append("-")
+        elif re.fullmatch(r'\d+', tok_clean) and int(tok_clean) > _MAX_FRET:
+            cleaned.append("-")
+        elif all(c in _VALID_TOKEN_CHARS for c in tok_clean):
             cleaned.append(tok_clean)
         else:
             cleaned.append("-")
@@ -287,7 +293,7 @@ _OPEN_MIDI_BY_INSTRUMENT = {
     "Bass (5-string)":          [23, 28, 33, 38, 43],
 }
 
-_MAX_FRET = 24
+from transpose import MAX_FRET as _MAX_FRET  # noqa: E402  (single source of truth)
 
 
 def _transpose_fret_token(token, semitones, string_name, instrument):
@@ -538,6 +544,11 @@ class Section:
         }
         self.visible = {"tab": True, "chords": True,
                         "notes": False, "lyrics": False}
+        # v0.16 — the chart grammar line (section 4). Kept alongside the
+        # v0.15 layer grid rather than replacing it; parsed with
+        # grammar.parse() purely to exercise/validate the new grammar.
+        # The song-map view and live re-render are v0.17 (out of scope here).
+        self.chart = ""
 
     def resize(self, n):
         """Grow or trim every layer to exactly n measures."""
@@ -558,6 +569,7 @@ class Section:
             "tab_beats": self.tab_beats,
             "measure_beats": {str(k): v for k, v in self.measure_beats.items()},
             "layers": self.layers, "visible": self.visible,
+            "chart": self.chart,
         }
 
     @staticmethod
@@ -571,6 +583,7 @@ class Section:
         s.measure_beats = {int(k): v for k, v in
                            d.get("measure_beats", {}).items()}
         s.visible = d.get("visible", {k: True for k in d["layers"]})
+        s.chart   = d.get("chart", "")
         raw = d["layers"]
         # Migrate old format (tab as newline-joined string → new dict format)
         tab_raw = raw.get("tab", [{} for _ in range(s.measures)])
@@ -1472,6 +1485,32 @@ class SongNotationApp(tk.Tk):
             values=[str(b) for b in TAB_BEATS_OPTIONS],
             state="readonly", font=FONT_MAIN, width=6))
 
+        # v0.16 — chart line (section 4). Optional, freeform, parsed with
+        # the new grammar on confirm; a bad line shows an inline error
+        # instead of being silently accepted or rewritten.
+        chart_var = tk.StringVar(value=editing.chart if editing else "")
+        chart_entry = row("Chart line:", lambda f: tk.Entry(
+            f, textvariable=chart_var, bg=t["input_bg"], fg=t["fg"],
+            insertbackground=t["fg"], relief="flat", font=FONT_MONO, width=40))
+        chart_err_lbl = tk.Label(dlg, text="", bg=t["bg"], fg="#e06060",
+                                  font=FONT_TINY, anchor="w")
+        chart_err_lbl.pack(fill="x", padx=16)
+
+        def _validate_chart(*_):
+            text = chart_var.get().strip()
+            if not text:
+                chart_err_lbl.config(text="")
+                return True
+            try:
+                grammar.parse(text)
+            except ChartParseError as exc:
+                chart_err_lbl.config(text=f"⚠ {exc}")
+                return False
+            chart_err_lbl.config(text="")
+            return True
+
+        chart_entry.bind("<FocusOut>", _validate_chart)
+
         lyr_frame = tk.Frame(dlg, bg=t["bg"])
         lyr_frame.pack(fill="x", padx=16, pady=6)
         tk.Label(lyr_frame, text="Show layers:",
@@ -1495,15 +1534,21 @@ class SongNotationApp(tk.Tk):
                 messagebox.showerror(
                     "Error", "Measures and Repeat must be positive integers.")
                 return
+            if not _validate_chart():
+                messagebox.showerror(
+                    "Error", "Chart line is not valid:\n\n" + chart_err_lbl["text"])
+                return
             sec_type  = type_var.get()
             display   = name_var.get().strip() or sec_type
             instr     = instr_var.get()
             new_beats = int(beats_var.get())
+            chart_val = chart_var.get().strip()
 
             if edit_idx is not None:
                 s = self.sections[edit_idx]
                 s.name = display; s.section_type = sec_type
                 s.instrument = instr; s.repeat = r; s.tab_beats = new_beats
+                s.chart = chart_val
                 s.resize(m)
                 for layer, v in lyr_vars.items():
                     s.visible[layer] = v.get()
@@ -1512,7 +1557,7 @@ class SongNotationApp(tk.Tk):
                 self._load_section(edit_idx)
             else:
                 s = Section(display, sec_type, m, instr)
-                s.repeat = r; s.tab_beats = new_beats
+                s.repeat = r; s.tab_beats = new_beats; s.chart = chart_val
                 for layer, v in lyr_vars.items():
                     s.visible[layer] = v.get()
                 self.sections.append(s); self._refresh_listbox()
@@ -2429,7 +2474,9 @@ class SongNotationApp(tk.Tk):
         if instruments is None:
             instruments = None   # means all
 
-        W   = 80
+        # v0.16 bug fix #3: W is now a real setting (default 100, section 7.4)
+        # instead of being defined and ignored.
+        W   = getattr(self, "txt_width", None) or 100
         div = lambda c="=": c * W
         lines = []
 
@@ -2457,55 +2504,76 @@ class SongNotationApp(tk.Tk):
                 f"  [{s.name}]{rep}   {s.measures} measures   {s.instrument}",
                 div("-"),
             ]
-            strings = INSTRUMENT_STRINGS.get(s.instrument, ["e","B","G","D","A","E"])
+            all_strings = INSTRUMENT_STRINGS.get(s.instrument, ["e","B","G","D","A","E"])
 
-            # ── Measure number header ──────────────────────────────────────────
-            has_tab = layers.get("tab") and any(s.layers["tab"])
-            if has_tab:
-                sn_pad = max(len(st) for st in strings) + 3
-                hdr = " " * sn_pad
-                for m in range(s.measures):
-                    m_beats = s.measure_beats.get(m, s.tab_beats)
-                    m_cell  = TOKEN_W * m_beats + 1
-                    hdr    += f"{'M'+str(m+1):<{m_cell}}"
-                lines += ["", hdr]
+            # v0.16 bug fix #4: has_tab is now one shared predicate
+            # (render.section_has_tab) called identically by TXT and PDF,
+            # instead of each computing "any(list-of-dicts)" inline — which
+            # was true for almost any section since a non-empty dict is
+            # truthy regardless of whether its values are real content.
+            has_tab = layers.get("tab") and render.section_has_tab(s.layers["tab"])
+            # v0.16 compact mode (section 7.3): drop strings with no
+            # content anywhere in this section.
+            strings = (render.active_strings(s.layers["tab"], all_strings)
+                       if has_tab else all_strings)
 
-            # ── Chords ────────────────────────────────────────────────────────
-            if layers.get("chords") and any(s.layers["chords"]):
-                _cell = TOKEN_W * s.tab_beats + 1 if has_tab else 16
-                lines += ["", "  Chords:"]
-                row = "   "
-                for m in range(s.measures):
-                    m_beats = s.measure_beats.get(m, s.tab_beats)
-                    m_cell  = TOKEN_W * m_beats + 1 if has_tab else 16
-                    row += f"{(s.layers['chords'][m] or '-'):<{m_cell}}"
-                lines.append(row)
+            max_beats = max(
+                (s.measure_beats.get(m, s.tab_beats) for m in range(s.measures)),
+                default=s.tab_beats,
+            )
+            mpl = render.measures_per_line(s.measures, max_beats, width=W) \
+                if s.measures else s.measures or 1
 
-            # ── Notes ─────────────────────────────────────────────────────────
-            if layers.get("notes") and any(s.layers["notes"]):
-                lines += ["", "  Notes:"]
-                row = "   "
-                for m in range(s.measures):
-                    m_beats = s.measure_beats.get(m, s.tab_beats)
-                    m_cell  = TOKEN_W * m_beats + 1 if has_tab else 16
-                    row += f"{(s.layers['notes'][m] or '-'):<{m_cell}}"
-                lines.append(row)
+            for chunk_start in range(0, max(s.measures, 1), mpl):
+                chunk = range(chunk_start, min(chunk_start + mpl, s.measures))
+                if not chunk:
+                    continue
 
-            # ── Tab ───────────────────────────────────────────────────────────
-            if has_tab:
-                for st in strings:
-                    row = f"{st}| "
-                    for m in range(s.measures):
+                # ── Measure number header ────────────────────────────────
+                if has_tab:
+                    sn_pad = max(len(st) for st in strings) + 3
+                    hdr = " " * sn_pad
+                    for m in chunk:
                         m_beats = s.measure_beats.get(m, s.tab_beats)
-                        cell    = s.layers["tab"][m]
-                        raw     = (cell.get(st, "") if isinstance(cell, dict) else "")
-                        tokens  = [tok for tok in raw.split() if tok] if raw else []
-                        while len(tokens) < m_beats:
-                            tokens.append("-")
-                        tokens   = tokens[:m_beats]
-                        cell_str = "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
-                        row += cell_str
+                        m_cell  = TOKEN_W * m_beats + 1
+                        hdr    += f"{'M'+str(m+1):<{m_cell}}"
+                    lines += ["", hdr]
+
+                # ── Chords ────────────────────────────────────────────────
+                if layers.get("chords") and any(s.layers["chords"]):
+                    lines += ["", "  Chords:"]
+                    row = "   "
+                    for m in chunk:
+                        m_beats = s.measure_beats.get(m, s.tab_beats)
+                        m_cell  = TOKEN_W * m_beats + 1 if has_tab else 16
+                        row += f"{(s.layers['chords'][m] or '-'):<{m_cell}}"
                     lines.append(row)
+
+                # ── Notes ─────────────────────────────────────────────────
+                if layers.get("notes") and any(s.layers["notes"]):
+                    lines += ["", "  Notes:"]
+                    row = "   "
+                    for m in chunk:
+                        m_beats = s.measure_beats.get(m, s.tab_beats)
+                        m_cell  = TOKEN_W * m_beats + 1 if has_tab else 16
+                        row += f"{(s.layers['notes'][m] or '-'):<{m_cell}}"
+                    lines.append(row)
+
+                # ── Tab ───────────────────────────────────────────────────
+                if has_tab:
+                    for st in strings:
+                        row = f"{st}| "
+                        for m in chunk:
+                            m_beats = s.measure_beats.get(m, s.tab_beats)
+                            cell    = s.layers["tab"][m]
+                            raw     = (cell.get(st, "") if isinstance(cell, dict) else "")
+                            tokens  = [tok for tok in raw.split() if tok] if raw else []
+                            while len(tokens) < m_beats:
+                                tokens.append("-")
+                            tokens   = tokens[:m_beats]
+                            cell_str = "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
+                            row += cell_str
+                        lines.append(row)
 
             # ── Lyrics ────────────────────────────────────────────────────────
             if layers.get("lyrics") and any(s.layers["lyrics"]):
@@ -2546,7 +2614,9 @@ class SongNotationApp(tk.Tk):
 
         # Orientation
         sec_lbl("Page orientation:")
-        orient_var = tk.StringVar(value="landscape")
+        # v0.16 (section 7.3): compact mode targets one page, so default the
+        # export dialog to Portrait A4 (v0.15 defaulted to Landscape).
+        orient_var = tk.StringVar(value="portrait")
         for val, lbl in [("landscape","A4 Landscape  (842 x 595 pt, wider)"),
                           ("portrait", "A4 Portrait   (595 x 842 pt, taller)")]:
             tk.Radiobutton(dlg, text=lbl, variable=orient_var, value=val,
@@ -2603,7 +2673,7 @@ class SongNotationApp(tk.Tk):
                    style="Accent.TButton").pack(side="right")
         dlg.bind("<Return>", lambda e: do_export())
 
-    def _build_pdf(self, layers=None, instruments=None, orient="landscape"):
+    def _build_pdf(self, layers=None, instruments=None, orient="portrait"):
         """
         Build a PDF with fixes for:
           - Non-latin1 chars (? glyphs) — safe ASCII substitution in _esc()
@@ -2721,12 +2791,17 @@ class SongNotationApp(tk.Tk):
             if s.instrument not in instruments:
                 continue
 
-            strings = INSTRUMENT_STRINGS.get(s.instrument, ["e","B","G","D","A","E"])
+            all_strings = INSTRUMENT_STRINGS.get(s.instrument, ["e","B","G","D","A","E"])
             rep_str = f" (x{s.repeat})" if s.repeat > 1 else ""
             mpl     = mpl_for(s.measures)
 
-            # Rough line count for page-break estimation
-            has_tab = layers.get("tab") and any(s.layers["tab"])
+            # v0.16 bug fix #4: same shared predicate as the TXT exporter —
+            # section_has_tab() checks for real content, not just "the list
+            # of per-measure dicts is non-empty" (which was always true).
+            has_tab = layers.get("tab") and render.section_has_tab(s.layers["tab"])
+            # Compact mode (section 7.3): drop strings with no content.
+            strings = (render.active_strings(s.layers["tab"], all_strings)
+                       if has_tab else all_strings)
             has_ch  = layers.get("chords") and any(s.layers["chords"])
             has_no  = layers.get("notes")  and any(s.layers["notes"])
             has_ly  = layers.get("lyrics") and any(s.layers["lyrics"])

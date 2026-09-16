@@ -2,6 +2,11 @@
 
 > This is a personal / vibecoded project. The roadmap is a wish list, not a commitment. Items may be added, removed, or reprioritised at any time.
 
+The organizing goal is a typed version of the one-page stage chart the
+author writes by hand — see `DESIGN_v0_16.md` section 1 for the full
+vocabulary that implies. Everything below is ordered by how directly it
+serves that, not by difficulty.
+
 ---
 
 ## ✅ Released
@@ -21,17 +26,39 @@
 | v0.12 | Variable tab beats (8/16/32); protected dashes; smart transposition |
 | v0.13 | Beats selector in editor toolbar; hamburger menu for narrow windows |
 | v0.14 | Minor stability and layout fixes |
-| v0.15 | (current) — ongoing refinements |
+| v0.15 | Ongoing refinements before this changelog existed |
+| **v0.16** | **Foundation release** — new data model, chart grammar, non-destructive render-time transposition, compact exports, v0.15 migration, repo hygiene. See [CHANGELOG.md](CHANGELOG.md). |
 
 ---
 
-## 🔜 Planned / Ideas
+## 🔜 Toward the one-page chart (v0.17+)
+
+These are the items that directly close the gap between "the app can
+export a song" and "the export looks like the reference sheets":
+
+- [ ] **Chart row inline editor with live re-render** — the v0.16 chart
+      field validates on confirm; it should show the rendered two-line
+      chart (fret over symbol) as you type
+- [ ] **Song map whole-song view** — see every section's chart line on one
+      screen, the way the handwritten page shows the whole song at once
+- [ ] **Riff library panel** — create, name, and reuse `block`s from the
+      UI (the model and grammar already support `block_ref`; there's no
+      editor for `blocks` yet)
+- [ ] **Mark and ending rendering** — `|:`, `:|`, 1st/2nd endings, segno,
+      coda, `simile` (`%`) parse today (`grammar.py`) but don't render in
+      TXT/PDF output yet
+- [ ] **One-page pagination** — compact mode drops empty strings and
+      collapses references, but doesn't yet guarantee a fit; needs real
+      pagination logic against the Portrait A4 target
+- [ ] **Stage/print view** — a distraction-free, large-type render meant to
+      be read from a music stand, not edited
+
+## 💡 Other ideas
 
 - [ ] **MIDI playback** — hear the tab back at a set tempo
 - [ ] **Chord diagrams** — visual fretboard popup for common chord shapes
 - [ ] **Time signature support** — 3/4, 6/8, etc.
-- [ ] **Print-friendly PDF** — better pagination, fonts, and layout for printed sheets
-- [ ] **Import from Guitar Pro / GuitalTab format** — stretch goal
+- [ ] **Import from Guitar Pro / GuitarPro format** — stretch goal
 - [ ] **Undo / Redo stack** — per section
 - [ ] **Multiple instruments per song** — e.g. guitar + bass in the same project
 - [ ] **Auto-save / crash recovery**

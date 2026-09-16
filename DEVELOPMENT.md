@@ -12,7 +12,7 @@ author already uses on paper: fret numbers over chord symbols, repeat
 counts at every level, named riffs referenced by name, back-references
 ("same as the verse above"), and free-form annotations. See
 `DESIGN_v0_16.md` section 1 for the full vocabulary and the reference case
-this repo audits against (`examples/sample_song.sng`).
+this repo audits against.
 
 Any change should be checked against that goal, not just against whether
 the code runs. A feature that makes the tab grid more powerful but doesn't
@@ -54,4 +54,3 @@ display, which this environment often doesn't have.
 2. Write `RELEASE_NOTES_vX.Y.Z.md`.
 3. Tag `vX.Y.Z` and cut a GitHub Release from the tag, using the release
    notes file as the release body.
-4. Confirm `examples/` still reflects the current format.

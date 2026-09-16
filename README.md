@@ -12,8 +12,6 @@ uses on paper: fret numbers over chord symbols, repeat counts, named riffs
 referenced by name, and back-references so a repeated chorus isn't written
 out twice.
 
-*(See `examples/` for a before/after — a migrated project file next to the
-hand-written chart it's reproducing.)*
 
 Built entirely with Python's standard library (Tkinter), so **no pip
 installs required**. Compatible with **macOS**, **Windows**, and **Linux**.
@@ -78,7 +76,6 @@ Requires Python 3.8+ with Tkinter (included in most Python distributions).
 | `.txt` | Plain-text export, readable in any editor |
 | `.pdf` | Formatted export with title, artist, date footer |
 
-See `examples/` for a sample of each.
 
 ---
 

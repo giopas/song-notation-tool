@@ -30,8 +30,6 @@ song_writer_v.0.1[0-4].py
 # but keep the curated examples/ folder, which ships with the repo.
 *.sng
 Sample_Band_-_Sample_Song.*
-!examples/*.sng
-!examples/sample_song.*
 
 # Test artifacts (the tests/ source is tracked; caches are not)
 .pytest_cache/
@@ -43,3 +41,4 @@ Sample_Band_-_Sample_Song.*
 *~
 
 Old - do not commit/
+examples/

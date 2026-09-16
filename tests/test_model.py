@@ -13,7 +13,7 @@ from model import (
 
 
 def test_new_document_shape():
-    doc = new_document(title="Sample Song", artist="Sample Band", key="B")
+    doc = new_document(title="Sample Song", artist="Sample Artist", key="B")
     assert doc["format"] == FORMAT_VERSION
     assert doc["meta"]["title"] == "Sample Song"
     assert doc["sections"] == []
@@ -98,8 +98,8 @@ def test_new_block_shape():
     assert b["items"] == []
 
 
-def test_sample_song_txt_fixture_migrates_without_loss():
-    """Round-trip: build a v0.15-shaped doc from the reference txt fixture
+def test_sample_song_fixture_migrates_without_loss():
+    """Round-trip: build a v0.15-shaped doc from the synthetic fixture
     and confirm every measure survives migration."""
     fixture_path = os.path.join(
         os.path.dirname(__file__), "fixtures", "v015", "sample_song.json")

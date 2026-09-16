@@ -1,0 +1,129 @@
+{
+  "app_version": "0.15",
+  "title": "Sample Song",
+  "artist": "Sample Artist",
+  "key": "A",
+  "time": "4/4",
+  "sections": [
+    {
+      "id": "intro",
+      "name": "Intro",
+      "type": "Intro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "link_id": null,
+      "tab_beats": 2,
+      "measure_beats": {},
+      "layers": {
+        "tab": [
+          { "G": "- -", "D": "- -", "A": "- -", "E": "7 -" },
+          { "G": "- -", "D": "- -", "A": "7 9", "E": "- -" }
+        ],
+        "chords": ["A", "D"],
+        "notes": ["", ""],
+        "lyrics": ["", ""]
+      },
+      "visible": {"tab": true, "chords": true, "notes": true, "lyrics": true}
+    },
+    {
+      "id": "verse1",
+      "name": "Verse 1",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 4,
+      "link_id": 101,
+      "tab_beats": 2,
+      "measure_beats": {},
+      "layers": {
+        "tab": [
+          { "G": "- -", "D": "- -", "A": "- -", "E": "5 -" },
+          { "G": "- -", "D": "- -", "A": "5 7", "E": "- -" }
+        ],
+        "chords": ["D", "D"],
+        "notes": ["", ""],
+        "lyrics": ["", ""]
+      },
+      "visible": {"tab": true, "chords": true, "notes": true, "lyrics": true}
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus 1",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 4,
+      "link_id": 102,
+      "tab_beats": 2,
+      "measure_beats": {},
+      "layers": {
+        "tab": [
+          { "G": "- -", "D": "- -", "A": "- -", "E": "5 -" },
+          { "G": "- -", "D": "- -", "A": "5 7", "E": "- -" }
+        ],
+        "chords": ["D", "D"],
+        "notes": ["", ""],
+        "lyrics": ["", ""]
+      },
+      "visible": {"tab": true, "chords": true, "notes": true, "lyrics": true}
+    },
+    {
+      "id": "verse2",
+      "name": "Verse 2",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 4,
+      "link_id": 101,
+      "tab_beats": 2,
+      "measure_beats": {},
+      "layers": {
+        "tab": [
+          { "G": "- -", "D": "- -", "A": "- -", "E": "- -" },
+          { "G": "- -", "D": "- -", "A": "- -", "E": "- -" }
+        ],
+        "chords": ["", ""],
+        "notes": ["", ""],
+        "lyrics": ["", ""]
+      },
+      "visible": {"tab": true, "chords": true, "notes": true, "lyrics": true}
+    },
+    {
+      "id": "chorus2",
+      "name": "Chorus 2",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 4,
+      "link_id": 102,
+      "tab_beats": 2,
+      "measure_beats": {},
+      "layers": {
+        "tab": [
+          { "G": "- -", "D": "- -", "A": "- -", "E": "- -" },
+          { "G": "- -", "D": "- -", "A": "- -", "E": "- -" }
+        ],
+        "chords": ["", ""],
+        "notes": ["", ""],
+        "lyrics": ["", ""]
+      },
+      "visible": {"tab": true, "chords": true, "notes": true, "lyrics": true}
+    },
+    {
+      "id": "interlude2",
+      "name": "Interlude 2",
+      "type": "Interlude",
+      "instrument": "Bass (4-string)",
+      "repeat": 4,
+      "link_id": null,
+      "tab_beats": 2,
+      "measure_beats": {},
+      "layers": {
+        "tab": [
+          { "G": "- -", "D": "- -", "A": "- -", "E": "- -" },
+          { "G": "- -", "D": "- -", "A": "- -", "E": "- -" }
+        ],
+        "chords": ["", ""],
+        "notes": ["A", "A"],
+        "lyrics": ["", ""]
+      },
+      "visible": {"tab": true, "chords": true, "notes": true, "lyrics": true}
+    }
+  ]
+}

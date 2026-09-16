@@ -29,7 +29,6 @@ song_writer_v.0.1[0-4].py
 # Sample exports and project saves (user data, not code) —
 # but keep the curated examples/ folder, which ships with the repo.
 *.sng
-Sample_Band_-_Sample_Song.*
 
 # Test artifacts (the tests/ source is tracked; caches are not)
 .pytest_cache/

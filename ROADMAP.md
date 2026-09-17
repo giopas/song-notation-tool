@@ -29,13 +29,14 @@ serves that, not by difficulty.
 | v0.15 | Ongoing refinements before this changelog existed |
 | **v0.16** | **Foundation release** — new data model, chart grammar, non-destructive render-time transposition, compact exports, v0.15 migration, repo hygiene. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.17** | **Song map + chart editor bar** — the UI rewrite: whole-song map, live-parsing chart editor, riff library with usage tracking, reordering, non-destructive transpose end to end, Stage View, page-break-safe PDF. See [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v0.17.0.md](RELEASE_NOTES_v0.17.0.md). |
+| **v0.18** | **Headless & browser use, plus a UX pass** — `export.py` extracted to a pure TXT/PDF engine; `cli.py` (convert/batch/lint, no window); `webserver.py` + `web/` (stdlib-only local server and browser front end); a "Start here" panel, help strip, and live Preview window in the desktop app. Resolves the "§11 architecture fork" item below. See [CHANGELOG.md](CHANGELOG.md). |
 
 ---
 
-## 🔜 Next up (v0.17.1+)
+## 🔜 Next up (v0.18.1+)
 
-Deferred out of v0.17 — see `RELEASE_NOTES_v0.17.0.md` for the full list
-and why:
+Deferred out of v0.17 that v0.18 didn't touch, plus what v0.18 itself
+opens up:
 
 - [ ] **Graphical ending brackets and a boxed coda block** — `render.py`
       already resolves the spans (`mark_spans()`, `has_coda()`); nothing
@@ -44,12 +45,26 @@ and why:
       bare identifiers for riff names
 - [ ] **Tab-grid measure copy/paste** and a per-measure beats picker
       (both existed pre-v0.17; dropped in the rewrite for time)
-- [ ] **§11's architecture fork** — Tkinter vs. Flask + browser SPA,
-      still open; the pure-data layers (`model`/`grammar`/`transpose`/
-      `render`) don't care either way
 - [ ] **Real one-page-in-five-minutes measurement** — the page estimate
       and Enter/Tab-driven entry are built toward the target, not yet
       benchmarked against an actual song
+- [ ] **Web UI: tab-grid (measure) editing** — the browser front end
+      shipped in v0.18 edits `render:"chart"` sections fully; a
+      `render:"tab"`/`"both"` section's measure grid is read-only there
+      for now (ships read-only/preview first, per the phased roadmap;
+      full grid editing is the natural v0.18.1 follow-up)
+- [ ] **Web UI: riff library management** — creating/renaming/deleting
+      riffs and Promote-to-riff/Duplicate-as-reference are desktop-only
+      for now; the web editor can *use* an existing riff reference but
+      not manage the library
+- [ ] **`webserver.py` authentication** — currently no auth at all,
+      fine on `localhost` or a trusted home network; worth a lightweight
+      token before recommending `--host 0.0.0.0` on anything else
+- [ ] **Lyric importer** — local-file and paste import of lyrics to line
+      up against notation faster; a web-search-assisted version should
+      stay a human-reviewed assist (search results shown, user pastes),
+      never an automatic fetch-and-store, for both copyright and
+      section-boundary-accuracy reasons
 
 ## 💡 Other ideas
 

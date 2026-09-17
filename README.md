@@ -13,8 +13,20 @@ referenced by name, and back-references so a repeated chorus isn't written
 out twice.
 
 
-Built entirely with Python's standard library (Tkinter), so **no pip
-installs required**. Compatible with **macOS**, **Windows**, and **Linux**.
+Built entirely with Python's standard library — **no pip installs
+required**, on the desktop app, the CLI, or the web server alike.
+Compatible with **macOS**, **Windows**, and **Linux**, and runs three
+ways:
+
+- **Desktop app** (`song_writer.py`) — the Tkinter window described below.
+- **Browser** (`webserver.py`) — a local web server + front end, reachable
+  from a phone or tablet on the same network.
+- **Headless CLI** (`cli.py`) — convert or batch-export `.sng` files from
+  a script or CI job, no window at all.
+
+All three run the exact same notation engine (`model.py` / `grammar.py`
+/ `render.py` / `transpose.py` / `export.py`), so a chart looks the same
+whichever way you made it.
 
 ---
 
@@ -52,6 +64,12 @@ installs required**. Compatible with **macOS**, **Windows**, and **Linux**.
 - **Project files** — save/load sessions as `.sng` (plain JSON,
   human-readable); `.sng` files from earlier versions load without loss
 - **Zero dependencies** — pure Python standard library, works out of the box
+- **"Start here" on first launch** — *New song*, *Open example*, or
+  *Import project* instead of a blank grid
+- **In-app help** — a "?" button explains the chart-line syntax,
+  repeats, riffs, and transpose in plain language, any time
+- **Live Preview window** — see the TXT/PDF export update as you edit
+- **Runs headless or in a browser too** — see [CLI & Web Use](#-cli--web-use) below
 
 ---
 
@@ -64,7 +82,7 @@ installs required**. Compatible with **macOS**, **Windows**, and **Linux**.
 ## 🚀 Quick Start
 
 ```bash
-# No install needed — just run:
+# Desktop app — no install needed, just run:
 python3 song_writer.py
 ```
 
@@ -74,6 +92,71 @@ Requires Python 3.8+ with Tkinter (included in most Python distributions).
 > ```bash
 > sudo apt install python3-tk
 > ```
+
+The CLI and web server don't need Tkinter at all:
+
+```bash
+python3 cli.py --help
+python3 webserver.py
+```
+
+See [CLI & Web Use](#-cli--web-use) below for the full command reference.
+
+---
+
+## 💻 CLI & Web Use
+
+### Headless CLI
+
+No window, no Tkinter import — for scripts and CI jobs.
+
+```bash
+# Convert one song to PDF (defaults to "<Artist> - <Title>.pdf")
+python3 cli.py convert -i song.sng -e pdf
+
+# ...or to TXT, only the bass parts
+python3 cli.py convert -i song.sng -e txt --instrument "Bass (4-string)"
+
+# Regenerate every .sng in a folder — e.g. before a gig, or after a
+# formatting change
+python3 cli.py batch -i songs/ -e pdf
+python3 cli.py batch -i songs/ -e txt --out-dir exports/
+
+# Sanity-check a .sng file's chart lines without opening the GUI
+python3 cli.py lint -i song.sng
+```
+
+Run `python3 cli.py --help` (or `... convert --help` / `... batch --help`)
+for the full option list.
+
+### Browser
+
+A thin local web server, standard library only:
+
+```bash
+python3 webserver.py                  # opens a window automatically
+python3 webserver.py --dir mysongs --port 9000
+python3 webserver.py --browser        # force a normal browser tab
+python3 webserver.py --no-open        # just start the server
+python3 webserver.py --host 0.0.0.0   # reachable from other devices on the LAN
+```
+
+Running it opens a window for you automatically — no need to copy a
+URL into a browser by hand. If the optional
+[`pywebview`](https://pypi.org/project/pywebview/) package is installed
+(`pip install pywebview`), it opens as a native, chrome-less window,
+the same launch experience as the sibling
+[qlc-plus-swiss-knife-tool-script](https://github.com/giopas/qlc-plus-swiss-knife-tool-script)
+project; otherwise it falls straight back to your default browser tab.
+Either way it's the same page underneath — `pywebview` is entirely
+optional, never required to run the server.
+
+Once it's open, you get the song list, meta form, and a chart-line
+editor per section with the same live-parsing preview the desktop
+app's editor bar has, plus TXT/PDF export. Tab-grid (measure) sections
+are read-only in the browser for now — edit those in the desktop app;
+chart-line sections are fully editable. See [ROADMAP.md](ROADMAP.md)
+for what's still desktop-only.
 
 ---
 
@@ -101,6 +184,13 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for how sessions on this project are
 run, `DESIGN_v0_16.md` for the data model, chart grammar, and
 transposition rules, and `DESIGN_v0_17.md` for the song map / riff
 library / chart editor bar this release is built on.
+
+**Architecture**, since v0.18: `model.py` / `grammar.py` / `render.py` /
+`transpose.py` / `songmap.py` / `export.py` / `examples.py` /
+`constants.py` are pure Python with no Tkinter import — `song_writer.py`
+(desktop), `cli.py` (headless), and `webserver.py` (browser) are three
+front ends over that one engine. `tests/test_export.py` asserts
+`export.py` specifically stays Tkinter-free.
 
 Run the test suite with:
 

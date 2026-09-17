@@ -49,6 +49,19 @@
 #         retired Section.layers dict. TXT/PDF export and a new Stage
 #         View are driven by the same render.py row renderer at two
 #         scales. See DESIGN_v0_17.md.
+#  v0.18  Headless & browser use, plus a UX pass (closes the "Tkinter vs.
+#         Flask + browser SPA" architecture-fork item in ROADMAP.md).
+#         export.py: build_song_lines()/build_pdf() extracted to pure
+#         functions taking a doc dict — this file now delegates to them
+#         instead of duplicating the TXT/PDF builders against live
+#         Tkinter StringVars. New: cli.py (convert/batch/lint, no window
+#         at all), webserver.py + web/ (stdlib-only local web server and
+#         browser front end reachable from any device on the network),
+#         examples.py (shared "Open example" sample). UX: a "Start here"
+#         panel (New song / Open example / Import) replaces the blank
+#         grid on first launch, a "?" help strip explains the chart-line
+#         syntax in plain language, and a live Preview window shows the
+#         TXT/PDF export updating as you edit. See CHANGELOG.md.
 #
 # ==============================================================================
 
@@ -68,7 +81,18 @@ import grammar
 import render
 import transpose
 import songmap
+import export as songexport
+import examples as songexamples
 from grammar import ParseError as ChartParseError
+from constants import (
+    APP_VERSION as _CONST_APP_VERSION,
+    INSTRUMENT_STRINGS as _CONST_INSTRUMENT_STRINGS,
+    TAB_BEATS_DEFAULT as _CONST_TAB_BEATS_DEFAULT,
+    SECTION_TYPES as _CONST_SECTION_TYPES,
+    RENDER_MODE_LABELS as _CONST_RENDER_MODE_LABELS,
+    TAB_BEATS_OPTIONS as _CONST_TAB_BEATS_OPTIONS,
+    default_export_name,
+)
 
 # ── macOS: suppress deprecation noise ────────────────────────────────────────
 if platform.system() == "Darwin":
@@ -76,37 +100,17 @@ if platform.system() == "Darwin":
     os.environ['TK_SILENCE_DEPRECATION'] = '1'
 
 # ==============================================================================
-#  VERSION — single source of truth; bumped here propagates everywhere
+#  VERSION & DOMAIN CONSTANTS — single source of truth is constants.py, so
+#  the CLI and web server (which never import Tkinter) see the same values.
 # ==============================================================================
-APP_VERSION = "0.17"
+APP_VERSION = _CONST_APP_VERSION
 APP_TITLE   = f"Song Notation Tool  v{APP_VERSION}"
 
-# ==============================================================================
-#  DOMAIN CONSTANTS
-# ==============================================================================
-
-# Section-type presets shown in the New Section dialog
-SECTION_TYPES = [
-    "Intro", "Verse", "Pre-Chorus", "Chorus", "Refrain",
-    "Bridge", "Interlude", "Solo", "Breakdown", "Outro", "Custom",
-]
-
-# Maps instrument/tuning → string list (high → low pitch).
-# Used to label tab rows and render the TXT/PDF export.
-INSTRUMENT_STRINGS = {
-    "Guitar (6-string)":        ["e", "B", "G", "D", "A", "E"],
-    "Guitar (6-string) Drop D": ["e", "B", "G", "D", "A", "D"],
-    "Guitar (7-string)":        ["e", "B", "G", "D", "A", "E", "B"],
-    "Bass (4-string)":          ["G", "D", "A", "E"],
-    "Bass (4-string) Drop D":   ["G", "D", "A", "D"],
-    "Bass (5-string)":          ["G", "D", "A", "E", "B"],
-}
-
-RENDER_MODE_LABELS = {"chart": "Chart", "tab": "Tab grid", "both": "Chart + Tab"}
-
-# Default number of beats per tab measure. Can be overridden per measure.
-TAB_BEATS_DEFAULT = 8
-TAB_BEATS_OPTIONS = [8, 16, 32, 64]   # choices in the tab-grid toolbar
+SECTION_TYPES       = _CONST_SECTION_TYPES
+INSTRUMENT_STRINGS  = _CONST_INSTRUMENT_STRINGS
+RENDER_MODE_LABELS  = _CONST_RENDER_MODE_LABELS
+TAB_BEATS_DEFAULT   = _CONST_TAB_BEATS_DEFAULT
+TAB_BEATS_OPTIONS   = _CONST_TAB_BEATS_OPTIONS
 
 # Shared fonts — Courier New keeps chart/tab columns aligned on all platforms
 FONT_MAIN  = ("Courier New", 11)
@@ -322,12 +326,19 @@ class SongNotationApp(tk.Tk):
         self.dirty = False
         self._next_ids = {"section": 1, "block": 1}
 
+        # Enhancement 1 (UX spec) — first launch shows a "Start here" panel
+        # (New song / Open example / Import) instead of a blank grid. This
+        # flag is cleared the moment the user picks one of those, or opens
+        # / creates a real document any other way.
+        self._started_fresh = True
+        self._help_window = None
+        self._preview_window = None
+        self._preview_text = None
+
         self._build_ui()
         self.apply_theme()
         self._bind_shortcuts()
 
-        # Start with one empty section so the editor bar has somewhere to go.
-        self._add_section(focus=True)
         self._rebuild_map()
         self._refresh_riff_strip()
         self._refresh_page_indicator()
@@ -380,6 +391,20 @@ class SongNotationApp(tk.Tk):
                                      style="Normal.TButton")
         self.btn_theme.pack(side="right", padx=3)
         ToolTip(self.btn_theme, "Toggle light / dark theme")
+
+        self.btn_preview = ttk.Button(self.topbar, text="👁 Preview",
+                                       command=self._toggle_preview,
+                                       style="Normal.TButton")
+        self.btn_preview.pack(side="right", padx=3)
+        ToolTip(self.btn_preview, "Open a live preview of the TXT/PDF export "
+                                   "— updates as you edit.")
+
+        self.btn_help = ttk.Button(self.topbar, text="?", width=2,
+                                    command=self._toggle_help,
+                                    style="Normal.TButton")
+        self.btn_help.pack(side="right", padx=3)
+        ToolTip(self.btn_help, "How this works — sections, chart-line syntax, "
+                                "repeats, riffs, and transpose, explained.")
 
         def _show_hamburger_menu():
             m = tk.Menu(self, tearoff=0)
@@ -565,6 +590,13 @@ class SongNotationApp(tk.Tk):
         self._row_gutters.clear()
         self._tab_panels.clear()
 
+        if not self.doc["sections"] and self._started_fresh:
+            self._build_start_here_panel(self.map_frame)
+            self.map_frame.update_idletasks()
+            self.map_canvas.configure(scrollregion=self.map_canvas.bbox("all"))
+            self._refresh_preview()
+            return
+
         for sec in self.doc["sections"]:
             self._build_section_row(self.map_frame, sec)
 
@@ -579,6 +611,78 @@ class SongNotationApp(tk.Tk):
         self._apply_row_theme_all()
         self.map_frame.update_idletasks()
         self.map_canvas.configure(scrollregion=self.map_canvas.bbox("all"))
+        self._refresh_preview()
+
+    # ==========================================================================
+    #  START HERE  (Enhancement 1) — shown instead of a blank grid on first
+    #  launch, or after starting a brand-new document with no sections yet.
+    # ==========================================================================
+
+    def _build_start_here_panel(self, parent):
+        t = THEMES[self.current_theme]
+        wrap = tk.Frame(parent, bg=t["bg"])
+        wrap.pack(fill="both", expand=True, pady=60)
+
+        tk.Label(wrap, text="Start here", font=FONT_HEAD,
+                 bg=t["bg"], fg=t["accent"]).pack(pady=(0, 4))
+        tk.Label(wrap, text="Nothing open yet — pick one:", font=FONT_TINY,
+                 bg=t["bg"], fg=t["lbl_gray"]).pack(pady=(0, 16))
+
+        row = tk.Frame(wrap, bg=t["bg"])
+        row.pack()
+
+        b1 = ttk.Button(row, text="📄  New song", style="Accent.TButton",
+                         command=self._start_new_song)
+        b1.pack(side="left", padx=6)
+        ToolTip(b1, "Set a Key and Time signature and start with an empty "
+                    "section list.")
+
+        b2 = ttk.Button(row, text="🎵  Open example", style="Normal.TButton",
+                         command=self._start_open_example)
+        b2.pack(side="left", padx=6)
+        ToolTip(b2, "Load a short built-in sample song, so the section / "
+                    "chart-line layout is visible right away.")
+
+        b3 = ttk.Button(row, text="📂  Import project", style="Normal.TButton",
+                         command=self._start_import)
+        b3.pack(side="left", padx=6)
+        ToolTip(b3, "Open an existing .sng project file. (Importing a "
+                    "plain-text chart isn't supported yet — only .sng.)")
+
+    def _start_new_song(self):
+        self._started_fresh = False
+        self._add_section(focus=True)
+        self._rebuild_map()
+        self.focus_set()
+        try:
+            self._topbar_entries[1].focus_set()  # Title field
+        except Exception:
+            pass
+
+    def _start_open_example(self):
+        self.doc = songexamples.example_document()
+        meta = self.doc.get("meta", {})
+        self.song_title.set(meta.get("title", ""))
+        self.song_artist.set(meta.get("artist", ""))
+        self.song_key.set(meta.get("key", ""))
+        self.song_tempo.set(meta.get("bpm", ""))
+        self.song_time.set(meta.get("time", "4/4"))
+        self._started_fresh = False
+        self.focus_kind = self.focus_id = None
+        self._set_editor_text("")
+        self._rebuild_map()
+        self._refresh_riff_strip()
+        self._refresh_page_indicator()
+        self.dirty = True
+
+    def _start_import(self):
+        self._started_fresh = False
+        self._open()
+        if not self.doc["sections"]:
+            # Cancelled, or opened an empty project — don't strand the user
+            # on a blank grid with no way back to Start Here.
+            self._started_fresh = True
+            self._rebuild_map()
 
     def _build_section_row(self, parent, sec):
         sid = sec["id"]
@@ -1301,81 +1405,21 @@ class SongNotationApp(tk.Tk):
     #  the song map and the Stage View (design section 7).
     # ==========================================================================
 
+    def _sync_doc_meta(self):
+        """Copy the live StringVars into self.doc['meta'] — the single
+        source of truth export.py (and the CLI/web server) read from."""
+        self.doc["meta"] = {
+            "title": self.song_title.get(), "artist": self.song_artist.get(),
+            "key": self.song_key.get(), "time": self.song_time.get(),
+            "bpm": self.song_tempo.get(),
+        }
+        self.doc["app_version"] = APP_VERSION
+
     def _build_song_lines(self, instruments=None):
-        W = 100
-        div = lambda c="=": c * W
-        lines = []
-
-        artist = self.song_artist.get().strip()
-        title  = self.song_title.get().strip()
-        lines += [div("="), f"  {title.upper()}"]
-        if artist:
-            lines.append(f"  {artist}")
-        meta = []
-        if self.song_key.get():   meta.append(f"Key: {self.song_key.get()}")
-        if self.song_tempo.get(): meta.append(f"BPM: {self.song_tempo.get()}")
-        if self.song_time.get():  meta.append(f"Time: {self.song_time.get()}")
-        if meta:
-            lines.append("  " + "   ".join(meta))
-        lines += [div("="), ""]
-
-        TOKEN_W = 3
-        for sec in self.doc["sections"]:
-            if instruments is not None and sec.get("instrument") not in instruments:
-                continue
-
-            rep = sec.get("repeat", 1)
-            rep_str = f"  (x{rep})" if rep and rep != 1 else ""
-            lines += [div("-"),
-                      f"  [{sec['name']}]{rep_str}   {sec.get('instrument', '')}",
-                      div("-"), ""]
-
-            eff = transpose.effective_transpose(
-                self.doc.get("transpose", 0), sec.get("transpose", 0))
-            chart = songmap.chart_items(sec)
-            if chart:
-                resolved = render.resolve_display_items(chart, eff)
-                lines += render.render_chart_row(resolved)
-                lines.append("")
-
-            measures = songmap.measure_items(sec)
-            if measures:
-                all_strings = INSTRUMENT_STRINGS.get(
-                    sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
-                strings = render.active_strings(
-                    [m.get("strings", {}) for m in measures], all_strings) or all_strings
-                max_beats = max((m.get("beats", TAB_BEATS_DEFAULT) for m in measures),
-                                 default=TAB_BEATS_DEFAULT)
-                mpl = render.measures_per_line(len(measures), max_beats, width=W)
-
-                for chunk_start in range(0, len(measures), mpl):
-                    chunk = list(range(chunk_start, min(chunk_start + mpl, len(measures))))
-                    sn_pad = max(len(st) for st in strings) + 3
-                    hdr = " " * sn_pad
-                    for m_idx in chunk:
-                        beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-                        cell_w = TOKEN_W * beats + 1
-                        hdr += f"{'M' + str(m_idx + 1):<{cell_w}}"
-                    lines.append(hdr)
-                    for st in strings:
-                        row = f"{st}| "
-                        for m_idx in chunk:
-                            beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-                            raw = measures[m_idx].get("strings", {}).get(st, "")
-                            tokens = [tok for tok in raw.split() if tok]
-                            while len(tokens) < beats:
-                                tokens.append("-")
-                            tokens = tokens[:beats]
-                            row += "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
-                        lines.append(row)
-                    lines.append("")
-
-            if sec.get("annotation"):
-                lines.append(f'  "{sec["annotation"]}"')
-                lines.append("")
-
-        lines += [div("="), f"  Generated by Song Notation Tool v{APP_VERSION}", div("=")]
-        return lines
+        # Delegates to export.py — the same pure builder the CLI and web
+        # server use — so TXT/Stage View/PDF can never drift apart again.
+        self._sync_doc_meta()
+        return songexport.build_song_lines(self.doc, instruments=instruments)
 
     def _export_txt(self):
         self._commit_editor_line(force=True)
@@ -1480,227 +1524,11 @@ class SongNotationApp(tk.Tk):
         dlg.bind("<Return>", lambda e: do_export())
 
     def _build_pdf(self, instruments=None, orient="portrait"):
-        """
-        Build a one-file PDF, reusing the QLC+ Swiss Knife v0.4 byte-level
-        writer (_assemble_pdf — no external libraries). Section content
-        comes from the same render.render_chart_row()/resolve_display_items()
-        calls the song map and Stage View use (design section 7: one
-        renderer, not two code paths).
-        """
-        if instruments is None:
-            instruments = {s.get("instrument", "") for s in self.doc["sections"]}
-
-        W, H = (842, 595) if orient == "landscape" else (595, 842)
-        MARGIN, LINE_H = 28, 12
-        MONO_SZ, HEAD_SZ, TITLE_SZ, FOOTER_H = 7.5, 9, 13, 18
-        TOKEN_W, CHAR_W, SN_W = 3, 4.6, 20
-
-        artist   = self.song_artist.get().strip()
-        title    = self.song_title.get().strip()
-        doc_date = datetime.date.today().strftime("%Y-%m-%d")
-
-        pages  = []
-        cur_ln = []
-
-        def _esc(s):
-            s = str(s)
-            for frm, to in [
-                ("\u2014", "-"), ("\u2013", "-"), ("\u00d7", "x"), ("\u00d8", "x"),
-                ("\u2019", "'"), ("\u2018", "'"), ("\u201c", '"'), ("\u201d", '"'),
-                ("\u00e9", "e"), ("\u00e8", "e"), ("\u00e0", "a"), ("\u00f4", "o"),
-                ("\u266a", ""), ("\u2665", ""), ("\u00d6", "O"), ("\u00fc", "u"),
-                ("\u25b2", "^"), ("\u25bc", "v"), ("\u25c6", "*"), ("\u203a", ">"),
-                ("\u00b7", "."),
-            ]:
-                s = s.replace(frm, to)
-            s = s.encode("latin-1", errors="replace").decode("latin-1")
-            return s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-
-        def txt(x, y, s, sz=MONO_SZ, bold=False):
-            font = "/F2" if bold else "/F1"
-            cur_ln.append(f"BT {font} {sz} Tf {x:.1f} {y:.1f} Td ({_esc(s)}) Tj ET")
-
-        def color(r, g, b):
-            cur_ln.append(f"{r:.3f} {g:.3f} {b:.3f} rg")
-
-        def hline(x1, y, x2, width=0.25, gray=0.72):
-            cur_ln.append(f"{gray:.2f} G {width} w {x1:.1f} {y:.1f} m {x2:.1f} {y:.1f} l S")
-
-        def rfill(x, y, w, h, r, g, b):
-            cur_ln.append(f"{r:.3f} {g:.3f} {b:.3f} rg {x:.1f} {y:.1f} {w:.1f} {h:.1f} re f")
-
-        def finish_page(pn):
-            hline(MARGIN, FOOTER_H, W - MARGIN)
-            color(0.4, 0.4, 0.4)
-            txt(MARGIN, 5, f"Song Notation Tool v{APP_VERSION}  -  {doc_date}", sz=6.5)
-            txt(W - MARGIN - 28, 5, f"Page {pn}", sz=6.5)
-            if cur_ln:
-                pages.append(zlib.compress("\n".join(cur_ln).encode("latin-1")))
-                cur_ln.clear()
-
-        max_beats = max(
-            (m.get("beats", TAB_BEATS_DEFAULT)
-             for s in self.doc["sections"] if s.get("instrument") in instruments
-             for m in songmap.measure_items(s)),
-            default=TAB_BEATS_DEFAULT,
-        )
-        COL_W = TOKEN_W * max_beats * CHAR_W + CHAR_W
-
-        def mpl_for(n_measures):
-            usable = W - 2 * MARGIN - SN_W
-            return max(1, min(n_measures, int(usable / COL_W)))
-
-        pn = 1
-        rfill(0, H - 46, W, 46, 0.10, 0.12, 0.22)
-        color(1, 1, 1)
-        hdr_txt = title.upper() + (f"  -  {artist}" if artist else "")
-        txt(MARGIN, H - 28, hdr_txt, sz=TITLE_SZ, bold=True)
-        meta_parts = []
-        if self.song_key.get():   meta_parts.append(f"Key: {self.song_key.get()}")
-        if self.song_tempo.get(): meta_parts.append(f"BPM: {self.song_tempo.get()}")
-        if self.song_time.get():  meta_parts.append(f"Time: {self.song_time.get()}")
-        if meta_parts:
-            txt(MARGIN, H - 41, "   |   ".join(meta_parts), sz=7.5)
-        cy = H - 54
-
-        for sec in self.doc["sections"]:
-            if sec.get("instrument") not in instruments:
-                continue
-
-            all_strings = INSTRUMENT_STRINGS.get(
-                sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
-            eff = transpose.effective_transpose(
-                self.doc.get("transpose", 0), sec.get("transpose", 0))
-            chart = songmap.chart_items(sec)
-            chart_rows = (render.render_chart_row(render.resolve_display_items(chart, eff))
-                          if chart else [])
-            measures = songmap.measure_items(sec)
-            strings = (render.active_strings(
-                        [m.get("strings", {}) for m in measures], all_strings)
-                       if measures else [])
-            mpl = mpl_for(len(measures)) if measures else 1
-
-            # Acceptance criterion (design §10): never split a section
-            # across a page break. Estimate the section's height with the
-            # same budget the live page indicator uses, and start a new
-            # page before the section — not mid-way through it — if it
-            # won't fit in what's left.
-            needed_h = render.estimate_section_lines(sec, strings or all_strings) * LINE_H
-            if cy - needed_h < FOOTER_H + LINE_H * 2:
-                finish_page(pn); pn += 1; cy = H - MARGIN
-
-            rep = sec.get("repeat", 1)
-            rep_str = f" (x{rep})" if rep and rep != 1 else ""
-            sec_label = f"[ {sec['name']} ]{rep_str}   {sec.get('instrument', '')}"
-            rfill(MARGIN, cy - LINE_H, W - 2 * MARGIN, LINE_H + 2, 0.16, 0.24, 0.42)
-            color(1, 1, 1)
-            txt(MARGIN + 4, cy - LINE_H + 3, sec_label, sz=HEAD_SZ, bold=True)
-            cy -= LINE_H + 6
-
-            if chart_rows:
-                color(0, 0, 0)
-                for ln in chart_rows:
-                    txt(MARGIN, cy, ln, sz=MONO_SZ)
-                    cy -= LINE_H
-                cy -= 2
-
-            if sec.get("annotation"):
-                color(0.3, 0.3, 0.3)
-                txt(MARGIN, cy, f'"{sec["annotation"]}"', sz=MONO_SZ)
-                cy -= LINE_H
-
-            for bs in range(0, len(measures), mpl):
-                batch = list(range(bs, min(bs + mpl, len(measures))))
-
-                def col_x(i, batch=batch):
-                    return MARGIN + SN_W + sum(
-                        TOKEN_W * measures[batch[j]].get("beats", TAB_BEATS_DEFAULT)
-                        * CHAR_W + CHAR_W
-                        for j in range(i))
-
-                color(0.40, 0.58, 0.82)
-                for i, m_idx in enumerate(batch):
-                    txt(col_x(i), cy, f"M{m_idx + 1}", sz=7)
-                cy -= LINE_H
-
-                for st in strings:
-                    color(0.16, 0.32, 0.58)
-                    txt(MARGIN, cy, f"{st}|", sz=MONO_SZ)
-                    for i, m_idx in enumerate(batch):
-                        beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-                        raw = measures[m_idx].get("strings", {}).get(st, "")
-                        tokens = [tok for tok in raw.split() if tok]
-                        while len(tokens) < beats:
-                            tokens.append("-")
-                        tokens = tokens[:beats]
-                        row_str = "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
-                        color(0, 0, 0)
-                        txt(col_x(i), cy, row_str, sz=MONO_SZ)
-                    cy -= LINE_H
-                    if cy < FOOTER_H + LINE_H:
-                        finish_page(pn); pn += 1; cy = H - MARGIN
-
-                hline(MARGIN, cy, W - MARGIN, gray=0.82)
-                cy -= 3
-
-            cy -= 8
-
-        finish_page(pn)
-        return self._assemble_pdf(pages, W, H)
-
-    @staticmethod
-    def _assemble_pdf(pages, W, H):
-        """
-        Assemble raw PDF bytes from a list of zlib-compressed page streams.
-        Ported directly from QLC+ Swiss Knife v0.4 — no external libraries.
-        """
-        raw     = "%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
-        offsets = []
-
-        def add(s):
-            nonlocal raw
-            offsets.append(len(raw))
-            raw += s
-
-        def obj(n, c):
-            return f"{n} 0 obj\n{c}\nendobj\n"
-
-        def sobj(n, data):
-            body = data.decode("latin-1")
-            return obj(n, (f"<< /Length {len(data)} /Filter /FlateDecode >>\n"
-                           f"stream\n{body}\nendstream"))
-
-        font_res = "<< /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >>"
-        kids, po, so = [], [], []
-        cid = 6
-
-        for ps in pages:
-            kids.append(f"{cid} 0 R")
-            po.append(obj(cid,
-                f"<< /Type /Page /Parent 2 0 R "
-                f"/MediaBox [0 0 {W:.2f} {H:.2f}] "
-                f"/Contents {cid + 1} 0 R /Resources {font_res} >>"))
-            so.append(sobj(cid + 1, ps))
-            cid += 2
-
-        add(obj(1, "<< /Type /Catalog /Pages 2 0 R >>"))
-        add(obj(2, f"<< /Type /Pages /Kids [{' '.join(kids)}] /Count {len(pages)} >>"))
-        add(obj(3, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica "
-                   "/Encoding /WinAnsiEncoding >>"))
-        add(obj(4, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold "
-                   "/Encoding /WinAnsiEncoding >>"))
-        add(obj(5, "<< /Type /Font /Subtype /Type1 /BaseFont /Courier "
-                   "/Encoding /WinAnsiEncoding >>"))
-        for p, s in zip(po, so):
-            add(p); add(s)
-
-        n    = cid - 1
-        xoff = len(raw)
-        raw += f"xref\n0 {n + 1}\n0000000000 65535 f \n"
-        for o in offsets:
-            raw += f"{o:010d} 00000 n \n"
-        raw += f"trailer\n<< /Size {n + 1} /Root 1 0 R >>\nstartxref\n{xoff}\n%%EOF\n"
-        return raw.encode("latin-1")
+        """Delegates to export.py — the same pure PDF builder the CLI and
+        web server use (design section 7: one renderer, not two code
+        paths, now true across UI/CLI/web too)."""
+        self._sync_doc_meta()
+        return songexport.build_pdf(self.doc, instruments=instruments, orient=orient)
 
     # ==========================================================================
     #  STAGE VIEW — large, high-contrast, read-only. Same renderer as TXT/PDF
@@ -1732,21 +1560,108 @@ class SongNotationApp(tk.Tk):
         top.focus_set()
 
     # ==========================================================================
+    #  HELP STRIP  (Enhancement 1) — plain-language explanation of the
+    #  workflow, reachable from the "?" toolbar button at any time. A
+    #  non-modal window so it can be left open while working, closed with
+    #  its own window controls, or dismissed with the same button/Escape.
+    # ==========================================================================
+
+    _HELP_TEXT = (
+        "A song is a list of sections (Intro, Verse, Chorus…), each with a "
+        "name, an instrument, a repeat count, and one chart line.\n\n"
+        "The chart line is typed, not clicked: chord/note symbols in order, "
+        "separated by spaces — e.g. \"B F# G E\". Put a fret number directly "
+        "after a symbol with no space to show it too — e.g. \"5A\" means "
+        "fret 5 on note A.\n\n"
+        "Repeats: set a section's repeat count in its header, or wrap part "
+        "of a chart line in brackets with a repeat — \"[5A 7D]x2\" plays "
+        "that pair twice before continuing.\n\n"
+        "Riffs: a block referenced by name from more than one section — "
+        "edit it once (in the Riffs strip below the map) and every "
+        "section using it updates. Select a run of the chart line and "
+        "press Cmd/Ctrl+R to turn it into a riff in place.\n\n"
+        "Duplicate as reference (Cmd/Ctrl+D) inserts \"=sectionname\" "
+        "rather than a copy, so a repeated section is never rewritten "
+        "twice — edit the original and every reference to it updates.\n\n"
+        "Transpose shifts every chord/fret in a section, or the whole "
+        "song, by semitones without rewriting what you typed — a +n then "
+        "-n round trip is always exact.\n\n"
+        "A parse error in a chart line never clears what you typed — it "
+        "shows inline, in place, and the last valid render stays on "
+        "screen above it.\n\n"
+        "Reorder sections by dragging a row's gutter (⠿), or with "
+        "Alt+Up / Alt+Down while a row is focused."
+    )
+
+    def _toggle_help(self):
+        if self._help_window is not None and self._help_window.winfo_exists():
+            self._help_window.destroy()
+            self._help_window = None
+            return
+        t = THEMES[self.current_theme]
+        win = tk.Toplevel(self)
+        win.title("How this works")
+        win.configure(bg=t["bg"])
+        win.geometry("480x520")
+        win.transient(self)
+
+        txt = tk.Text(win, wrap="word", bg=t["bg"], fg=t["fg"],
+                       font=FONT_TINY, relief="flat", padx=16, pady=14,
+                       insertwidth=0)
+        txt.pack(fill="both", expand=True)
+        txt.insert("1.0", self._HELP_TEXT)
+        txt.configure(state="disabled")
+
+        win.bind("<Escape>", lambda e: self._toggle_help())
+        win.protocol("WM_DELETE_WINDOW", self._toggle_help)
+        self._help_window = win
+
+    # ==========================================================================
+    #  LIVE PREVIEW PANE  (Enhancement 1) — a non-modal window showing the
+    #  TXT/PDF export as it will look, refreshed after every edit that
+    #  touches the map (_rebuild_map already calls _refresh_preview()).
+    # ==========================================================================
+
+    def _toggle_preview(self):
+        if self._preview_window is not None and self._preview_window.winfo_exists():
+            self._preview_window.destroy()
+            self._preview_window = None
+            self._preview_text = None
+            return
+        t = THEMES[self.current_theme]
+        win = tk.Toplevel(self)
+        win.title("Preview — export")
+        win.configure(bg=t["bg"])
+        win.geometry("640x760")
+        win.transient(self)
+
+        txt = tk.Text(win, wrap="none", bg=t["bg"], fg=t["fg"],
+                       font=FONT_MONO, relief="flat", padx=14, pady=12,
+                       insertwidth=0)
+        txt.pack(fill="both", expand=True)
+
+        win.protocol("WM_DELETE_WINDOW", self._toggle_preview)
+        self._preview_window = win
+        self._preview_text = txt
+        self._refresh_preview()
+
+    def _refresh_preview(self):
+        if self._preview_text is None or not self._preview_window.winfo_exists():
+            return
+        lines = self._build_song_lines()
+        self._preview_text.configure(state="normal")
+        self._preview_text.delete("1.0", "end")
+        self._preview_text.insert("1.0", "\n".join(lines))
+        self._preview_text.configure(state="disabled")
+
+    # ==========================================================================
     #  SAVE / OPEN
     # ==========================================================================
 
     def _save(self):
         self._commit_editor_line(force=True)
-        self.doc["meta"] = {
-            "title": self.song_title.get(), "artist": self.song_artist.get(),
-            "key": self.song_key.get(), "time": self.song_time.get(),
-            "bpm": self.song_tempo.get(),
-        }
-        self.doc["app_version"] = APP_VERSION
-        artist = self.song_artist.get().strip()
-        title  = self.song_title.get().strip()
-        default_name = (f"{artist} - {title}" if artist else title
-                        ).replace(" ", "_") + ".sng"
+        self._sync_doc_meta()
+        default_name = default_export_name(self.doc, "sng")
 
         path = filedialog.asksaveasfilename(
             defaultextension=".sng",
@@ -1767,6 +1682,7 @@ class SongNotationApp(tk.Tk):
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        self._started_fresh = False
         self.doc = model.migrate_document(data)
         meta = self.doc.get("meta", {})
         self.song_title.set(meta.get("title", data.get("title", "")))

@@ -4,6 +4,90 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.18.0] — 2026-09-17
+
+Two things: the app now runs headless and in a browser, not just as a
+Tkinter window; and the Tkinter app itself is more self-explanatory to
+a new or returning user. See the UX & Multi-Platform Enhancement Spec
+for the full brief this closes, and `ROADMAP.md`'s former "§11's
+architecture fork — Tkinter vs. Flask + browser SPA" item, which this
+release resolves.
+
+### Added
+
+- **`cli.py`** — a headless CLI with no window at all, built entirely
+  on the pure-data layers:
+  - `cli.py convert -i song.sng -e {txt,pdf} [-o out] [--instrument …] [--orient …]`
+    — convert one `.sng` file.
+  - `cli.py batch -i songs/ -e {txt,pdf} [--out-dir …]` — re-export
+    every `.sng` in a folder, e.g. before a gig or after a formatting
+    change; reports per-file success/failure and exits non-zero if any
+    failed.
+  - `cli.py lint -i song.sng` — parse every section's chart line and
+    report errors (or confirm they all parse cleanly) without opening
+    the GUI.
+- **`webserver.py`** + **`web/`** — a thin, stdlib-only local web
+  server (`http.server`, zero external dependencies, matching the
+  project's own rule) exposing the core engine over HTTP/JSON, plus a
+  static HTML/CSS/JS front end: song list, meta form, a chart-line
+  editor per section with live-parsing preview (mirrors the desktop
+  chart editor bar), reorder/duplicate/delete, a collapsible "how this
+  works" help strip, a first-launch "Start here" panel, and TXT/PDF
+  export. Run `./webserver.py` (serves `./songs` on
+  `http://localhost:8420`) or `./webserver.py --host 0.0.0.0` to reach
+  it from another device on the network (e.g. a phone at rehearsal).
+  API routes are documented inline in `webserver.py`.
+  - Running it now opens a window automatically instead of leaving you
+    to copy the URL into a browser by hand — a native, chrome-less
+    window via the optional `pywebview` package (`pip install
+    pywebview`; matches the sibling
+    [qlc-plus-swiss-knife-tool-script](https://github.com/giopas/qlc-plus-swiss-knife-tool-script)
+    project's launch UX) when it's installed, falling straight back to
+    your default browser tab when it isn't — nothing about this is a
+    *required* dependency. `--browser` forces a normal browser tab even
+    with `pywebview` installed; `--no-open` starts the server without
+    opening anything (e.g. when only serving other devices on the
+    network).
+- **`export.py`** — `build_song_lines(doc, instruments=None)` and
+  `build_pdf(doc, instruments=None, orient="portrait")`, extracted
+  from `SongNotationApp._build_song_lines`/`_build_pdf`/`_assemble_pdf`.
+  Pure functions over a `doc` dict (no Tkinter import anywhere in the
+  module — covered by a dedicated test), so the CLI and web server call
+  the exact same TXT/PDF builders the desktop app uses; a fix or a new
+  export field now only has to be made once.
+- **`constants.py`** — `APP_VERSION`, `INSTRUMENT_STRINGS`,
+  `SECTION_TYPES`, `RENDER_MODE_LABELS`, `TAB_BEATS_DEFAULT`,
+  `TAB_BEATS_OPTIONS`, and `default_export_name()` moved out of
+  `song_writer.py` so non-UI code (CLI, web server, tests) doesn't need
+  to import Tkinter just to read an instrument's string list.
+- **`examples.py`** — the built-in "Example Song" sample behind "Open
+  example," shared by the desktop app and the web server so it can
+  never drift between the two.
+- **Desktop app — "Start here" panel.** First launch (or a brand-new
+  document with no sections) shows *New song*, *Open example*, and
+  *Import project* instead of a blank grid.
+- **Desktop app — help strip.** A "?" button in the toolbar opens a
+  plain-language explanation of sections, chart-line syntax, repeats,
+  riffs, duplicate-as-reference, and transpose.
+- **Desktop app — live Preview window.** A "👁 Preview" toolbar button
+  opens a window showing the TXT/PDF export as it will look, refreshed
+  automatically on every edit that touches the song map.
+- `tests/test_export.py` — 8 new tests covering `export.py`, including
+  an explicit assertion that the module has no `tkinter` import.
+
+### Changed
+
+- `song_writer.py`'s `_build_song_lines`/`_build_pdf` are now thin
+  delegators to `export.py` (`_sync_doc_meta()` copies the live
+  StringVars into `self.doc["meta"]` first, same as `_save()` already
+  did) — the duplicate TXT/PDF-building code that used to live in the
+  Tkinter class is gone.
+- `_save()` and the export dialogs use `constants.default_export_name()`
+  instead of each re-computing the "`<Artist> - <Title>`" filename
+  stem inline.
+- `APP_VERSION` bumped to `0.18`, sourced from `constants.py` everywhere
+  (desktop app, CLI, web server) instead of being defined separately.
+
 ## [0.17.0] — 2026-09-16
 
 ### Added

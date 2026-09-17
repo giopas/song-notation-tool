@@ -1,0 +1,11 @@
+# Nothing in this project requires any of these to run — song_writer.py,
+# cli.py, and webserver.py all work with the standard library alone.
+#
+# This is purely optional, for webserver.py's native-window launch mode
+# (a chrome-less window instead of a plain browser tab). Without it,
+# webserver.py falls straight back to opening your default browser —
+# see the "Browser" section of README.md.
+#
+#   pip install -r requirements-optional.txt
+#
+pywebview>=5.0

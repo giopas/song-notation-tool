@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Song Notation Tool</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <div id="topbar-left">
+      <span id="app-title">🎸 Song Notation Tool</span>
+      <span id="app-version"></span>
+    </div>
+    <div id="topbar-right">
+      <button id="btn-help" class="icon-btn" title="How this works">?</button>
+      <button id="btn-preview-toggle" class="btn">Preview</button>
+      <button id="btn-save" class="btn">Save</button>
+      <div class="dropdown">
+        <button id="btn-export" class="btn accent">Export ▾</button>
+        <div id="export-menu" class="dropdown-menu hidden">
+          <button data-fmt="txt">Export TXT</button>
+          <button data-fmt="pdf">Export PDF (portrait)</button>
+          <button data-fmt="pdf-landscape">Export PDF (landscape)</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Persistent "how this works" strip — collapsible, Enhancement 1 -->
+  <section id="help-strip" class="hidden">
+    <h3>How this works</h3>
+    <ul>
+      <li><strong>A song is a list of sections</strong> (Intro, Verse, Chorus…), each with a
+        name, an instrument, a repeat count, and one chart line.</li>
+      <li><strong>The chart line</strong> is typed, not clicked: chord/note symbols in order,
+        separated by spaces — e.g. <code>B F# G E</code>. Add a fret number right after a
+        symbol with no space to show it too — e.g. <code>5A</code> means "fret 5 on note A".</li>
+      <li><strong>Repeats</strong>: put <code>(x3)</code> after a section's repeat field, or
+        wrap part of a line in brackets with a repeat — <code>[5A 7D]x2</code> plays that pair
+        twice before continuing.</li>
+      <li><strong>Riffs</strong>: a block referenced by name in more than one section — edit it
+        once, every section using it updates. (Manage riffs from the desktop app for now.)</li>
+      <li><strong>Transpose</strong> shifts every chord/fret in a section (or the whole song)
+        by semitones, without rewriting what you typed — safe to undo by transposing back.</li>
+      <li>A parse error in a chart line never clears what you typed — it's shown inline in red
+        under the field, and the last valid render stays visible above it.</li>
+    </ul>
+  </section>
+
+  <div id="layout">
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <span>Songs</span>
+        <button id="btn-new-song" class="icon-btn" title="New song">+</button>
+      </div>
+      <ul id="song-list"></ul>
+      <button id="btn-open-example" class="btn subtle">Open example song</button>
+    </aside>
+
+    <main id="main">
+      <!-- First-launch / empty state -->
+      <section id="start-here" class="hidden">
+        <h2>Start here</h2>
+        <p>Nothing open yet. Pick one:</p>
+        <div id="start-actions">
+          <button id="start-new" class="btn accent">New song</button>
+          <button id="start-example" class="btn">Open example</button>
+        </div>
+      </section>
+
+      <section id="editor" class="hidden">
+        <div id="meta-form">
+          <label>Title <input id="meta-title" type="text" placeholder="Song title"></label>
+          <label>Artist <input id="meta-artist" type="text" placeholder="Artist"></label>
+          <label>Key <input id="meta-key" type="text" size="4" placeholder="B"></label>
+          <label>Time <input id="meta-time" type="text" size="4" placeholder="4/4"></label>
+          <label>BPM <input id="meta-bpm" type="text" size="4" placeholder=""></label>
+        </div>
+
+        <div id="section-list"></div>
+
+        <button id="btn-add-section" class="btn subtle" title="Insert a new section (Verse, Chorus…) at the end, empty and ready to fill in.">+ Add section</button>
+      </section>
+
+      <section id="preview-pane" class="hidden">
+        <div id="preview-header">
+          <span>Preview — how this will look exported</span>
+          <button id="btn-preview-close" class="icon-btn" title="Close preview">×</button>
+        </div>
+        <pre id="preview-text"></pre>
+      </section>
+    </main>
+  </div>
+
+  <!-- New-song modal -->
+  <div id="modal-backdrop" class="hidden">
+    <div id="new-song-modal" class="modal">
+      <h3>New song</h3>
+      <label>Title <input id="new-title" type="text"></label>
+      <label>Artist <input id="new-artist" type="text"></label>
+      <label>Key <input id="new-key" type="text"></label>
+      <label>Time <input id="new-time" type="text" value="4/4"></label>
+      <label>BPM <input id="new-bpm" type="text"></label>
+      <div class="modal-actions">
+        <button id="new-song-cancel" class="btn subtle">Cancel</button>
+        <button id="new-song-create" class="btn accent">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+
+  <template id="section-template">
+    <div class="section-card" data-id="">
+      <div class="section-head">
+        <span class="drag-handle" title="Section order">⠿</span>
+        <input class="sec-name" type="text" title="Section name, e.g. Verse 1">
+        <select class="sec-type" title="Section type — controls the accent color"></select>
+        <select class="sec-instrument" title="Instrument / tuning for this section"></select>
+        <input class="sec-repeat" type="number" min="1" title="How many times this section is played consecutively">
+        <button class="btn icon-btn sec-up" title="Move up">↑</button>
+        <button class="btn icon-btn sec-down" title="Move down">↓</button>
+        <button class="btn icon-btn sec-dup" title="Duplicate as reference — same as this section rather than a copy">⧉</button>
+        <button class="btn icon-btn sec-del" title="Delete section">🗑</button>
+      </div>
+      <input class="sec-chart-line" type="text" placeholder="Type the chart line, e.g. B F# G E   or  [C D]x2 G"
+             title="Chord/fret symbols in order, space separated. Add a fret directly after a symbol (5A). Wrap and repeat with [ ]xN.">
+      <div class="sec-preview">
+        <div class="sec-preview-fret"></div>
+        <div class="sec-preview-sym"></div>
+      </div>
+      <div class="sec-error hidden"></div>
+      <div class="sec-empty-hint hidden">This section has no measures yet — type a chart line above to start entering notes.</div>
+    </div>
+  </template>
+
+  <script src="/app.js"></script>
+</body>
+</html>

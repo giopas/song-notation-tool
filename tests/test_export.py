@@ -85,3 +85,55 @@ def test_default_export_name_uses_artist_and_title():
     assert default_export_name(doc, "txt") == "20Minutes_-_Third_State.txt"
     doc["meta"]["artist"] = ""
     assert default_export_name(doc, ".pdf") == "Third_State.pdf"
+
+
+# ==============================================================================
+#  Lyrics in export (v0.19) — opt-in via print_lyrics, off by default.
+# ==============================================================================
+
+def test_build_song_lines_omits_lyrics_by_default():
+    doc = _doc_with_one_section()
+    doc["lyrics_text"] = "Some lyric line"
+    doc["sections"][0]["lyrics_text"] = "A section lyric line"
+    text = "\n".join(export.build_song_lines(doc))
+    assert "Some lyric line" not in text
+    assert "A section lyric line" not in text
+    assert "LYRICS" not in text
+
+
+def test_build_song_lines_includes_whole_song_lyrics_when_enabled():
+    doc = _doc_with_one_section()
+    doc["print_lyrics"] = True
+    doc["lyrics_text"] = "Whole song line one\nWhole song line two"
+    text = "\n".join(export.build_song_lines(doc))
+    assert "LYRICS" in text
+    assert "Whole song line one" in text
+    assert "Whole song line two" in text
+
+
+def test_build_song_lines_includes_section_lyrics_when_enabled():
+    doc = _doc_with_one_section()
+    doc["sections"][0]["print_lyrics"] = True
+    doc["sections"][0]["lyrics_text"] = "Section lyric line"
+    text = "\n".join(export.build_song_lines(doc))
+    assert "Section lyric line" in text
+
+
+def test_build_pdf_valid_with_lyrics_enabled():
+    doc = _doc_with_one_section()
+    doc["print_lyrics"] = True
+    doc["lyrics_text"] = "Line one\nLine two"
+    doc["sections"][0]["print_lyrics"] = True
+    doc["sections"][0]["lyrics_text"] = "Verse line"
+    pdf_bytes = export.build_pdf(doc)
+    assert pdf_bytes.startswith(b"%PDF-1.4")
+    assert b"%%EOF" in pdf_bytes
+
+
+def test_build_pdf_handles_long_lyrics_without_crashing():
+    doc = _doc_with_one_section()
+    doc["print_lyrics"] = True
+    doc["lyrics_text"] = "\n".join(f"line {i}" for i in range(200))
+    pdf_bytes = export.build_pdf(doc)
+    assert pdf_bytes.startswith(b"%PDF-1.4")
+    assert b"%%EOF" in pdf_bytes

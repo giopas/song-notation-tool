@@ -4,6 +4,64 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.19.0] — 2026-09-17
+
+Two roadmap items land together: the browser front end gets the same
+non-destructive Transpose the desktop app has had since v0.4, and a new
+Lyrics panel — reference text alongside a section or the whole song,
+in both front ends.
+
+### Added
+- **Transpose in the web UI** — a "Transpose ↕" button in the browser
+  toolbar opens the same whole-song-or-one-section choice as the
+  desktop app's Transpose dialog, by any number of semitones. It sets
+  `doc.transpose` / `section.transpose`, the exact fields the
+  render-time engine (`transpose.py`) and the desktop app already use,
+  so a song transposed in the browser looks right in the desktop app
+  and vice versa — nothing device-specific about it.
+- **Lyrics panel**, desktop and web — a new "Lyrics" button opens a
+  scoped text box (whole song, or the focused/selected section) with
+  three ways to fill it: type or paste directly, **"Import from
+  file…"** to load a local `.txt` file, or **"Search lyrics online
+  ↗"**, which asks for the song title and artist (pre-filled from the
+  doc's meta fields, editable — they might be empty or describe this
+  arrangement rather than the published song) and opens a DuckDuckGo
+  search for `<artist> <title> lyrics` in a new tab — it never fetches
+  or auto-inserts anything, by design (both copyright and
+  section-boundary accuracy: you decide what to paste and where it
+  goes). Stored non-destructively as `lyrics_text` on the document or
+  the section, alongside `transpose` — it's a reference layer, never
+  parsed or aligned to the chart, and **off by default** in the
+  TXT/PDF export and the Preview pane.
+- **"Include in TXT/PDF export and the Preview pane"** checkbox in the
+  Lyrics panel (desktop and web) — sets a new `print_lyrics` flag on
+  the document or section, independent of `lyrics_text` itself, so
+  pasting reference lyrics in never changes what a song prints until
+  you opt in. `render.py`'s page-count estimate and the PDF's
+  never-split-a-section-across-a-page-break guarantee both account for
+  the extra lines when it's on.
+- **"Split into sections…"** in the Lyrics panel (whole-song scope
+  only, desktop and web) — splits the pasted-in text on blank lines
+  and assigns one block per section in document order: existing
+  sections first, then a new section per leftover block. Turns "paste
+  the whole song's lyrics from a search result" into one step instead
+  of copying each verse/chorus in by hand via the scope picker; asks
+  for confirmation first since it overwrites each target section's
+  existing lyrics text.
+- **`webserver.py` exposes a small `js_api`** (`open_url`) to the
+  front end when running as a native `pywebview` window — that
+  window has no browser-tab concept, so `window.open()`/`target=
+  "_blank"` is a silent no-op there; "Search lyrics online" now goes
+  through `window.pywebview.api.open_url()` (falling back to
+  `window.open()` in plain browser mode) so it reaches the OS's
+  actual default browser either way.
+- `model.py`: `new_document()` and `new_section()` now default
+  `lyrics_text` to `""` and `print_lyrics` to `False`. Existing `.sng`
+  files (including ones migrated from v0.15) load fine without either
+  key — every read goes through `.get(..., default)`.
+- Help strip (web) and in-app help (desktop, "?" button) updated to
+  describe both features.
+
 ## [0.18.1] — 2026-09-17
 
 A follow-up to `webserver.py`'s launch mode from v0.18.0: a resizable

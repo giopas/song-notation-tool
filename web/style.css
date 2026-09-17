@@ -219,21 +219,37 @@ button {
 }
 
 /* ---------- modal ---------- */
-#modal-backdrop {
+.modal-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center; z-index: 30;
 }
+/* Opened from within the Lyrics modal, so it must stack above it —
+   DOM order alone isn't enough since both are .modal-backdrop siblings
+   at the same z-index. */
+#lyrics-search-modal-backdrop { z-index: 40; }
 .modal {
   background: var(--card-bg); border: 1px solid var(--border);
   border-radius: 10px; padding: 20px; width: 320px;
   display: flex; flex-direction: column; gap: 10px;
 }
+.modal.modal-wide { width: 520px; }
 .modal label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--lbl-gray); }
-.modal input {
+.modal input, .modal select {
   background: var(--input-bg); color: var(--fg); border: 1px solid var(--border);
   border-radius: 5px; padding: 6px 8px;
 }
+.modal textarea {
+  background: var(--input-bg); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 5px; padding: 8px; font-family: var(--mono); font-size: 13px;
+  resize: vertical; min-height: 220px;
+}
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.modal-hint { font-size: 11px; color: var(--lbl-gray); margin: 0; }
+.modal-checkbox {
+  display: flex; flex-direction: row; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--fg);
+}
+.modal-checkbox input { width: auto; }
 
 /* ---------- toast ---------- */
 #toast {

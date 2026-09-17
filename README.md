@@ -51,7 +51,15 @@ whichever way you made it.
   Drop D variants
 - **Non-destructive transposition** — shift the whole song or a section
   by any number of semitones, resolved at display/export time; +n then
-  −n round-trips exactly because nothing is ever rewritten
+  −n round-trips exactly because nothing is ever rewritten. Available in
+  the desktop app and the browser front end alike
+- **Lyrics panel** — paste, type, import a `.txt` file, or open a
+  browser search for lyrics, scoped to a section or the whole song;
+  reference text, never parsed — off by default in the TXT/PDF export
+  and Preview pane, opt in per section with one checkbox. "Split into
+  sections…" divides a pasted-in whole song on blank lines and assigns
+  it across the existing sections (adding new ones for any leftover)
+  in one step
 - **Marks** — barlines, 1st/2nd endings, segno, coda, D.C./D.S., `simile`
 - **Stage View** (Ctrl/Cmd+P) — full-window, high-contrast, read-only
 - **Live page-count indicator**, and a PDF export that never splits a
@@ -161,8 +169,9 @@ tab, stops the server).
 
 Once it's open, you get the song list, meta form, and a chart-line
 editor per section with the same live-parsing preview the desktop
-app's editor bar has, plus TXT/PDF export. Tab-grid (measure) sections
-are read-only in the browser for now — edit those in the desktop app;
+app's editor bar has, plus TXT/PDF export, Transpose (whole song or
+one section), and the Lyrics panel. Tab-grid (measure) sections are
+read-only in the browser for now — edit those in the desktop app;
 chart-line sections are fully editable. See [ROADMAP.md](ROADMAP.md)
 for what's still desktop-only.
 

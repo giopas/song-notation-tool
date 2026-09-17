@@ -177,11 +177,23 @@ def has_coda(items) -> bool:
 LINES_PER_PAGE = 58
 
 
+def lyrics_block_line_count(text: str) -> int:
+    """Line count a lyrics_text block will occupy when printed — one line
+    per source line (no word-wrap accounting, same "rough estimate" spirit
+    as the rest of this module), plus a trailing blank separator. 0 for
+    blank/whitespace-only text."""
+    text = (text or "")
+    if not text.strip():
+        return 0
+    return len(text.splitlines()) + 1  # + trailing blank line
+
+
 def estimate_section_lines(section: dict, strings=None) -> int:
     """Rough line count `section` will occupy in the TXT/PDF export."""
     items = section.get("items", [])
     annotation = section.get("annotation", "")
-    if not items and not annotation:
+    lyrics = section.get("lyrics_text", "") if section.get("print_lyrics") else ""
+    if not items and not annotation and not lyrics.strip():
         return 0
 
     lines = 1  # section label line
@@ -204,6 +216,8 @@ def estimate_section_lines(section: dict, strings=None) -> int:
     if annotation:
         lines += 1
 
+    lines += lyrics_block_line_count(lyrics)
+
     return lines + 1  # trailing blank line between sections
 
 
@@ -211,6 +225,8 @@ def estimate_page_count(doc: dict, instrument_strings: dict = None,
                          lines_per_page: int = LINES_PER_PAGE) -> int:
     """Live page-count estimate for the song-map header."""
     total = 0
+    if doc.get("print_lyrics"):
+        total += lyrics_block_line_count(doc.get("lyrics_text", "")) + 1  # + label line
     for sec in doc.get("sections", []):
         strings = None
         if instrument_strings:

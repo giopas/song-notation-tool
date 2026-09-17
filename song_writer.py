@@ -69,6 +69,8 @@ import datetime  # timestamp in PDF footer
 import json      # .sng project files are plain JSON
 import os
 import platform
+import urllib.parse  # build the "search lyrics online" query URL
+import webbrowser     # open the lyrics search in the user's browser
 import zlib      # PDF page stream compression (FlateDecode)
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
@@ -478,6 +480,15 @@ class SongNotationApp(tk.Tk):
         ToolTip(self.btn_transpose,
                 "Shift the whole song, or just the focused section, by ±N semitones "
                 "— applied at render time only (never rewrites stored notes).")
+
+        self.btn_lyrics = ttk.Button(
+            self.topbar2, text="Lyrics 📝",
+            command=self._lyrics_dialog, style="Normal.TButton")
+        self.btn_lyrics.pack(side="left", padx=3)
+        ToolTip(self.btn_lyrics,
+                "Paste, import, or search for lyrics — whole song or just the "
+                "focused section. Reference text only, never exported or "
+                "auto-fetched from the web.")
 
         self.lbl_pages = tk.Label(self.topbar2, text="[1 page]",
                                    font=FONT_TINY, anchor="e")
@@ -1401,6 +1412,229 @@ class SongNotationApp(tk.Tk):
         dlg.bind("<Return>", lambda e: apply_transpose())
 
     # ==========================================================================
+    #  LYRICS — reference text only: import from a local file, paste, type,
+    #  or open a browser search. Never parsed, aligned, or exported — just
+    #  kept alongside the song so you can work against it by eye. Stored
+    #  non-destructively on the document or the section as "lyrics_text",
+    #  same spirit as transpose (nothing else it touches is rewritten).
+    # ==========================================================================
+
+    def _lyrics_dialog(self):
+        self._commit_editor_line(force=True)
+        t = THEMES[self.current_theme]
+        dlg = tk.Toplevel(self)
+        dlg.title("Lyrics")
+        dlg.configure(bg=t["bg"])
+        dlg.geometry("520x540")
+        dlg.transient(self)
+        dlg.grab_set()
+
+        has_focused_section = (self.focus_kind == "section")
+        scope_var = tk.StringVar(value="section" if has_focused_section else "song")
+        target_box = {}  # holds the dict currently loaded into the text widget
+
+        top = tk.Frame(dlg, bg=t["bg"])
+        top.pack(fill="x", padx=16, pady=(12, 4))
+        tk.Label(top, text="Lyrics for:", bg=t["bg"], fg=t["accent"],
+                 font=FONT_TINY).pack(side="left")
+
+        def _save_target_text():
+            tgt = target_box.get("obj")
+            if tgt is not None:
+                tgt["lyrics_text"] = txt.get("1.0", "end-1c")
+
+        def _target_for_scope():
+            if scope_var.get() == "song":
+                return self.doc
+            return self._find_section(self.focus_id)
+
+        def _load_scope():
+            _save_target_text()
+            tgt = _target_for_scope()
+            target_box["obj"] = tgt
+            txt.delete("1.0", "end")
+            if tgt is not None:
+                txt.insert("1.0", tgt.get("lyrics_text", ""))
+                print_var.set(bool(tgt.get("print_lyrics", False)))
+            btn_split.configure(
+                state=("normal" if scope_var.get() == "song" else "disabled"))
+
+        tk.Radiobutton(top, text="Whole song", variable=scope_var, value="song",
+                       bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
+                       activebackground=t["bg"], font=FONT_TINY,
+                       command=_load_scope).pack(side="left", padx=(8, 0))
+        tk.Radiobutton(top, text="Focused section only", variable=scope_var,
+                       value="section", bg=t["bg"], fg=t["fg"],
+                       selectcolor=t["input_bg"], activebackground=t["bg"],
+                       font=FONT_TINY, command=_load_scope,
+                       state=("normal" if has_focused_section else "disabled")
+                       ).pack(side="left", padx=(8, 0))
+
+        body = tk.Frame(dlg, bg=t["bg"])
+        body.pack(fill="both", expand=True, padx=16, pady=(4, 4))
+        txt = tk.Text(body, wrap="word", bg=t["input_bg"], fg=t["fg"],
+                       font=FONT_TINY, relief="flat", padx=8, pady=8, undo=True)
+        sb = ttk.Scrollbar(body, orient="vertical", command=txt.yview)
+        txt.configure(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        txt.pack(side="left", fill="both", expand=True)
+
+        print_var = tk.BooleanVar(value=False)
+
+        def _on_print_toggle():
+            tgt = target_box.get("obj")
+            if tgt is not None:
+                tgt["print_lyrics"] = print_var.get()
+                self.dirty = True
+                self._rebuild_map()
+
+        chk = tk.Checkbutton(
+            body_footer := tk.Frame(dlg, bg=t["bg"]),
+            text="Include in TXT/PDF export and the Preview pane",
+            variable=print_var, command=_on_print_toggle,
+            bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
+            activebackground=t["bg"], font=FONT_TINY)
+        chk.pack(anchor="w")
+        body_footer.pack(fill="x", padx=16, pady=(0, 2))
+
+        def _split_into_sections():
+            blocks = [b.strip() for b in _re.split(r"\n\s*\n+", txt.get("1.0", "end-1c"))
+                      if b.strip()]
+            if not blocks:
+                messagebox.showinfo("Split into sections",
+                                     "Nothing to split — paste some lyrics first.")
+                return
+            existing = self.doc["sections"]
+            preview = ", ".join(
+                (existing[i]["name"] if i < len(existing) else f"(new section {i + 1})")
+                for i in range(len(blocks)))
+            extra = len(blocks) - len(existing)
+            warn = f", adding {extra} new section(s) for the rest" if extra > 0 else ""
+            if not messagebox.askyesno(
+                    "Split into sections",
+                    f"Assign {len(blocks)} lyric block(s) to: {preview}{warn}.\n\n"
+                    "Existing section lyrics will be overwritten where present, and "
+                    "the whole-song lyrics text will be cleared. Continue?"):
+                return
+            for i, block in enumerate(blocks):
+                if i < len(existing):
+                    existing[i]["lyrics_text"] = block
+                else:
+                    sid = self._new_id("section", "sec")
+                    sec = model.new_section(sid, f"Lyrics {i + 1}",
+                                             instrument=self.default_instrument.get())
+                    sec["lyrics_text"] = block
+                    self.doc["sections"].append(sec)
+            self.doc["lyrics_text"] = ""
+            self.doc["print_lyrics"] = False
+            self.dirty = True
+            self._rebuild_map()
+            messagebox.showinfo("Split into sections",
+                                 f"Assigned lyrics to {len(blocks)} section(s).")
+            dlg.destroy()
+
+        def _import_file():
+            path = filedialog.askopenfilename(
+                title="Import lyrics from text file",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+            if not path:
+                return
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+            except OSError as exc:
+                messagebox.showerror("Import lyrics", f"Couldn't read file:\n{exc}")
+                return
+            if txt.get("1.0", "end-1c").strip() and not messagebox.askyesno(
+                    "Import lyrics",
+                    "Replace the current lyrics text with the file's contents?"):
+                return
+            txt.delete("1.0", "end")
+            txt.insert("1.0", content)
+
+        def _search_online():
+            # Ask rather than assume: the doc's Title/Artist fields might be
+            # empty, or describe *this arrangement* rather than the song as
+            # published (e.g. a cover, a working title) — so this always
+            # prompts, pre-filled from those fields as a starting point.
+            prompt = tk.Toplevel(dlg)
+            prompt.title("Search lyrics online")
+            prompt.configure(bg=t["bg"])
+            prompt.resizable(False, False)
+            prompt.transient(dlg)
+            prompt.grab_set()
+
+            tk.Label(prompt, text="Song title:", bg=t["bg"], fg=t["fg"],
+                     font=FONT_TINY).grid(row=0, column=0, sticky="e",
+                                           padx=(16, 6), pady=(16, 4))
+            title_var = tk.StringVar(value=self.song_title.get().strip())
+            e1 = tk.Entry(prompt, textvariable=title_var, width=30, font=FONT_MAIN)
+            e1.grid(row=0, column=1, padx=(0, 16), pady=(16, 4))
+
+            tk.Label(prompt, text="Artist:", bg=t["bg"], fg=t["fg"],
+                     font=FONT_TINY).grid(row=1, column=0, sticky="e", padx=(16, 6), pady=4)
+            artist_var = tk.StringVar(value=self.song_artist.get().strip())
+            tk.Entry(prompt, textvariable=artist_var, width=30, font=FONT_MAIN).grid(
+                row=1, column=1, padx=(0, 16), pady=4)
+
+            def _go():
+                query = " ".join(
+                    p for p in (artist_var.get().strip(), title_var.get().strip(), "lyrics")
+                    if p) or "song lyrics"
+                # DuckDuckGo rather than Google — no account/consent wall,
+                # friendlier default for an open-source tool.
+                url = "https://duckduckgo.com/?q=" + urllib.parse.quote(query)
+                webbrowser.open_new_tab(url)
+                prompt.destroy()
+
+            br2 = tk.Frame(prompt, bg=t["bg"])
+            br2.grid(row=2, column=0, columnspan=2, sticky="e", padx=16, pady=(10, 14))
+            ttk.Button(br2, text="Cancel", command=prompt.destroy,
+                       style="Normal.TButton").pack(side="right", padx=4)
+            ttk.Button(br2, text="Search", command=_go,
+                       style="Accent.TButton").pack(side="right")
+            prompt.bind("<Return>", lambda e: _go())
+            e1.focus_set()
+
+        btnrow = tk.Frame(dlg, bg=t["bg"])
+        btnrow.pack(fill="x", padx=16, pady=(4, 2))
+        ttk.Button(btnrow, text="Import from file…", command=_import_file,
+                   style="Normal.TButton").pack(side="left")
+        ttk.Button(btnrow, text="Search lyrics online ↗", command=_search_online,
+                   style="Normal.TButton").pack(side="left", padx=(6, 0))
+        btn_split = ttk.Button(btnrow, text="Split into sections…",
+                                command=_split_into_sections, style="Normal.TButton")
+        btn_split.pack(side="left", padx=(6, 0))
+        ToolTip(btn_split, "Splits this text on blank lines and assigns one block per "
+                "section, in order — using existing sections first, then adding new "
+                "ones for any leftover blocks. Whole-song scope only.")
+        ToolTip(btnrow, "Asks for song title and artist, then opens a "
+                "DuckDuckGo search for it in your default browser, in a new "
+                "tab — nothing is fetched or pasted in for you; copy what "
+                "you want back into this box.")
+
+        _load_scope()  # now that print_var and btn_split both exist
+
+        tk.Label(dlg, text="Off by default: a reference layer, never aligned to the "
+                 "chart automatically. Check the box above to include it in the "
+                 "TXT/PDF export and the Preview pane too.",
+                 bg=t["bg"], fg=t["fg"], font=FONT_TINY, wraplength=488,
+                 justify="left").pack(anchor="w", padx=16, pady=(2, 4))
+
+        def _close(save):
+            if save:
+                _save_target_text()
+                self.dirty = True
+            dlg.destroy()
+
+        br = tk.Frame(dlg, bg=t["bg"])
+        br.pack(fill="x", padx=16, pady=(6, 14))
+        ttk.Button(br, text="Cancel", command=lambda: _close(False),
+                   style="Normal.TButton").pack(side="right", padx=4)
+        ttk.Button(br, text="Save & Close", command=lambda: _close(True),
+                   style="Accent.TButton").pack(side="right")
+
+    # ==========================================================================
     #  EXPORT — TXT / PDF, both built from the same section-line renderer as
     #  the song map and the Stage View (design section 7).
     # ==========================================================================
@@ -1586,6 +1820,10 @@ class SongNotationApp(tk.Tk):
         "Transpose shifts every chord/fret in a section, or the whole "
         "song, by semitones without rewriting what you typed — a +n then "
         "-n round trip is always exact.\n\n"
+        "Lyrics (📝) holds reference text alongside a section or the whole "
+        "song — paste it, import a .txt file, or open a browser search for "
+        "it. It's never parsed, aligned, or exported; just there to work "
+        "against by eye.\n\n"
         "A parse error in a chart line never clears what you typed — it "
         "shows inline, in place, and the last valid render stays on "
         "screen above it.\n\n"

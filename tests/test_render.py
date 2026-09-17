@@ -132,6 +132,20 @@ def test_estimate_section_lines_includes_annotation():
     assert estimate_section_lines(sec) == 5
 
 
+def test_estimate_section_lines_ignores_lyrics_when_print_lyrics_false():
+    sec = {"items": [make_token("A", 5)], "annotation": "", "render": "chart",
+           "lyrics_text": "verse one\nverse two", "print_lyrics": False}
+    # 1 label + 2 chart rows + 1 trailing blank — same as with no lyrics at all
+    assert estimate_section_lines(sec) == 4
+
+
+def test_estimate_section_lines_counts_lyrics_when_print_lyrics_true():
+    sec = {"items": [make_token("A", 5)], "annotation": "", "render": "chart",
+           "lyrics_text": "verse one\nverse two", "print_lyrics": True}
+    # 1 label + 2 chart rows + (2 lyric lines + 1 lyric-block blank) + 1 trailing blank
+    assert estimate_section_lines(sec) == 7
+
+
 def test_estimate_page_count_at_least_one_for_nonempty_doc():
     doc = {"sections": [
         {"items": [make_token("A", 5)], "annotation": "", "render": "chart"},

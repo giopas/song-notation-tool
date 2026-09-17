@@ -63,6 +63,8 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "app_version": "0.16",
         "meta": {"title": title, "artist": artist, "key": key, "time": time, "bpm": bpm},
         "transpose": 0,
+        "lyrics_text": "",
+        "print_lyrics": False,
         "blocks": {},
         "sections": [],
     }
@@ -80,7 +82,8 @@ def new_section(section_id, name, section_type="Verse",
     return {
         "id": section_id, "name": name, "type": section_type,
         "instrument": instrument, "repeat": repeat, "transpose": 0,
-        "render": render, "annotation": "", "items": [],
+        "render": render, "annotation": "", "lyrics_text": "",
+        "print_lyrics": False, "items": [],
     }
 
 

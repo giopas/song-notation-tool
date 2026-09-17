@@ -74,7 +74,8 @@ function newSectionId() {
 function makeSection(name, type, instrument) {
   return {
     id: newSectionId(), name, type, instrument: instrument || defaultInstrument(),
-    repeat: 1, transpose: 0, render: "chart", annotation: "", items: [],
+    repeat: 1, transpose: 0, render: "chart", annotation: "",
+    lyrics_text: "", print_lyrics: false, items: [],
   };
 }
 function defaultInstrument() {
@@ -439,6 +440,170 @@ function closeNewSongModal() {
 }
 
 // ---------------------------------------------------------------------------
+//  Transpose modal — whole song or one section, mirrors the desktop app's
+//  Transpose dialog. Non-destructive: sets doc.transpose / section.transpose,
+//  same fields the desktop app and render-time engine already use.
+// ---------------------------------------------------------------------------
+function scopeOptionsHtml() {
+  const songOpt = `<option value="__song__">Whole song</option>`;
+  const sectionOpts = currentDoc.sections
+    .map((s) => `<option value="${s.id}">${escapeHtml(s.name || s.id)}</option>`)
+    .join("");
+  return songOpt + sectionOpts;
+}
+
+function openTransposeModal() {
+  if (!currentDoc) { toast("Open a song first"); return; }
+  document.getElementById("transpose-scope").innerHTML = scopeOptionsHtml();
+  document.getElementById("transpose-amount").value = "0";
+  document.getElementById("transpose-modal-backdrop").classList.remove("hidden");
+}
+function closeTransposeModal() {
+  document.getElementById("transpose-modal-backdrop").classList.add("hidden");
+}
+function applyTranspose() {
+  const scope = document.getElementById("transpose-scope").value;
+  const n = parseInt(document.getElementById("transpose-amount").value, 10);
+  if (!Number.isInteger(n)) { toast("Enter a whole number of semitones."); return; }
+  if (n === 0) { closeTransposeModal(); return; }
+  if (scope === "__song__") {
+    currentDoc.transpose = (currentDoc.transpose || 0) + n;
+  } else {
+    const sec = currentDoc.sections.find((s) => s.id === scope);
+    if (sec) sec.transpose = (sec.transpose || 0) + n;
+  }
+  closeTransposeModal();
+  schedulePreviewUpdate();
+  const label = scope === "__song__" ? "whole song" : "section";
+  toast(`Transposed ${label} by ${n > 0 ? "+" : ""}${n} semitone(s) — remember to Save`);
+}
+
+// ---------------------------------------------------------------------------
+//  Lyrics modal — stored non-destructively on the document or a section as
+//  `lyrics_text`, never parsed or aligned to the chart. Printed in the
+//  TXT/PDF export and the Preview pane only when its own `print_lyrics`
+//  flag is on (off by default). "Search online" opens a browser search in
+//  a new tab; it never fetches or auto-pastes lyrics in, by design
+//  (copyright + accuracy).
+// ---------------------------------------------------------------------------
+function lyricsTarget() {
+  const scope = document.getElementById("lyrics-scope").value;
+  if (scope === "__song__") return currentDoc;
+  return currentDoc.sections.find((s) => s.id === scope);
+}
+function loadLyricsForScope() {
+  const t = lyricsTarget();
+  document.getElementById("lyrics-textarea").value = (t && t.lyrics_text) || "";
+  document.getElementById("lyrics-print").checked = !!(t && t.print_lyrics);
+  const isSongScope = document.getElementById("lyrics-scope").value === "__song__";
+  document.getElementById("lyrics-split").classList.toggle("hidden", !isSongScope);
+}
+function openLyricsModal() {
+  if (!currentDoc) { toast("Open a song first"); return; }
+  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml();
+  document.getElementById("lyrics-scope").value = "__song__";
+  loadLyricsForScope();
+  document.getElementById("lyrics-modal-backdrop").classList.remove("hidden");
+}
+function closeLyricsModal() {
+  document.getElementById("lyrics-modal-backdrop").classList.add("hidden");
+}
+
+// Splits the whole-song lyrics text on blank lines and assigns one block
+// per section in order — the existing sections first, then a new section
+// per leftover block — so pasted-in lyrics (from a file or a web search)
+// can be lined up against the song's real structure in one step instead of
+// copying each verse/chorus in by hand via the Scope dropdown.
+function splitLyricsIntoSections() {
+  const textarea = document.getElementById("lyrics-textarea");
+  const blocks = textarea.value.split(/\n\s*\n+/).map((b) => b.trim()).filter(Boolean);
+  if (!blocks.length) { toast("Nothing to split — paste some lyrics first."); return; }
+
+  const existing = currentDoc.sections;
+  const preview = blocks.map((_, i) =>
+    i < existing.length ? (existing[i].name || existing[i].id) : `(new section ${i + 1})`
+  ).join(", ");
+  const extra = blocks.length - existing.length;
+  const warn = extra > 0 ? `, adding ${extra} new section(s) for the rest` : "";
+  if (!confirm(`Assign ${blocks.length} lyric block(s) to: ${preview}${warn}. ` +
+               `Existing section lyrics will be overwritten where present, and the ` +
+               `whole-song lyrics text will be cleared. Continue?`)) {
+    return;
+  }
+
+  blocks.forEach((block, i) => {
+    if (i < existing.length) {
+      existing[i].lyrics_text = block;
+    } else {
+      const sec = makeSection(`Lyrics ${i + 1}`, META.section_types[1] || "Verse");
+      sec.lyrics_text = block;
+      currentDoc.sections.push(sec);
+    }
+  });
+  currentDoc.lyrics_text = "";
+  currentDoc.print_lyrics = false;
+
+  renderEditor();
+  schedulePreviewUpdate();
+  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml();
+  document.getElementById("lyrics-scope").value = currentDoc.sections[0].id;
+  loadLyricsForScope();
+  toast(`Assigned lyrics to ${blocks.length} section(s) — remember to Save`);
+}
+function openSearchLyricsModal() {
+  const meta = (currentDoc && currentDoc.meta) || {};
+  document.getElementById("lyrics-search-title").value = meta.title || "";
+  document.getElementById("lyrics-search-artist").value = meta.artist || "";
+  document.getElementById("lyrics-search-modal-backdrop").classList.remove("hidden");
+}
+function closeSearchLyricsModal() {
+  document.getElementById("lyrics-search-modal-backdrop").classList.add("hidden");
+}
+function runLyricsSearch() {
+  const title = document.getElementById("lyrics-search-title").value.trim();
+  const artist = document.getElementById("lyrics-search-artist").value.trim();
+  const query = [artist, title, "lyrics"].filter((p) => p).join(" ") || "song lyrics";
+  // DuckDuckGo rather than Google — no account/consent wall, friendlier
+  // default for an open-source tool.
+  const url = "https://duckduckgo.com/?q=" + encodeURIComponent(query);
+  openInBrowser(url);
+  closeSearchLyricsModal();
+}
+
+// In the native app window (pywebview), window.open()/target="_blank" is a
+// no-op — there's no browser-tab concept inside that webview to open it
+// in. webserver.py exposes window.pywebview.api.open_url(), which hands
+// the URL to the OS's real default browser instead; plain browser mode
+// (no pywebview) doesn't have window.pywebview at all, so window.open()
+// is used there.
+function openInBrowser(url) {
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.open_url) {
+    window.pywebview.api.open_url(url).then((ok) => {
+      if (!ok) toast("Couldn't open the browser for that search.");
+    }).catch(() => toast("Couldn't open the browser for that search."));
+    return;
+  }
+  const win = window.open(url, "_blank", "noopener");
+  if (!win) {
+    toast("Your browser blocked the new tab — allow pop-ups for this page, or copy the link.");
+  }
+}
+function importLyricsFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const textarea = document.getElementById("lyrics-textarea");
+    if (textarea.value.trim() && !confirm("Replace the current lyrics text with the file's contents?")) {
+      return;
+    }
+    textarea.value = String(reader.result || "");
+    const t = lyricsTarget();
+    if (t) t.lyrics_text = textarea.value;
+  };
+  reader.readAsText(file);
+}
+
+// ---------------------------------------------------------------------------
 //  Wire-up
 // ---------------------------------------------------------------------------
 async function init() {
@@ -468,6 +633,39 @@ async function init() {
     if (!e.target.closest("#topbar-right .dropdown")) {
       document.getElementById("export-menu").classList.add("hidden");
     }
+  });
+
+  document.getElementById("btn-transpose").addEventListener("click", openTransposeModal);
+  document.getElementById("transpose-cancel").addEventListener("click", closeTransposeModal);
+  document.getElementById("transpose-apply").addEventListener("click", applyTranspose);
+
+  document.getElementById("btn-lyrics").addEventListener("click", openLyricsModal);
+  document.getElementById("lyrics-scope").addEventListener("change", loadLyricsForScope);
+  document.getElementById("lyrics-textarea").addEventListener("input", debounce(() => {
+    const t = lyricsTarget();
+    if (t) t.lyrics_text = document.getElementById("lyrics-textarea").value;
+  }, 200));
+  document.getElementById("lyrics-print").addEventListener("change", (e) => {
+    const t = lyricsTarget();
+    if (t) t.print_lyrics = e.target.checked;
+    schedulePreviewUpdate();
+  });
+  document.getElementById("lyrics-split").addEventListener("click", splitLyricsIntoSections);
+  document.getElementById("lyrics-import").addEventListener("click", () =>
+    document.getElementById("lyrics-file-input").click());
+  document.getElementById("lyrics-file-input").addEventListener("change", (e) => {
+    importLyricsFile(e.target.files && e.target.files[0]);
+    e.target.value = "";
+  });
+  document.getElementById("lyrics-search").addEventListener("click", openSearchLyricsModal);
+  document.getElementById("lyrics-close").addEventListener("click", closeLyricsModal);
+
+  document.getElementById("lyrics-search-cancel").addEventListener("click", closeSearchLyricsModal);
+  document.getElementById("lyrics-search-go").addEventListener("click", runLyricsSearch);
+  ["lyrics-search-title", "lyrics-search-artist"].forEach((id) => {
+    document.getElementById(id).addEventListener("keydown", (e) => {
+      if (e.key === "Enter") runLyricsSearch();
+    });
   });
 
   document.getElementById("btn-new-song").addEventListener("click", openNewSongModal);

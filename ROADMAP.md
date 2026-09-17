@@ -31,6 +31,7 @@ serves that, not by difficulty.
 | **v0.17** | **Song map + chart editor bar** — the UI rewrite: whole-song map, live-parsing chart editor, riff library with usage tracking, reordering, non-destructive transpose end to end, Stage View, page-break-safe PDF. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.18** | **Headless & browser use, plus a UX pass** — `export.py` extracted to a pure TXT/PDF engine; `cli.py` (convert/batch/lint, no window); `webserver.py` + `web/` (stdlib-only local server and browser front end); a "Start here" panel, help strip, and live Preview window in the desktop app. Resolves the "§11 architecture fork" item below. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.18.1** | **Native app window (not frameless) + Save & Close** — `webserver.py` opens a resizable native window when `pywebview` is installed, not a browser tab; a "⏻ Save & Close" button (and new `/api/quit` route) sits alongside its own close button. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.19.0** | **Web UI transpose + Lyrics panel** — Transpose (whole song or one section) now works the same in the browser as the desktop app; a new Lyrics panel (type/paste, import a `.txt` file, or a browser-search link) is available in both front ends, stored non-destructively and never auto-fetched or exported. See [CHANGELOG.md](CHANGELOG.md). |
 
 ---
 
@@ -61,11 +62,6 @@ opens up:
 - [ ] **`webserver.py` authentication** — currently no auth at all,
       fine on `localhost` or a trusted home network; worth a lightweight
       token before recommending `--host 0.0.0.0` on anything else
-- [ ] **Lyric importer** — local-file and paste import of lyrics to line
-      up against notation faster; a web-search-assisted version should
-      stay a human-reviewed assist (search results shown, user pastes),
-      never an automatic fetch-and-store, for both copyright and
-      section-boundary-accuracy reasons
 
 ## 💡 Other ideas
 

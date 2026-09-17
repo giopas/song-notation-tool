@@ -14,6 +14,8 @@
     </div>
     <div id="topbar-right">
       <button id="btn-help" class="icon-btn" title="How this works">?</button>
+      <button id="btn-transpose" class="btn" title="Transpose the whole song or one section, without rewriting what you typed">Transpose ↕</button>
+      <button id="btn-lyrics" class="btn" title="Paste, import, or search for lyrics — reference only, never exported">Lyrics 📝</button>
       <button id="btn-preview-toggle" class="btn">Preview</button>
       <button id="btn-save" class="btn">Save</button>
       <div class="dropdown">
@@ -44,6 +46,9 @@
         once, every section using it updates. (Manage riffs from the desktop app for now.)</li>
       <li><strong>Transpose</strong> shifts every chord/fret in a section (or the whole song)
         by semitones, without rewriting what you typed — safe to undo by transposing back.</li>
+      <li><strong>Lyrics</strong> holds reference text for a section or the whole song — paste
+        it, import a .txt file, or open a browser tab to search for it online. It's never
+        parsed, aligned, or exported automatically; just there to work against by eye.</li>
       <li>A parse error in a chart line never clears what you typed — it's shown inline in red
         under the field, and the last valid render stays visible above it.</li>
     </ul>
@@ -95,7 +100,7 @@
   </div>
 
   <!-- New-song modal -->
-  <div id="modal-backdrop" class="hidden">
+  <div id="modal-backdrop" class="modal-backdrop hidden">
     <div id="new-song-modal" class="modal">
       <h3>New song</h3>
       <label>Title <input id="new-title" type="text"></label>
@@ -107,6 +112,68 @@
         <button id="new-song-cancel" class="btn subtle">Cancel</button>
         <button id="new-song-create" class="btn accent">Create</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Transpose modal -->
+  <div id="transpose-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3>Transpose</h3>
+      <label>Scope
+        <select id="transpose-scope"></select>
+      </label>
+      <label>Semitones (+/-)
+        <input id="transpose-amount" type="number" step="1" value="0">
+      </label>
+      <div class="modal-actions">
+        <button id="transpose-cancel" class="btn subtle">Cancel</button>
+        <button id="transpose-apply" class="btn accent">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search-lyrics-online modal — asks for song/artist rather than
+       assuming the doc's meta fields, since those might be empty or
+       describe this arrangement rather than the published song. -->
+  <div id="lyrics-search-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3>Search lyrics online</h3>
+      <label>Song title <input id="lyrics-search-title" type="text"></label>
+      <label>Artist <input id="lyrics-search-artist" type="text"></label>
+      <div class="modal-actions">
+        <button id="lyrics-search-cancel" class="btn subtle">Cancel</button>
+        <button id="lyrics-search-go" class="btn accent">Search</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lyrics modal -->
+  <div id="lyrics-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3>Lyrics</h3>
+      <label>Scope
+        <select id="lyrics-scope"></select>
+      </label>
+      <textarea id="lyrics-textarea" rows="14"
+                placeholder="Paste or type lyrics here…"></textarea>
+      <label class="modal-checkbox">
+        <input id="lyrics-print" type="checkbox">
+        Include in TXT/PDF export and the Preview pane
+      </label>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <div>
+          <button id="lyrics-import" class="btn subtle">Import from file…</button>
+          <button id="lyrics-search" class="btn subtle">Search online ↗</button>
+          <button id="lyrics-split" class="btn subtle hidden"
+                  title="Split this text on blank lines and assign one block per section, in order — using existing sections first, then adding new ones for any leftover blocks.">Split into sections…</button>
+          <input id="lyrics-file-input" type="file" accept=".txt,text/plain" class="hidden">
+        </div>
+        <button id="lyrics-close" class="btn accent">Done</button>
+      </div>
+      <p class="modal-hint">Off by default: a reference layer, never aligned to the chart
+        automatically. Check the box above to print it too. "Search online ↗" asks for the
+        song title and artist, then opens a DuckDuckGo search in a new tab; nothing is
+        fetched or pasted in for you.</p>
     </div>
   </div>
 

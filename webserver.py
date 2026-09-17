@@ -90,6 +90,23 @@ WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 _RUNTIME = {"webview_window": None, "httpd": None}
 
 
+class _JsApi:
+    """Exposed to the front end as `window.pywebview.api` in native-window
+    mode. `window.open(url, "_blank")` is a no-op there (pywebview's
+    webview has no browser-tab concept to open it in), so the Lyrics
+    panel's "Search online" button calls this instead — same
+    webbrowser.open_new_tab() the desktop app's own lyrics search uses
+    — to hand the URL to the OS's actual default browser. In plain
+    browser mode (--browser, or pywebview not installed) `window.pywebview`
+    doesn't exist at all and the front end falls back to window.open()."""
+
+    def open_url(self, url: str) -> bool:
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+            return False
+        webbrowser.open_new_tab(url)
+        return True
+
+
 def _shutdown():
     window = _RUNTIME.get("webview_window")
     if window is not None:
@@ -470,6 +487,7 @@ def main(argv=None):
             "Song Notation Tool", url,
             width=1180, height=820, min_size=(900, 600),
             resizable=True, confirm_close=True,
+            js_api=_JsApi(),
         )
         _RUNTIME["webview_window"] = window
         webview.start()

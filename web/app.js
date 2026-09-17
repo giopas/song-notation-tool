@@ -23,6 +23,7 @@ const API = {
   render: (doc, instruments) => fetchJSON("/api/render", {
     method: "POST", body: JSON.stringify({ doc, instruments }),
   }),
+  quit: () => fetchJSON("/api/quit", { method: "POST" }),
 };
 
 function fetchJSON(url, opts) {
@@ -344,6 +345,37 @@ async function saveCurrent() {
   refreshSongList();
 }
 
+async function saveAndClose() {
+  if (currentDoc && currentFilename) {
+    try {
+      await saveCurrent();
+    } catch (err) {
+      if (!confirm(`Couldn't save ${currentFilename}: ${err}\n\nClose anyway without saving?`)) {
+        return;
+      }
+    }
+  }
+  showClosedOverlay("Closing…");
+  try {
+    await API.quit();
+  } catch (err) {
+    // The server may tear down before this response makes it back —
+    // that's expected, not a failure.
+  }
+  setTimeout(() => showClosedOverlay("Closed — you can close this window now."), 600);
+}
+
+function showClosedOverlay(message) {
+  let overlay = document.getElementById("closed-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "closed-overlay";
+    document.body.appendChild(overlay);
+  }
+  overlay.textContent = message;
+  overlay.classList.remove("hidden");
+}
+
 async function exportCurrent(kind) {
   if (!currentDoc) return;
   let url, filename, body;
@@ -420,6 +452,7 @@ async function init() {
   document.getElementById("btn-preview-toggle").addEventListener("click", () => togglePreview());
   document.getElementById("btn-preview-close").addEventListener("click", () => togglePreview(false));
   document.getElementById("btn-save").addEventListener("click", () => saveCurrent().catch((e) => toast(String(e))));
+  document.getElementById("btn-close").addEventListener("click", () => saveAndClose().catch((e) => toast(String(e))));
   document.getElementById("btn-add-section").addEventListener("click", addSection);
 
   document.getElementById("btn-export").addEventListener("click", () => {

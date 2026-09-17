@@ -4,6 +4,44 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.18.1] — 2026-09-17
+
+A follow-up to `webserver.py`'s launch mode from v0.18.0, closer to how
+the sibling `qlc-plus-swiss-knife-tool-script` project's window
+actually behaves: no OS titlebar by default, and a proper in-app way to
+quit now that there's no titlebar close button to rely on.
+
+### Added
+- **Frameless native window by default.** When `pywebview` is
+  installed, the window it opens now has no OS titlebar at all
+  (`frameless=True`), not just no browser chrome. `easy_drag=True`
+  keeps it movable by clicking anywhere in it; `confirm_close=True`
+  keeps Cmd/Ctrl+Q as a safety-netted fallback.
+- **"⏻ Save & Close" button** in the front end's toolbar — saves the
+  currently open song, then calls the new `POST /api/quit` route to
+  shut the app down cleanly. This is now the normal way to quit,
+  since a frameless window has no close button of its own.
+- **`POST /api/quit`** — destroys the native window in webview mode;
+  in browser mode, stops the HTTP server via `socketserver`'s own
+  thread-safe `shutdown()`.
+- **Clearer terminal output when `pywebview` isn't installed.** Instead
+  of silently opening a browser tab, `webserver.py` now prints the
+  install command (`pip install pywebview`, or `pip install -r
+  requirements-optional.txt`) and reminds you of `--browser` /
+  `--no-open`. Only shown when the fallback is actually due to the
+  missing package — not when `--browser` was passed on purpose, and
+  not with `--no-open` (nothing was going to open either way).
+
+### Fixed
+- The first pass at `/api/quit` (written but never released) used a
+  self-sent `SIGINT` to stop the server in browser mode, matching the
+  reference project. Caught during testing: self-directed signal
+  delivery to a backgrounded process isn't reliable in every
+  environment — confirmed with an isolated repro where even an
+  externally sent `SIGTERM` didn't stop a trivial Python loop, only
+  `SIGKILL` did. Switched to `socketserver.BaseServer.shutdown()`,
+  which needs no signal delivery at all and works the same everywhere.
+
 ## [0.18.0] — 2026-09-17
 
 Two things: the app now runs headless and in a browser, not just as a

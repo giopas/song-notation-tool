@@ -6,24 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.18.1] — 2026-09-17
 
-A follow-up to `webserver.py`'s launch mode from v0.18.0, closer to how
-the sibling `qlc-plus-swiss-knife-tool-script` project's window
-actually behaves: no OS titlebar by default, and a proper in-app way to
-quit now that there's no titlebar close button to rely on.
+A follow-up to `webserver.py`'s launch mode from v0.18.0: a resizable
+native app window instead of a browser tab, and a proper in-app "Save
+& Close" alongside it.
 
 ### Added
-- **Frameless native window by default.** When `pywebview` is
-  installed, the window it opens now has no OS titlebar at all
-  (`frameless=True`), not just no browser chrome. `easy_drag=True`
-  keeps it movable by clicking anywhere in it; `confirm_close=True`
-  keeps Cmd/Ctrl+Q as a safety-netted fallback.
+- **`webserver.py` opens a native app window**, when `pywebview` is
+  installed: a normal titled OS window (resizable, its own
+  minimize/maximize/close buttons) rather than a full browser tab with
+  an address bar and tabs — the same idea as the sibling
+  `qlc-plus-swiss-knife-tool-script` project's window. A frameless
+  (no-titlebar) version was tried first and reverted: testing found it
+  loses native resize-by-edge and maximize on macOS, with nothing
+  `pywebview` exposes to reliably bring either back.
 - **"⏻ Save & Close" button** in the front end's toolbar — saves the
   currently open song, then calls the new `POST /api/quit` route to
-  shut the app down cleanly. This is now the normal way to quit,
-  since a frameless window has no close button of its own.
+  shut the app down cleanly. A convenience alongside the window's own
+  close button, not a replacement for it.
 - **`POST /api/quit`** — destroys the native window in webview mode;
   in browser mode, stops the HTTP server via `socketserver`'s own
-  thread-safe `shutdown()`.
+  thread-safe `shutdown()` (not a self-sent signal — see Fixed below).
 - **Clearer terminal output when `pywebview` isn't installed.** Instead
   of silently opening a browser tab, `webserver.py` now prints the
   install command (`pip install pywebview`, or `pip install -r
@@ -33,14 +35,14 @@ quit now that there's no titlebar close button to rely on.
   not with `--no-open` (nothing was going to open either way).
 
 ### Fixed
-- The first pass at `/api/quit` (written but never released) used a
-  self-sent `SIGINT` to stop the server in browser mode, matching the
-  reference project. Caught during testing: self-directed signal
-  delivery to a backgrounded process isn't reliable in every
-  environment — confirmed with an isolated repro where even an
-  externally sent `SIGTERM` didn't stop a trivial Python loop, only
-  `SIGKILL` did. Switched to `socketserver.BaseServer.shutdown()`,
-  which needs no signal delivery at all and works the same everywhere.
+- An early draft of `/api/quit` used a self-sent `SIGINT` to stop the
+  server in browser mode, matching the reference project. Caught
+  during testing: self-directed signal delivery to a backgrounded
+  process isn't reliable in every environment — confirmed with an
+  isolated repro where even an externally sent `SIGTERM` didn't stop a
+  trivial Python loop, only `SIGKILL` did. Switched to
+  `socketserver.BaseServer.shutdown()`, which needs no signal delivery
+  at all and works the same everywhere.
 
 ## [0.18.0] — 2026-09-17
 

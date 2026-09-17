@@ -15,10 +15,11 @@ phone or tablet at rehearsal).
 Run it:
 
     ./webserver.py                 # opens a window automatically —
-                                    # a frameless native window if
-                                    # pywebview is installed, else
-                                    # your default browser (with
-                                    # install instructions printed)
+                                    # a native app window (resizable,
+                                    # not a browser tab) if pywebview
+                                    # is installed, else your default
+                                    # browser (with install
+                                    # instructions printed)
     ./webserver.py --dir mysongs --port 9000
     ./webserver.py --browser       # force a normal browser tab, even
                                     # if pywebview is installed
@@ -34,12 +35,17 @@ qlc-plus-swiss-knife-tool-script project, its native-window mode is
 used automatically when it's importable and falls straight back to
 opening your default browser tab when it isn't, printing install
 instructions when that fallback is due to the missing package rather
-than an explicit --browser. Nothing here requires it to run. Since the
-window is frameless (no OS titlebar/close button), the front end's
-"Save & Close" button is the normal way to quit — it saves the open
-song, then calls POST /api/quit, which destroys the native window (or,
-in browser mode, sends this process SIGINT) — same pattern as that
-sibling project's own /api/quit route.
+than an explicit --browser. Nothing here requires it to run. The
+window is a normal titled OS window — resizable, with its own
+minimize/maximize/close buttons — not frameless: that was tried first
+and reverted once testing showed a borderless pywebview window loses
+native resize-by-edge and maximize on macOS, with nothing pywebview
+exposes to reliably replace either. The front end's "Save & Close"
+button is still there as a convenience alongside the window's own
+close button — it saves the open song, then calls POST /api/quit,
+which destroys the native window (or, in browser mode, stops the
+HTTP server via socketserver's own thread-safe shutdown()) — same
+idea as that sibling project's own /api/quit route.
 
 Songs are plain .sng JSON files (the same format the desktop app saves)
 read from/written to --dir. The API is documented inline below, next to
@@ -443,25 +449,27 @@ def main(argv=None):
             pywebview_missing = True
 
     if use_webview:
-        # ── Native window mode: frameless by default (no OS titlebar, no
-        # browser chrome at all) — like the sibling
-        # qlc-plus-swiss-knife-tool-script project's app window, minus its
-        # titlebar too. easy_drag lets you move the window by dragging
-        # anywhere in it, since there's no titlebar left to drag by; the
-        # in-page "Save & Close" button (or Cmd/Ctrl+Q, still caught by
-        # confirm_close below) is the normal way to close it, since a
-        # frameless window has no visible close button of its own.
+        # ── Native window mode: a normal titled OS window — not a browser
+        # tab (no address bar, no tabs), but not frameless either. This
+        # started out frameless; reverted after testing found that a
+        # borderless pywebview window loses native resize-by-edge and
+        # maximize on macOS, with no reliable custom replacement pywebview
+        # exposes for either. A titlebar's own maximize/resize/close
+        # buttons are the correct fix, not more code — matches how the
+        # sibling qlc-plus-swiss-knife-tool-script project's window
+        # actually works too. resizable=True is pywebview's own default;
+        # named explicitly here since it's the whole point.
         # pywebview needs the main thread for its OS event loop (required
         # on macOS in particular), so the HTTP server runs in a background
         # thread instead of the usual serve_forever() on the main thread.
         server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         server_thread.start()
-        print(f"Opening {url} in a native window.  Use the in-app Save & "
-              f"Close button (or Cmd/Ctrl+Q) to quit.")
+        print(f"Opening {url} in a native window.  Close the window (or "
+              f"use the in-app Save & Close button) to quit.")
         window = webview.create_window(
             "Song Notation Tool", url,
             width=1180, height=820, min_size=(900, 600),
-            frameless=True, easy_drag=True, confirm_close=True,
+            resizable=True, confirm_close=True,
         )
         _RUNTIME["webview_window"] = window
         webview.start()
@@ -475,7 +483,7 @@ def main(argv=None):
     # connections, then block on serve_forever() as before.
     if pywebview_missing:
         print("Note: pywebview isn't installed, so this opened in your "
-              "browser instead of a frameless native window.")
+              "browser instead of a native app window.")
         print("  Install it for the native window:  pip install pywebview")
         print("  (or: pip install -r requirements-optional.txt)")
         print("Other options: --browser (always use a browser tab), "

@@ -145,20 +145,19 @@ Running it opens a window for you automatically — no need to copy a
 URL into a browser by hand. If the optional
 [`pywebview`](https://pypi.org/project/pywebview/) package is installed
 (`pip install pywebview`, or `pip install -r requirements-optional.txt`),
-that window is **frameless** — no OS titlebar, no browser chrome at
-all — the same launch experience as the sibling
+that's a normal native app window — resizable, with its own
+minimize/maximize/close buttons, just not a full browser tab (no
+address bar, no tabs) — the same idea as the sibling
 [qlc-plus-swiss-knife-tool-script](https://github.com/giopas/qlc-plus-swiss-knife-tool-script)
-project's window, minus its titlebar too. Without `pywebview` it falls
-straight back to your default browser tab instead, and prints the
-install command so you know it's available; either way it's the same
-page underneath — `pywebview` is entirely optional, never required to
-run the server.
+project's window. Without `pywebview` it falls straight back to your
+default browser tab instead, and prints the install command so you
+know it's available; either way it's the same page underneath —
+`pywebview` is entirely optional, never required to run the server.
 
-Because the window has no titlebar, the front end's **"⏻ Save &
-Close"** button (top right) is the normal way to quit — it saves the
+The front end also has a **"⏻ Save & Close"** button (top right) as a
+convenience alongside the window's own close button — it saves the
 song you have open, then closes the window (or, in a plain browser
-tab, stops the server). The window can still be dragged by clicking
-anywhere in it, and Cmd/Ctrl+Q still works as a fallback.
+tab, stops the server).
 
 Once it's open, you get the song list, meta form, and a chart-line
 editor per section with the same live-parsing preview the desktop

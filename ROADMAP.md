@@ -30,7 +30,7 @@ serves that, not by difficulty.
 | **v0.16** | **Foundation release** — new data model, chart grammar, non-destructive render-time transposition, compact exports, v0.15 migration, repo hygiene. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.17** | **Song map + chart editor bar** — the UI rewrite: whole-song map, live-parsing chart editor, riff library with usage tracking, reordering, non-destructive transpose end to end, Stage View, page-break-safe PDF. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.18** | **Headless & browser use, plus a UX pass** — `export.py` extracted to a pure TXT/PDF engine; `cli.py` (convert/batch/lint, no window); `webserver.py` + `web/` (stdlib-only local server and browser front end); a "Start here" panel, help strip, and live Preview window in the desktop app. Resolves the "§11 architecture fork" item below. See [CHANGELOG.md](CHANGELOG.md). |
-| **v0.18.1** | **Frameless native window + Save & Close** — `webserver.py`'s window is frameless by default when `pywebview` is installed, with a "⏻ Save & Close" button (and new `/api/quit` route) as the normal way to quit it. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.18.1** | **Native app window (not frameless) + Save & Close** — `webserver.py` opens a resizable native window when `pywebview` is installed, not a browser tab; a "⏻ Save & Close" button (and new `/api/quit` route) sits alongside its own close button. See [CHANGELOG.md](CHANGELOG.md). |
 
 ---
 

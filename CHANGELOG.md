@@ -72,7 +72,7 @@ release resolves.
 - **Desktop app — live Preview window.** A "👁 Preview" toolbar button
   opens a window showing the TXT/PDF export as it will look, refreshed
   automatically on every edit that touches the song map.
-- `tests/test_export.py` — 8 new tests covering `export.py`, including
+- `tests/test_export.py` — 7 new tests covering `export.py`, including
   an explicit assertion that the module has no `tkinter` import.
 
 ### Changed
@@ -89,6 +89,14 @@ release resolves.
   (desktop app, CLI, web server) instead of being defined separately.
 
 ## [0.17.0] — 2026-09-16
+
+The UI rewrite `DESIGN_v0_17.md` called for: the app now edits the
+v0.16 document model directly — a section's `items` — instead of the
+retired per-measure `layers` grid. The song map, the chart editor bar,
+and the riff library become the editing surface for every
+`render:"chart"` section (most of them); the old measure grid survives,
+rewired onto `measure` items, for `render:"tab"` sections. 92 unit
+tests, all independent of Tk/a display.
 
 ### Added
 - **Song map** — the section listbox + single-section editor split is
@@ -140,12 +148,26 @@ release resolves.
 - The v0.15 section-link dialog (`link_id`) — superseded by
   `=sectionname` references typed directly in the chart line, and by
   Ctrl/Cmd+D.
-- The custom-drawn scrollbar indicator canvases (v0.6) — replaced with
-  standard `ttk.Scrollbar`s.
+- The custom-drawn scrollbar indicator canvases (v0.6) — simplified to
+  standard `ttk.Scrollbar`s in the rewrite; functionally equivalent,
+  the drawn-canvas look is gone.
 
-See `RELEASE_NOTES_v0.17.0.md` for what's deferred from `DESIGN_v0_17.md`.
+### Deferred
+Being upfront about the gap between `DESIGN_v0_17.md` and this
+release — graphical 1st/2nd-ending brackets and a boxed coda block
+(`render.mark_spans()`/`has_coda()` resolve the data; nothing draws
+the graphics yet), chart-editor-bar autocomplete, and tab-grid
+measure copy/paste all stayed out of scope here. Tracked live in
+`ROADMAP.md` rather than repeated per-release.
 
 ## [0.16.0] — 2026-09-16
+
+v0.15 supported exactly one thing — a full measure-by-measure tab grid
+— which meant every song came out as several pages, mostly dashes,
+with repeated sections written out in full (see `DESIGN_v0_16.md`
+section 2 for the audit against a real song). This release is the
+foundation for the compact, one-page charts the project is actually
+for.
 
 ### Added
 - New `.sng` data model (format 2): a section is a flat sequence of items
@@ -160,7 +182,8 @@ See `RELEASE_NOTES_v0.17.0.md` for what's deferred from `DESIGN_v0_17.md`.
   Never rewrites stored notes; a `+n` then `-n` round trip is exact.
 - **v0.15 → v0.16 migration** (`model.migrate_document`) — old files load
   without loss; `link_id` becomes a `section_ref`, tab/chords/notes layers
-  become items.
+  become items. Nothing destructive: a v0.15 `.sng` opens as-is and the
+  app won't overwrite it with the new format until you explicitly save.
 - A "Chart line" field in the section editor, parsed live against the new
   grammar (minimal UI hook — the full chart-row editor and song map are
   v0.17).

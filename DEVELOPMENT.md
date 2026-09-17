@@ -40,8 +40,10 @@ display, which this environment often doesn't have.
 ## Conventions
 
 - No dependencies beyond the Python standard library, plus `pytest` for
-  the test suite (dev-only).
-- The version lives in `APP_VERSION` in `song_writer.py` — nowhere else.
+  the test suite (dev-only), and an entirely optional `pywebview` for
+  `webserver.py`'s native-window launch mode (see
+  `requirements-optional.txt`) — never required to run anything.
+- The version lives in `APP_VERSION` in `constants.py` — nowhere else.
   Do not version the filename.
 - A bug fix belongs in the changelog under "Fixed" even if it was
   discovered incidentally while building something else.
@@ -50,7 +52,12 @@ display, which this environment often doesn't have.
 
 ## Releasing
 
-1. Update `CHANGELOG.md`.
-2. Write `RELEASE_NOTES_vX.Y.Z.md`.
-3. Tag `vX.Y.Z` and cut a GitHub Release from the tag, using the release
-   notes file as the release body.
+1. Update `CHANGELOG.md` — a short "why" paragraph at the top of the
+   version's entry, then Added/Changed/Removed/Deferred as usual. This
+   is the single source of release history now; there's no separate
+   `RELEASE_NOTES_vX.Y.Z.md` file per release any more (there used to
+   be, for v0.16.0 and v0.17.0 — folded back into `CHANGELOG.md` and
+   removed once the app's pace made maintaining two documents of the
+   same story per release more overhead than it was worth).
+2. Tag `vX.Y.Z` and cut a GitHub Release from the tag, using that
+   version's `CHANGELOG.md` section as the release body.

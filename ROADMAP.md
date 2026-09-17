@@ -28,7 +28,7 @@ serves that, not by difficulty.
 | v0.14 | Minor stability and layout fixes |
 | v0.15 | Ongoing refinements before this changelog existed |
 | **v0.16** | **Foundation release** — new data model, chart grammar, non-destructive render-time transposition, compact exports, v0.15 migration, repo hygiene. See [CHANGELOG.md](CHANGELOG.md). |
-| **v0.17** | **Song map + chart editor bar** — the UI rewrite: whole-song map, live-parsing chart editor, riff library with usage tracking, reordering, non-destructive transpose end to end, Stage View, page-break-safe PDF. See [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v0.17.0.md](RELEASE_NOTES_v0.17.0.md). |
+| **v0.17** | **Song map + chart editor bar** — the UI rewrite: whole-song map, live-parsing chart editor, riff library with usage tracking, reordering, non-destructive transpose end to end, Stage View, page-break-safe PDF. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.18** | **Headless & browser use, plus a UX pass** — `export.py` extracted to a pure TXT/PDF engine; `cli.py` (convert/batch/lint, no window); `webserver.py` + `web/` (stdlib-only local server and browser front end); a "Start here" panel, help strip, and live Preview window in the desktop app. Resolves the "§11 architecture fork" item below. See [CHANGELOG.md](CHANGELOG.md). |
 
 ---

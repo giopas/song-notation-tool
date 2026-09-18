@@ -209,6 +209,18 @@ function buildSectionCard(sec, idx) {
   wireSectionEvents(node, sec, idx);
   updateSectionPreview(node, sec);
   updateTabGridVisibility(node, sec);
+
+  // A freshly built card has no "last render" to preserve, so the
+  // leave-it-alone path in updateSectionPreview would leave the chart row
+  // blank until the first keystroke. Fetch the render once, in the
+  // background — failures are silent, since this is only a display nicety
+  // and the typed line is already on screen.
+  if (lineInput.value.trim() && sec.render !== "free") {
+    API.parseLine(lineInput.value)
+      .then((result) => { if (result.ok) updateSectionPreview(node, sec, result); })
+      .catch(() => {});
+  }
+
   return node;
 }
 

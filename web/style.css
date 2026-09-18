@@ -40,6 +40,8 @@ button {
 /* ---------- topbar ---------- */
 #topbar {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 8px;
   align-items: center;
   justify-content: space-between;
   background: var(--header-bg);
@@ -48,7 +50,7 @@ button {
 }
 #app-title { font-weight: bold; color: var(--accent); }
 #app-version { color: var(--lbl-gray); margin-left: 8px; font-size: 12px; }
-#topbar-right { display: flex; gap: 8px; align-items: center; }
+#topbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 .btn {
   background: var(--btn-bg);
@@ -135,7 +137,18 @@ button {
 #song-list .song-title { display: block; font-weight: 600; }
 #song-list .song-artist { display: block; font-size: 12px; color: var(--lbl-gray); }
 
-#main { flex: 1; padding: 20px; max-width: 980px; }
+/* The editor is form-like — inputs, dropdowns and monospace chart lines —
+   and a wide window should give the chart line more room, not park 800px
+   of empty space to its right (which a hard `max-width: 980px` did). It
+   still gets an upper bound so a 4K display doesn't stretch one line of
+   chords across half a metre, and centres itself once it hits that. */
+#main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px;
+  max-width: 1680px;
+  margin: 0 auto;
+}
 
 /* ---------- start-here ---------- */
 #start-here { text-align: center; padding: 60px 20px; color: var(--lbl-gray); }
@@ -182,7 +195,7 @@ button {
 .section-card[data-type="Outro"]     { border-left-color: #b4befe; }
 
 .section-head {
-  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px;
 }
 .drag-handle { color: var(--lbl-gray); cursor: grab; padding: 0 2px; }
 
@@ -209,16 +222,23 @@ button {
    two columns at that width, so the strip stays about as tall as the
    input row it sits next to. */
 .sec-line-row {
-  display: flex; align-items: flex-start; gap: 8px;
+  display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap;
 }
-.sec-line-row .sec-chart-line { flex: 1 1 auto; min-width: 0; }
+/* The input keeps a floor so the palette can't squeeze it to nothing, and
+   grows into whatever is left over. */
+.sec-line-row .sec-chart-line { flex: 1 1 200px; min-width: 0; }
 
+/* Sized by its content rather than pinned to a fixed column: in a wide
+   window the whole palette sits on one row beside the input (so the card
+   is as tall as the input, not four button-rows tall), and it wraps to two
+   or three rows only as the window narrows. This is what makes a resize
+   actually buy you something. */
 .sec-insert-strip {
-  flex: 0 0 auto; width: 148px;
+  flex: 0 1 auto;
   display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start;
 }
 .ins-btn {
-  min-width: 34px; flex: 1 1 34px;
+  min-width: 34px; flex: 0 0 auto;
   background: var(--btn-bg); color: var(--fg);
   border: 1px solid var(--border); border-radius: 4px;
   padding: 3px 5px; font-family: var(--mono); font-size: 11px;
@@ -229,9 +249,14 @@ button {
 
 @media (max-width: 760px) {
   /* Narrow window: the palette goes under the line instead of beside it,
-     rather than squeezing the input it's meant to serve. */
+     rather than squeezing the input it's meant to serve, and the buttons
+     spread to fill the row they now own. */
   .sec-line-row { flex-direction: column; }
+  /* flex-basis is the HEIGHT once the direction is column, so the row's
+     `flex: 1 1 220px` would make this input 220px tall. Size by width. */
+  .sec-line-row .sec-chart-line { flex: 0 0 auto; width: 100%; }
   .sec-insert-strip { width: 100%; }
+  .ins-btn { flex: 1 1 34px; }
 }
 
 /* ---------- free-text mode ---------- */
@@ -245,10 +270,18 @@ button {
 .sec-free-text:focus { border-color: var(--select-bg); outline: none; }
 .sec-free-text::placeholder { color: var(--lbl-gray); }
 
+/* `white-space: pre` belongs on the two rows, NOT on this wrapper: on the
+   wrapper it also preserved the newlines and indentation of the template's
+   own source between the child <div>s, so an empty preview still rendered
+   about six blank line boxes — ~117px of dead space in every single
+   section card, which is most of what made the cards look padded out. The
+   rows keep `pre` because column alignment is the whole point of them. */
 .sec-preview {
-  font-family: var(--mono); white-space: pre; overflow-x: auto;
+  font-family: var(--mono); overflow-x: auto;
   margin-top: 6px; color: var(--fg); font-size: 13px; line-height: 1.5;
 }
+.sec-preview:empty { margin-top: 0; }
+.sec-preview-fret, .sec-preview-sym { white-space: pre; }
 .sec-preview-fret { color: var(--amber); }
 .sec-preview-sym { color: var(--fg); }
 

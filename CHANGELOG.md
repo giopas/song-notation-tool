@@ -79,6 +79,36 @@ sentence on it.
   can read isn't much of a chart.
 
 ### Fixed
+- **Section cards wasted most of the window.** Three separate causes,
+  found by measuring the real layout in a headless browser rather than
+  eyeballing it:
+  - `#main` was capped at `max-width: 980px`, so a 2000px-wide window
+    left ~800px of dead space to the right of every card. It now fills
+    the width it's given, with a 1680px upper bound (and auto margins
+    past that, so an ultra-wide display doesn't stretch one line of
+    chords across half a metre).
+  - `.sec-preview` carried `white-space: pre`, which preserved the
+    newlines and indentation of the template's own markup between its
+    two child rows — an *empty* preview still rendered about six blank
+    line boxes, ~117px of dead height in every card. `pre` now sits on
+    the two rows, where the column alignment actually needs it.
+  - The quick-insert palette was pinned to a fixed 148px column, so it
+    always wrapped to four button-rows and made every card as tall as
+    the palette rather than as tall as the input. It's now sized by its
+    content: one row beside the input in a wide window, wrapping only as
+    the window narrows. Net effect on a wide window: a section card went
+    from 294px tall to 117px.
+- **The page scrolled sideways below ~900px.** `.section-head` packs
+  nine controls into a non-wrapping flex row, so the whole document grew
+  wider than the viewport instead of the header wrapping. Both it and
+  the topbar now wrap. Also fixed the narrow-window rule flipping
+  `.sec-line-row` to `flex-direction: column`, where the input's
+  `flex-basis` sizes *height* — it was rendering 260px tall.
+- **A section's rendered chart row was blank until you typed in it.**
+  `updateSectionPreview()` treats "no parse result" as "keep the last
+  render", but a freshly built card has no last render to keep, so
+  every card from a saved song opened with an empty preview. Cards now
+  fetch their render once on build.
 - **Icon buttons in the section header had their glyphs off-centre**
   (the ↑ ↓ ⧉ 🗑 row, and the sidebar's +). They carry both `.btn` and
   `.icon-btn`; `.btn`'s `padding: 6px 12px` was being applied inside

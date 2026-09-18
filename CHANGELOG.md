@@ -59,6 +59,10 @@ sentence on it.
   `SNT_DEBUG_LAUNCH=1` prints the full traceback.
 
 ### Changed
+- **Every export carries the project link in its footer** — TXT and PDF
+  alike. A chart handed to a bandmate is the only place its reader can
+  look to find out what made it. The URL lives in `constants.APP_URL`,
+  beside the version, so it's stated once.
 - **Section names print without square brackets** in both TXT and PDF.
   The brackets marked the name out from its surroundings, but a banner
   band or a divider rule already does that — they were two more

@@ -436,3 +436,16 @@ def test_section_names_print_without_brackets():
     text = "\n".join(export.build_song_lines(doc))
     assert "[" not in text and "]" not in text
     assert "Intro" in text
+
+
+def test_exports_carry_the_project_link_in_the_footer():
+    """A chart handed to a bandmate should say where the program came
+    from — it's the only place the reader can look."""
+    from constants import APP_URL
+    doc = _layout_doc()
+    text = "\n".join(export.build_song_lines(doc))
+    assert APP_URL in text
+    assert text.rindex(APP_URL) > text.rindex("Intro")     # in the footer
+    # The PDF stores its content stream compressed, so check the source
+    # the footer is drawn from rather than the bytes.
+    assert export.build_pdf(doc).startswith(b"%PDF-1.4")

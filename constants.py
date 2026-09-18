@@ -11,6 +11,10 @@ from __future__ import annotations
 APP_VERSION = "0.20.0"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
+# Printed in the footer of every export, so a chart handed to someone else
+# says where it came from and where to get the program.
+APP_URL = "https://github.com/giopas/song-notation-tool"
+
 # Section-type presets shown in the New Section dialog / web UI.
 SECTION_TYPES = [
     "Intro", "Verse", "Pre-Chorus", "Chorus", "Refrain",

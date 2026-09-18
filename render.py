@@ -108,18 +108,28 @@ def _symbol_str(item: dict) -> str:
     return ""
 
 
-def render_chart_row(items, label: str = ""):
+BODY_INDENT = 2   # every body line in the TXT/PDF export starts here
+
+
+def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
     """
     Render one section's chart items as two column-aligned text lines:
     fret numbers above, symbols below. Groups/refs/marks render in the
     symbol row only (no fret line) — section 7.2.
+
+    With no `label`, the rows start at `indent` — the same column the
+    export indents its section headers, annotations and free text to, so a
+    chart section and a free-text section under the same header line up
+    instead of sitting two columns apart. A `label` (the desktop app's
+    song map, which prints the section name in a gutter) sizes its own
+    column as before.
     """
     if not items:
         return [label.rstrip()] if label else []
 
     frets = [_fret_str(it) for it in items]
     symbols = [_symbol_str(it) for it in items]
-    label_w = max(len(label) + 2, 4)
+    label_w = max(len(label) + 2, 4) if label else indent
     cols = [max(len(f), len(s)) + 2 for f, s in zip(frets, symbols)]
 
     fret_line = " " * label_w + "".join(f"{f:<{w}}" for f, w in zip(frets, cols))

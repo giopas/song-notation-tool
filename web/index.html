@@ -221,7 +221,7 @@
             <tr><td>Fret + note</td><td>Fret number (0–24) directly before symbol</td><td><code>5A</code> <code>7D</code> <code>10G</code> <code>0E</code></td></tr>
             <tr><td>Group / repeat</td><td>Wrap in <code>[ ]</code> with <code>xN</code> after bracket</td><td><code>[5A 7D]x2</code> <code>[C G]x4</code></td></tr>
             <tr><td>Standalone repeat</td><td><code>xN</code> right after any item</td><td><code>Am x3</code></td></tr>
-            <tr><td>Annotation</td><td>Double-quoted text</td><td><code>"keep it simple"</code></td></tr>
+            <tr><td>Annotation</td><td>Double-quoted text, or the Annotation field under the section</td><td><code>"keep it simple"</code></td></tr>
             <tr><td>Riff reference</td><td>Bare identifier (not a chord name)</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
             <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
             <tr><td>Transpose shift</td><td><code>+N</code> or <code>-N</code> on ref or group</td><td><code>riff1+2</code> <code>=verse1-1</code> <code>[5A 7D]x2+3</code></td></tr>
@@ -347,6 +347,13 @@
         <div class="sec-preview-fret"></div>
         <div class="sec-preview-sym"></div>
       </div>
+      <!-- The annotation had no home in the UI: typing "..." on the chart
+           line set it, unparse() then left it out of the line, and nothing
+           displayed it — so once set it could never be seen or removed.
+           One visible field, in every render mode. -->
+      <input class="sec-annotation" type="text"
+             placeholder="Annotation (optional) — printed in quotes under this section"
+             title="A free note printed under this section in the export. Clear it to remove it.">
       <div class="sec-error hidden"></div>
       <div class="sec-empty-hint hidden">This section has no measures yet — type a chart line above to start entering notes.</div>
       <div class="sec-tab-grid hidden">

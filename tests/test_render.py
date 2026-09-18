@@ -320,3 +320,21 @@ def test_group_symbol_row_keeps_fret_numbers():
     from render import render_chart_row
     rows = render_chart_row([model.make_group(grammar.parse_items("3A 12D"), repeat=2)])
     assert "3A 12D" in "\n".join(rows)
+
+
+def test_unlabelled_chart_row_uses_the_export_body_indent():
+    """A chart section and a free-text section under the same header must
+    start in the same column; they were 4 and 2 apart."""
+    from render import render_chart_row, BODY_INDENT
+    import grammar
+    fret, sym = render_chart_row(grammar.parse_items("3A 12D"))
+    assert sym.startswith(" " * BODY_INDENT + "3")  is False   # fret row is separate
+    assert sym[:BODY_INDENT] == " " * BODY_INDENT
+    assert sym[BODY_INDENT] != " "
+
+
+def test_labelled_chart_row_still_gets_its_own_gutter():
+    from render import render_chart_row
+    import grammar
+    _, sym = render_chart_row(grammar.parse_items("3A 12D"), label="Verse")
+    assert sym.startswith("Verse")

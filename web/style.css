@@ -306,6 +306,18 @@ button {
 .sec-preview-fret { color: var(--amber); }
 .sec-preview-sym { color: var(--fg); }
 
+.sec-annotation {
+  width: 100%; box-sizing: border-box; margin-top: 6px;
+  background: transparent; color: var(--fg);
+  border: 1px solid transparent; border-radius: 5px;
+  padding: 4px 8px; font-size: 12px; font-style: italic;
+}
+.sec-annotation::placeholder { color: var(--lbl-gray); font-style: italic; }
+.sec-annotation:hover { border-color: var(--border); }
+.sec-annotation:focus {
+  background: var(--input-bg); border-color: var(--select-bg); outline: none;
+}
+
 .sec-error {
   color: var(--red); font-size: 12px; margin-top: 4px;
 }

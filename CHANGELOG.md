@@ -122,6 +122,22 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **A section's annotation could be set but never removed.** Typing
+  `"like this"` on a chart line stored it as the section's `annotation`,
+  `grammar.unparse()` then (correctly) left it out of the line, and
+  nothing anywhere displayed it — so once set, a quoted note was
+  permanent, and in a free-text section, where the chart line is hidden
+  entirely, it couldn't even be re-typed. Each section card now has a
+  visible Annotation field, in every render mode; clearing it removes the
+  annotation. Typing `"…"` on the chart line still works and now lands in
+  that field instead of disappearing into the document.
+- **Chart sections printed two columns right of everything else.**
+  `render_chart_row()` used a minimum 4-column gutter even with no label,
+  while section headers, annotations and free text all indent by 2 — so a
+  chart or referenced section sat visibly out of line with the free-text
+  sections around it. There's now one `render.BODY_INDENT` the export
+  uses for every body line. A labelled row (the desktop song map's name
+  gutter) is unchanged.
 - **A group's symbol row dropped its fret numbers** — `[3A 12D]x2`
   printed as `[A D](x2)`. Harmless while groups were only ever typed by
   hand; not harmless once an expanded reference renders as one.

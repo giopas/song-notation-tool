@@ -202,3 +202,21 @@ def test_txt_export_expands_a_section_reference():
     assert "=chorus1" not in text
     assert text.count("A  D") == 2          # once for each section
     assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+def test_free_text_and_chart_sections_share_one_left_margin():
+    """The reported symptom: a referenced (chart) section printed two
+    columns further right than the free-text sections around it."""
+    import grammar, render
+    doc = model.new_document(title="T")
+    free = model.new_section("i", "Intro", "Intro", render="free")
+    free["free_text"] = "|--|3-|  |--|5-|"
+    chart = model.new_section("c", "Chorus", "Chorus")
+    chart["items"] = grammar.parse_items("C G")
+    chart["annotation"] = "keep it simple"
+    doc["sections"] = [free, chart]
+
+    body = [ln for ln in export.build_song_lines(doc)
+            if ln.strip() and not set(ln.strip()) <= {"=", "-"}]
+    indents = {len(ln) - len(ln.lstrip()) for ln in body}
+    assert indents == {render.BODY_INDENT}

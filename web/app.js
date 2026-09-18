@@ -200,6 +200,7 @@ function buildSectionCard(sec, idx) {
   lineInput.value = sec.chart_line || "";
 
   node.querySelector(".sec-free-text").value = sec.free_text || "";
+  node.querySelector(".sec-annotation").value = sec.annotation || "";
 
   // Populate tab beats dropdown
   const beatsSelect = node.querySelector(".tab-beats-select");
@@ -288,6 +289,12 @@ function wireSectionEvents(node, sec, idx) {
       if (result.ok) {
         setChartItems(s, result.items);
         s.chart_line = result.unparsed;
+        if (result.annotation) {
+          // grammar.unparse() drops the quoted text from the line, so show
+          // it in the field instead of losing track of it.
+          s.annotation = result.annotation;
+          node.querySelector(".sec-annotation").value = result.annotation;
+        }
         updateSectionPreview(node, s, result);
       } else {
         updateSectionPreview(node, s, { error: result.error });
@@ -298,6 +305,11 @@ function wireSectionEvents(node, sec, idx) {
     schedulePreviewUpdate();
   }, 150);
   lineInput.addEventListener("input", onLineChange);
+
+  node.querySelector(".sec-annotation").addEventListener("input", (e) => {
+    byId().annotation = e.target.value;
+    schedulePreviewUpdate();
+  });
 
   // Free-text mode: stored verbatim, never parsed. No debounce on the
   // model write (it's a plain string assignment); only the export preview

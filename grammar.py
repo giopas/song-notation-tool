@@ -79,6 +79,7 @@ _LITERAL_MARKS = {
 }
 _WORD_MARKS = {
     "coda": "coda", "segno": "segno", "dc": "dc", "ds": "ds",
+    "rest": "rest",
 }
 _ENDING_RE = re.compile(r'^\|(\d)\.$')
 

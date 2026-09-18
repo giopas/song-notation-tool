@@ -60,6 +60,8 @@ import mimetypes
 import os
 import re
 import socketserver
+import subprocess
+import sys
 import threading
 import webbrowser
 from http import HTTPStatus
@@ -295,6 +297,7 @@ class Handler(BaseHTTPRequestHandler):
                     "render_modes": RENDER_MODE_LABELS,
                     "instruments": INSTRUMENT_STRINGS,
                     "tab_beats_default": TAB_BEATS_DEFAULT,
+                    "tab_beats_options": [8, 16, 32, 64],
                 })
             if path == "/api/songs":
                 return self._send_json(self.store.list_songs())
@@ -423,7 +426,112 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json({"ok": True})
 
 
+# ==============================================================================
+#  Native window by default — re-exec into the project's own virtualenv.
+#
+#  pywebview is optional, but once it *is* installed the native window is
+#  what you want every time, without having to remember to activate a venv
+#  first. `python3 webserver.py` with the system interpreter would otherwise
+#  silently fall back to a browser tab just because that interpreter can't
+#  see ./.venv/lib/.../pywebview. So: if this interpreter has no pywebview
+#  but a sibling virtualenv does, hand the whole process over to that
+#  interpreter (os.execv — same PID, same argv, no wrapper script and no
+#  environment variables for the user to set).
+#
+#  SNT_NO_REEXEC=1 disables it, and the child always carries that flag so a
+#  broken venv can never produce an exec loop.
+# ==============================================================================
+
+_VENV_CANDIDATES = (".venv", "venv", "env")
+
+
+def _same_path(a: str, b: str) -> bool:
+    return os.path.realpath(a) == os.path.realpath(b)
+
+
+def _venv_python(root: str):
+    """
+    Path to a sibling virtualenv interpreter that can import webview, or
+    None. Cheap: only spawns a probe for venvs that actually exist.
+
+    "Am I already running under this venv?" is answered with sys.prefix
+    against the venv directory — NOT by comparing interpreter paths. On
+    macOS (and most Linux venvs) .venv/bin/python3 is a symlink straight
+    back to the base interpreter that created it, so `python3
+    webserver.py` from a shell whose python3 IS that base interpreter
+    makes realpath(.venv/bin/python3) == realpath(sys.executable) even
+    though this process has none of the venv's site-packages. That false
+    match is exactly the case this whole function exists to handle, so it
+    must not be the thing that aborts it.
+
+    Returns (path, None) on success, or (None, reason) so the caller can
+    say something useful when a venv is present but unusable.
+    """
+    reason = None
+    for name in _VENV_CANDIDATES:
+        vroot = os.path.join(root, name)
+        if not os.path.isdir(vroot):
+            continue
+        if _same_path(sys.prefix, vroot):
+            return None, None       # genuinely already inside it
+        for rel in (("bin", "python3"), ("bin", "python"), ("Scripts", "python.exe")):
+            cand = os.path.join(vroot, *rel)
+            if not os.path.isfile(cand):
+                continue
+            try:
+                proc = subprocess.run([cand, "-c", "import webview"],
+                                      stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.PIPE, timeout=30)
+            except (OSError, subprocess.SubprocessError) as exc:
+                reason = f"{os.path.relpath(cand, root)}: {exc}"
+                continue
+            if proc.returncode == 0:
+                return cand, None
+            err = (proc.stderr or b"").decode("utf-8", "replace").strip()
+            last = err.splitlines()[-1] if err else f"exit {proc.returncode}"
+            reason = f"{os.path.relpath(cand, root)} can't import webview — {last}"
+            if os.environ.get("SNT_DEBUG_LAUNCH") and err:
+                print(err)
+            break                   # one interpreter per venv is enough
+    return None, reason
+
+
+def _maybe_reexec_into_venv(argv):
+    """If the native window is wanted but this interpreter lacks pywebview,
+    re-exec under a sibling virtualenv that has it. Returns only when there
+    is nothing to do."""
+    if os.environ.get("SNT_NO_REEXEC"):
+        return
+    if "--browser" in argv or "--no-open" in argv:
+        return
+    try:
+        import webview  # noqa: F401
+        return                      # already good — nothing to do
+    except ImportError:
+        pass
+
+    root = os.path.dirname(os.path.abspath(__file__))
+    py, reason = _venv_python(root)
+    if not py:
+        # A venv that exists but can't import webview is worth one line —
+        # silently falling back to a browser tab is what made this
+        # confusing in the first place.
+        if reason:
+            print(f"Note: {reason}")
+            print("  (set SNT_DEBUG_LAUNCH=1 for the full traceback)")
+        return
+
+    os.environ["SNT_NO_REEXEC"] = "1"
+    rel = os.path.relpath(py, root)
+    print(f"Using {rel} (it has pywebview) for the native window.")
+    try:
+        os.execv(py, [py, os.path.abspath(__file__), *argv])
+    except OSError as exc:          # exec failed — carry on in this process
+        print(f"Could not switch interpreter ({exc}); continuing without it.")
+
+
 def main(argv=None):
+    _maybe_reexec_into_venv(list(sys.argv[1:] if argv is None else argv))
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--dir", default="songs",
                          help="Folder of .sng files to serve (default: ./songs)")
@@ -500,10 +608,13 @@ def main(argv=None):
     # open the default browser shortly after the server starts accepting
     # connections, then block on serve_forever() as before.
     if pywebview_missing:
-        print("Note: pywebview isn't installed, so this opened in your "
-              "browser instead of a native app window.")
-        print("  Install it for the native window:  pip install pywebview")
-        print("  (or: pip install -r requirements-optional.txt)")
+        print("Note: pywebview isn't installed for any interpreter this "
+              "script can find, so it opened in your browser instead of a "
+              "native app window.")
+        print("  Set it up once, and every later launch is a native window:")
+        print("    python3 -m venv .venv")
+        print("    .venv/bin/python3 -m pip install -r requirements-optional.txt")
+        print("  After that, plain `python3 webserver.py` finds it by itself.")
         print("Other options: --browser (always use a browser tab), "
               "--no-open (don't open anything automatically)")
     if not args.no_open:

@@ -13,10 +13,10 @@ ITEM_KINDS = ("token", "group", "block_ref", "section_ref", "measure", "mark")
 
 MARK_NAMES = (
     "repeat_open", "repeat_close", "ending_1", "ending_2",
-    "segno", "coda", "dc", "ds", "simile",
+    "segno", "coda", "dc", "ds", "simile", "rest",
 )
 
-RENDER_MODES = ("chart", "tab", "both")
+RENDER_MODES = ("chart", "tab", "both", "free")
 
 
 # ==============================================================================
@@ -78,12 +78,13 @@ def new_block(block_id, name, bars=4, beats_per_bar=8, instrument="Bass (4-strin
 
 
 def new_section(section_id, name, section_type="Verse",
-                 instrument="Bass (4-string)", repeat=1, render="chart"):
+                 instrument="Bass (4-string)", repeat=1, render="chart",
+                 free_text=""):
     return {
         "id": section_id, "name": name, "type": section_type,
         "instrument": instrument, "repeat": repeat, "transpose": 0,
         "render": render, "annotation": "", "lyrics_text": "",
-        "print_lyrics": False, "items": [],
+        "print_lyrics": False, "free_text": free_text, "items": [],
     }
 
 

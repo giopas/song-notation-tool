@@ -83,16 +83,22 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
                   f"  [{sec['name']}]{rep_str}   {sec.get('instrument', '')}",
                   div("-"), ""]
 
+        if sec.get("render") == "free":
+            free = sec.get("free_text", "") or ""
+            if free.strip():
+                lines += [f"  {ln}" for ln in free.splitlines()]
+                lines.append("")
+
         eff = transpose.effective_transpose(
             doc.get("transpose", 0), sec.get("transpose", 0))
         chart = songmap.chart_items(sec)
-        if chart:
+        if sec.get("render") != "free" and chart:
             resolved = render.resolve_display_items(chart, eff)
             lines += render.render_chart_row(resolved)
             lines.append("")
 
         measures = songmap.measure_items(sec)
-        if measures:
+        if sec.get("render") != "free" and measures:
             all_strings = INSTRUMENT_STRINGS.get(
                 sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
             strings = render.active_strings(
@@ -250,10 +256,11 @@ def build_pdf(doc: dict, instruments=None, orient: str = "portrait") -> bytes:
             sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
         eff = transpose.effective_transpose(
             doc.get("transpose", 0), sec.get("transpose", 0))
+        free_mode = sec.get("render") == "free"
         chart = songmap.chart_items(sec)
         chart_rows = (render.render_chart_row(render.resolve_display_items(chart, eff))
-                      if chart else [])
-        measures = songmap.measure_items(sec)
+                      if chart and not free_mode else [])
+        measures = [] if free_mode else songmap.measure_items(sec)
         strings = (render.active_strings(
                     [m.get("strings", {}) for m in measures], all_strings)
                    if measures else [])
@@ -272,6 +279,15 @@ def build_pdf(doc: dict, instruments=None, orient: str = "portrait") -> bytes:
         color(1, 1, 1)
         txt(MARGIN + 4, cy - LINE_H + 3, sec_label, sz=HEAD_SZ, bold=True)
         cy -= LINE_H + 6
+
+        if free_mode and (sec.get("free_text") or "").strip():
+            color(0, 0, 0)
+            for ln in sec["free_text"].splitlines():
+                txt(MARGIN, cy, ln, sz=MONO_SZ)
+                cy -= LINE_H
+                if cy < FOOTER_H + LINE_H:
+                    finish_page(); pn_holder[0] += 1; cy = H - MARGIN
+            cy -= 2
 
         if chart_rows:
             color(0, 0, 0)

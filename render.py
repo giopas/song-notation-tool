@@ -188,16 +188,30 @@ def lyrics_block_line_count(text: str) -> int:
     return len(text.splitlines()) + 1  # + trailing blank line
 
 
+def free_text_line_count(text: str) -> int:
+    """Line count a section's verbatim free-text block occupies when
+    printed — one line per source line, plus a trailing blank separator.
+    0 for blank/whitespace-only text."""
+    text = (text or "")
+    if not text.strip():
+        return 0
+    return len(text.splitlines()) + 1
+
+
 def estimate_section_lines(section: dict, strings=None) -> int:
     """Rough line count `section` will occupy in the TXT/PDF export."""
     items = section.get("items", [])
     annotation = section.get("annotation", "")
     lyrics = section.get("lyrics_text", "") if section.get("print_lyrics") else ""
-    if not items and not annotation and not lyrics.strip():
+    render_mode = section.get("render", "chart")
+    free = section.get("free_text", "") if render_mode == "free" else ""
+    if not items and not annotation and not lyrics.strip() and not free.strip():
         return 0
 
     lines = 1  # section label line
-    render_mode = section.get("render", "chart")
+
+    if render_mode == "free":
+        lines += free_text_line_count(free)
 
     if render_mode in ("chart", "both"):
         chart_items = [it for it in items if it.get("kind") != "measure"]

@@ -62,13 +62,27 @@ button {
 .btn.subtle { background: transparent; color: var(--lbl-gray); border-color: transparent; }
 .btn.subtle:hover { color: var(--fg); }
 
+/* Icon buttons are square and hold a single glyph. They carry .btn too
+   (for the border/hover treatment), and .btn's `padding: 6px 12px` was
+   being applied inside that fixed 28px box — shrinking the content area
+   to almost nothing and shoving the glyph off to one side. Flex centring
+   plus zero padding is what actually centres a glyph here: the glyphs in
+   use (↑ ↓ ⧉ 🗑 +) have wildly different bearings and baselines, so
+   text-align/line-height alone can't be trusted to place them. */
 .icon-btn {
   background: transparent;
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 6px;
   width: 28px; height: 28px;
+  min-width: 28px;
+  padding: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+  font-size: 13px;
 }
 .icon-btn:hover { border-color: var(--select-bg); }
 
@@ -188,6 +202,49 @@ button {
 }
 .sec-chart-line:focus { border-color: var(--select-bg); outline: none; }
 
+/* ---------- chart line + quick-insert palette ----------
+   The palette is a fixed-width column beside the input rather than above
+   or below it: a section card is already tall, and keeping the inserts at
+   eye level with the line they act on is the whole point. It wraps into
+   two columns at that width, so the strip stays about as tall as the
+   input row it sits next to. */
+.sec-line-row {
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.sec-line-row .sec-chart-line { flex: 1 1 auto; min-width: 0; }
+
+.sec-insert-strip {
+  flex: 0 0 auto; width: 148px;
+  display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start;
+}
+.ins-btn {
+  min-width: 34px; flex: 1 1 34px;
+  background: var(--btn-bg); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 3px 5px; font-family: var(--mono); font-size: 11px;
+  line-height: 1.3; cursor: pointer; text-align: center;
+}
+.ins-btn:hover { background: var(--surface); border-color: var(--select-bg); }
+.ins-btn:active { background: var(--select-bg); color: var(--select-fg); }
+
+@media (max-width: 760px) {
+  /* Narrow window: the palette goes under the line instead of beside it,
+     rather than squeezing the input it's meant to serve. */
+  .sec-line-row { flex-direction: column; }
+  .sec-insert-strip { width: 100%; }
+}
+
+/* ---------- free-text mode ---------- */
+.sec-free-text {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  background: var(--input-bg); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 8px 10px; font-family: var(--mono); font-size: 13px;
+  line-height: 1.5; margin-top: 2px;
+}
+.sec-free-text:focus { border-color: var(--select-bg); outline: none; }
+.sec-free-text::placeholder { color: var(--lbl-gray); }
+
 .sec-preview {
   font-family: var(--mono); white-space: pre; overflow-x: auto;
   margin-top: 6px; color: var(--fg); font-size: 13px; line-height: 1.5;
@@ -263,4 +320,122 @@ button {
   position: fixed; inset: 0; background: var(--bg); color: var(--lbl-gray);
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; z-index: 50;
+}
+
+/* ---------- render-mode toggle ---------- */
+.sec-render {
+  background: var(--input-bg); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 5px; padding: 5px 7px; font-size: 13px;
+}
+
+/* ---------- tab grid ---------- */
+.sec-tab-grid {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.tab-grid-toolbar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.tab-beats-label {
+  font-size: 12px; color: var(--lbl-gray); display: flex; align-items: center; gap: 4px;
+}
+.tab-beats-label select {
+  background: var(--input-bg); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 6px; font-size: 12px;
+}
+.tab-grid-body {
+  overflow-x: auto;
+}
+.tab-grid-table {
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.tab-grid-table th {
+  color: var(--blue);
+  font-weight: normal;
+  padding: 2px 6px;
+  text-align: center;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tab-grid-table td {
+  padding: 0;
+}
+.tab-grid-table .tab-string-label {
+  color: var(--mauve);
+  font-weight: 600;
+  padding: 2px 6px;
+  text-align: right;
+  white-space: nowrap;
+  user-select: none;
+}
+.tab-grid-table input.tab-cell {
+  width: 32px;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 2px;
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: center;
+}
+.tab-grid-table input.tab-cell:focus {
+  border-color: var(--select-bg);
+  outline: none;
+  background: var(--input-bg);
+}
+.tab-measure-header {
+  display: flex; align-items: center; gap: 2px; justify-content: center;
+}
+.tab-del-measure {
+  background: transparent; color: var(--lbl-gray); border: none;
+  font-size: 10px; cursor: pointer; padding: 0 2px; line-height: 1;
+}
+.tab-del-measure:hover { color: var(--red); }
+
+/* ── Notation reference modal ────────────────────────────────────── */
+.notation-ref-body {
+  max-height: 55vh;
+  overflow-y: auto;
+  margin: 12px 0;
+}
+.notation-ref-body h4 {
+  margin: 16px 0 6px;
+  color: var(--mauve);
+  font-size: 14px;
+}
+.notation-ref-body p {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.notation-ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.notation-ref-table th {
+  text-align: left;
+  color: var(--mauve);
+  border-bottom: 1px solid var(--border);
+  padding: 5px 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.notation-ref-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.notation-ref-table code {
+  background: var(--surface);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 13px;
 }

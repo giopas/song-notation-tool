@@ -14,6 +14,7 @@
     </div>
     <div id="topbar-right">
       <button id="btn-help" class="icon-btn" title="How this works">?</button>
+      <button id="btn-notation-ref" class="btn subtle" title="Show all available chart-line notations">Notation ⌘</button>
       <button id="btn-transpose" class="btn" title="Transpose the whole song or one section, without rewriting what you typed">Transpose ↕</button>
       <button id="btn-lyrics" class="btn" title="Paste, import, or search for lyrics — reference only, never exported">Lyrics 📝</button>
       <button id="btn-preview-toggle" class="btn">Preview</button>
@@ -46,6 +47,17 @@
         once, every section using it updates. (Manage riffs from the desktop app for now.)</li>
       <li><strong>Transpose</strong> shifts every chord/fret in a section (or the whole song)
         by semitones, without rewriting what you typed — safe to undo by transposing back.</li>
+      <li><strong>Rest</strong>: type <code>rest</code> in a chart line to mark a measure where
+        you don't play — shows as "rest" in the chart and export.</li>
+      <li><strong>Tab grid</strong>: switch a section's render mode to "Tab" or "Both" (dropdown
+        in the section header) to show an editable tablature grid. Add measures with the
+        "+ Measure" button and type fret numbers into the cells.</li>
+      <li><strong>Free text</strong>: switch a section's render mode to "Free" for a plain
+        text box instead of a chart line — anything you type there is kept and exported
+        verbatim, for the bits this notation doesn't cover.</li>
+      <li><strong>The buttons beside the chart line</strong> drop notation at the cursor —
+        rests, repeat barlines, endings, groups, annotations — so you don't have to
+        remember the syntax.</li>
       <li><strong>Lyrics</strong> holds reference text for a section or the whole song — paste
         it, import a .txt file, or open a browser tab to search for it online. It's never
         parsed, aligned, or exported automatically; just there to work against by eye.</li>
@@ -177,6 +189,96 @@
     </div>
   </div>
 
+
+  <!-- Notation reference modal -->
+  <div id="notation-ref-backdrop" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3>Notation Reference</h3>
+      <p class="modal-hint" style="margin-top:0">Everything you can type in a chart line, at a glance.</p>
+
+      <div class="notation-ref-body">
+        <table class="notation-ref-table">
+          <thead><tr><th>What</th><th>Syntax</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td>Chord / note</td><td>Symbol, optionally with quality suffix</td><td><code>B</code> <code>F#</code> <code>Am7</code> <code>C/G</code></td></tr>
+            <tr><td>Fret + note</td><td>Fret number (0–24) directly before symbol</td><td><code>5A</code> <code>7D</code> <code>10G</code> <code>0E</code></td></tr>
+            <tr><td>Group / repeat</td><td>Wrap in <code>[ ]</code> with <code>xN</code> after bracket</td><td><code>[5A 7D]x2</code> <code>[C G]x4</code></td></tr>
+            <tr><td>Standalone repeat</td><td><code>xN</code> right after any item</td><td><code>Am x3</code></td></tr>
+            <tr><td>Annotation</td><td>Double-quoted text</td><td><code>"keep it simple"</code></td></tr>
+            <tr><td>Riff reference</td><td>Bare identifier (not a chord name)</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
+            <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
+            <tr><td>Transpose shift</td><td><code>+N</code> or <code>-N</code> on ref or group</td><td><code>riff1+2</code> <code>=verse1-1</code> <code>[5A 7D]x2+3</code></td></tr>
+          </tbody>
+        </table>
+
+        <h4>Marks</h4>
+        <p class="modal-hint" style="margin-top:0">These are the standard sheet-music
+          symbols, written out as plain text you can type. They exist so a repeated part
+          is written once and pointed at, instead of copied out again — which is what
+          keeps a song on one page.</p>
+        <table class="notation-ref-table">
+          <thead><tr><th>Type</th><th>Name</th><th>What it tells the player</th></tr></thead>
+          <tbody>
+            <tr><td><code>|:</code></td><td>Repeat-open</td>
+                <td>Start of a repeated stretch. Opens the section that <code>:|</code> closes.</td></tr>
+            <tr><td><code>:|</code></td><td>Repeat-close</td>
+                <td>End of a repeated stretch — go back to the last <code>|:</code> (or to the
+                    start of the song if there isn't one) and play it through once more.</td></tr>
+            <tr><td><code>|1.</code></td><td>1st ending</td>
+                <td>Play this the <em>first</em> time through the repeat, then go back.
+                    Everything after the mark belongs to the ending, up to the next one.</td></tr>
+            <tr><td><code>|2.</code></td><td>2nd ending</td>
+                <td>Skip the 1st ending on the way through the second time and play this
+                    instead, then carry on. The usual "two different last bars" case.</td></tr>
+            <tr><td><code>%</code></td><td>Simile</td>
+                <td>Play this bar exactly like the previous one. Saves rewriting a
+                    groove that doesn't change.</td></tr>
+            <tr><td><code>rest</code></td><td>Rest / tacet</td>
+                <td>Don't play here — silence for this measure. Worth writing down: an
+                    intentional gap and a forgotten bar look the same otherwise.</td></tr>
+            <tr><td><code>segno</code></td><td>Segno (𝄋)</td>
+                <td>A named place-marker. On its own it does nothing; it's the point
+                    <code>ds</code> sends you back to. Italian for "sign".</td></tr>
+            <tr><td><code>coda</code></td><td>Coda (𝄌)</td>
+                <td>Marks the tail end — the separate final passage you jump to after
+                    the last repeat, instead of playing the section out as written.
+                    Italian for "tail".</td></tr>
+            <tr><td><code>dc</code></td><td>D.C. — <em>da capo</em></td>
+                <td>"From the top": go back to the very beginning of the song and play
+                    through again from there.</td></tr>
+            <tr><td><code>ds</code></td><td>D.S. — <em>dal segno</em></td>
+                <td>"From the sign": go back to the <code>segno</code> mark — not to the
+                    start — and play on from there. Use it when the repeat begins
+                    partway in, after an intro you don't play twice.</td></tr>
+          </tbody>
+        </table>
+
+        <p class="modal-hint"><strong>The common shape:</strong> a song ends
+          <code>ds</code> (or <code>dc</code>), you play back through from the
+          <code>segno</code>, and on that second pass you break off at
+          <code>coda</code> for the real ending. Written out in full that's three
+          near-identical pages; with these marks it's three words.</p>
+
+        <p class="modal-hint">None of these change the notes — they only change the
+          <em>order</em> you play them in. The buttons beside each chart line insert
+          any of them at the cursor, so you never have to remember the exact spelling.</p>
+
+        <h4>Render modes</h4>
+        <p><strong>Chart</strong> — chord/note symbols in a row (the chart line).<br>
+           <strong>Tab</strong> — editable tablature grid (fret numbers on strings).<br>
+           <strong>Both</strong> — chart line above, tab grid below.<br>
+           <strong>Free</strong> — a plain multi-line text box instead. Nothing in it is
+           parsed, transposed, or validated; it's printed in the TXT/PDF export exactly
+           as typed. Use it for a section the notation above doesn't cover.</p>
+        <p class="modal-hint">Switch with the dropdown in each section's header. The tab grid
+           has its own "+ Measure" button and beats-per-measure selector.</p>
+      </div>
+
+      <div class="modal-actions">
+        <button id="notation-ref-close" class="btn accent">Close</button>
+      </div>
+    </div>
+  </div>
   <div id="toast" class="hidden"></div>
 
   <template id="section-template">
@@ -187,19 +289,56 @@
         <select class="sec-type" title="Section type — controls the accent color"></select>
         <select class="sec-instrument" title="Instrument / tuning for this section"></select>
         <input class="sec-repeat" type="number" min="1" title="How many times this section is played consecutively">
+        <select class="sec-render" title="Render mode: Chart (chords/notes), Tab (tablature grid), Both, or Free text (anything you like, kept verbatim)">
+          <option value="chart">Chart</option>
+          <option value="tab">Tab</option>
+          <option value="both">Both</option>
+          <option value="free">Free</option>
+        </select>
         <button class="btn icon-btn sec-up" title="Move up">↑</button>
         <button class="btn icon-btn sec-down" title="Move down">↓</button>
         <button class="btn icon-btn sec-dup" title="Duplicate as reference — same as this section rather than a copy">⧉</button>
         <button class="btn icon-btn sec-del" title="Delete section">🗑</button>
       </div>
-      <input class="sec-chart-line" type="text" placeholder="Type the chart line, e.g. B F# G E   or  [C D]x2 G"
-             title="Chord/fret symbols in order, space separated. Add a fret directly after a symbol (5A). Wrap and repeat with [ ]xN.">
+      <div class="sec-line-row">
+        <input class="sec-chart-line" type="text" placeholder="Type the chart line, e.g. B F# G E   or  [C D]x2 G"
+               title="Chord/fret symbols in order, space separated. Add a fret directly after a symbol (5A). Wrap and repeat with [ ]xN.">
+        <!-- Quick-insert palette: every button drops its notation at the
+             caret, so the chart line stays typed text you can still edit
+             by hand. data-ins is the literal text; data-caret is how far
+             back from the end to leave the caret (e.g. inside [ ] or " "). -->
+        <div class="sec-insert-strip" title="Insert notation at the cursor">
+          <button type="button" class="ins-btn" data-ins="rest" title="Rest / tacet — a measure you don't play">rest</button>
+          <button type="button" class="ins-btn" data-ins="%" title="Simile — play like the previous bar">%</button>
+          <button type="button" class="ins-btn" data-ins="|:" title="Repeat-open barline">|:</button>
+          <button type="button" class="ins-btn" data-ins=":|" title="Repeat-close barline">:|</button>
+          <button type="button" class="ins-btn" data-ins="|1." title="1st ending">|1.</button>
+          <button type="button" class="ins-btn" data-ins="|2." title="2nd ending">|2.</button>
+          <button type="button" class="ins-btn" data-ins="x2" title="Repeat the item before the cursor twice">x2</button>
+          <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat — caret lands inside the brackets">[ ]x2</button>
+          <button type="button" class="ins-btn" data-ins="&quot;&quot;" data-caret="1" title="Free annotation in quotes">&quot;&quot;</button>
+          <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
+          <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
+          <button type="button" class="ins-btn" data-ins="dc" title="D.C. — repeat from the beginning">dc</button>
+          <button type="button" class="ins-btn" data-ins="ds" title="D.S. — repeat from the segno">ds</button>
+        </div>
+      </div>
+      <textarea class="sec-free-text hidden" rows="6" spellcheck="false"
+                placeholder="Free text — anything you like, kept exactly as typed and printed as-is in the export."
+                title="This section is free text: nothing here is parsed, transposed, or validated."></textarea>
       <div class="sec-preview">
         <div class="sec-preview-fret"></div>
         <div class="sec-preview-sym"></div>
       </div>
       <div class="sec-error hidden"></div>
       <div class="sec-empty-hint hidden">This section has no measures yet — type a chart line above to start entering notes.</div>
+      <div class="sec-tab-grid hidden">
+        <div class="tab-grid-toolbar">
+          <button class="btn subtle tab-add-measure" title="Add a measure to this section's tab grid">+ Measure</button>
+          <label class="tab-beats-label">Beats: <select class="tab-beats-select"></select></label>
+        </div>
+        <div class="tab-grid-body"></div>
+      </div>
     </div>
   </template>
 

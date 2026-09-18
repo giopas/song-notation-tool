@@ -743,6 +743,18 @@ class SongNotationApp(tk.Tk):
         rep_suffix = f"   ×{rep}" if rep and rep != 1 else ""
 
         lines = []
+        # Free-text sections have no parsed items at all — show the text
+        # itself (trimmed to a few lines so one verbose section can't push
+        # the rest of the song map off screen). Editing it happens in the
+        # web UI; this view is read-only for those.
+        if render_mode == "free":
+            free = (sec.get("free_text", "") or "").splitlines()
+            if free:
+                lines = free[:6] + (["  …"] if len(free) > 6 else [])
+            else:
+                lines = ["(empty free-text section)"]
+            return "\n".join(lines)
+
         if render_mode in ("chart", "both"):
             chart = songmap.chart_items(sec)
             if chart:
@@ -791,7 +803,11 @@ class SongNotationApp(tk.Tk):
         self.focus_id = sid
         annotation_suffix = f' "{sec["annotation"]}"' if sec.get("annotation") else ""
         self._set_editor_text(grammar.unparse(songmap.chart_items(sec)) + annotation_suffix)
-        if sec.get("render") == "tab":
+        if sec.get("render") == "free":
+            self.editor_entry.configure(state="disabled")
+            self.lbl_editor_hint.configure(
+                text=f"{sec['name']} › free-text section — edit it in the web UI")
+        elif sec.get("render") == "tab":
             self.editor_entry.configure(state="disabled")
             self.lbl_editor_hint.configure(
                 text=f"{sec['name']} › tab-only section — edit the grid below")

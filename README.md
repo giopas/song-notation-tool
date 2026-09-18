@@ -152,8 +152,11 @@ python3 webserver.py --host 0.0.0.0   # reachable from other devices on the LAN
 Running it opens a window for you automatically — no need to copy a
 URL into a browser by hand. If the optional
 [`pywebview`](https://pypi.org/project/pywebview/) package is installed
-(`pip install pywebview`, or `pip install -r requirements-optional.txt`),
-that's a normal native app window — resizable, with its own
+anywhere it can find — including a `.venv` sitting next to
+`webserver.py`, which it hands the process over to on its own, so
+plain `python3 webserver.py` gets the native window with no venv to
+activate and no environment variables to set — that's a normal native
+app window — resizable, with its own
 minimize/maximize/close buttons, just not a full browser tab (no
 address bar, no tabs) — the same idea as the sibling
 [qlc-plus-swiss-knife-tool-script](https://github.com/giopas/qlc-plus-swiss-knife-tool-script)
@@ -161,6 +164,21 @@ project's window. Without `pywebview` it falls straight back to your
 default browser tab instead, and prints the install command so you
 know it's available; either way it's the same page underneath —
 `pywebview` is entirely optional, never required to run the server.
+
+**Setting up the native window (one time, macOS/Linux/Windows):**
+
+```bash
+python3 -m venv .venv
+.venv/bin/python3 -m pip install -r requirements-optional.txt
+```
+
+On macOS that's all — `pywebview` pulls in the PyObjC/WebKit bindings
+it needs itself; there's no Homebrew package or system framework to
+install separately. From then on `python3 webserver.py` opens the
+native window by itself, because the launcher probes for a sibling
+virtualenv that can `import webview` and re-execs into it
+(`SNT_NO_REEXEC=1` turns that off; `--browser` and `--no-open` skip it
+too).
 
 The front end also has a **"⏻ Save & Close"** button (top right) as a
 convenience alongside the window's own close button — it saves the
@@ -170,10 +188,13 @@ tab, stops the server).
 Once it's open, you get the song list, meta form, and a chart-line
 editor per section with the same live-parsing preview the desktop
 app's editor bar has, plus TXT/PDF export, Transpose (whole song or
-one section), and the Lyrics panel. Tab-grid (measure) sections are
-read-only in the browser for now — edit those in the desktop app;
-chart-line sections are fully editable. See [ROADMAP.md](ROADMAP.md)
-for what's still desktop-only.
+one section), the Lyrics panel, a quick-insert palette beside each
+chart line (rests, repeat barlines, endings, groups, annotations — all
+dropped in at the cursor), and **free-text sections**. Tab-grid
+(measure) sections are editable in the browser too now — switch a
+section's render mode to Tab or Both, add measures, and type fret
+numbers straight into the cells. See [ROADMAP.md](ROADMAP.md) for
+what's still desktop-only (riff/block management, chiefly).
 
 ---
 

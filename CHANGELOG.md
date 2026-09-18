@@ -4,6 +4,90 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.20.0] — 2026-09-18
+
+Two ways to stop fighting the notation, and one launch annoyance
+fixed. The chart-line grammar has grown enough that remembering
+whether a second ending is `|2.` or `[2]` costs more than typing the
+note does — so the syntax is now a row of buttons beside the line it
+edits. And for the bits the grammar genuinely doesn't cover, a section
+can now just be text: `render: "free"` turns the whole chart apparatus
+off and prints what you typed. That's a deliberate escape hatch, not a
+gap to close later — a one-page stage chart is allowed to have a
+sentence on it.
+
+### Added
+- **Quick-insert palette** in the web UI — a compact column of buttons
+  beside each section's chart line: `rest`, `%`, `|:`, `:|`, `|1.`,
+  `|2.`, `x2`, `[ ]x2`, `""`, `segno`, `coda`, `dc`, `ds`. Each drops
+  its notation at the caret, space-separated from what's already
+  there, and leaves the caret *inside* the brackets or quotes where
+  that's the useful place for it. The insert fires the same `input`
+  event typing would, so the existing debounced parse, inline error
+  display, and live preview all run unchanged — the chart line stays
+  typed text you can still edit by hand. The palette moves below the
+  line on narrow windows rather than squeezing the input it serves.
+- **Free-text sections** — a fourth per-section render mode, `free`,
+  alongside Chart / Tab / Both. The section shows one plain textarea;
+  nothing in it is parsed, transposed, validated, or column-aligned,
+  and the TXT and PDF exports print it verbatim. Stored as a new
+  `free_text` string on the section. Switching a section to Free
+  leaves its existing items untouched, so switching back to Chart
+  brings the chart line back exactly as it was — the two are
+  alternative views of one section, not a destructive conversion.
+  `render.estimate_section_lines()` counts free text toward the live
+  page estimate, so the page count still tracks the real export.
+- **Native window without any setup** — `webserver.py` now probes for
+  a sibling virtualenv (`.venv`, `venv`, or `env`) whose interpreter
+  can `import webview`, and re-execs into it (`os.execv` — same PID,
+  same argv, no wrapper script). So `python3 webserver.py` with the
+  system interpreter opens the native app window instead of silently
+  falling back to a browser tab just because the system Python can't
+  see `./.venv/lib/.../pywebview`. `SNT_NO_REEXEC=1` disables it, the
+  child always carries that flag so a broken venv can't produce an
+  exec loop, and `--browser` / `--no-open` skip the probe entirely.
+  The "am I already inside that venv?" test compares `sys.prefix` to the
+  venv directory, **not** the interpreter paths: `.venv/bin/python3` is
+  normally a symlink straight back to the base interpreter that created
+  the venv, so on a machine where `python3` *is* that base interpreter
+  (a python.org framework build on macOS, most distro Pythons on Linux)
+  comparing `realpath(sys.executable)` matches even though the running
+  process has none of the venv's packages — which is precisely the case
+  the re-exec exists to fix. If a venv is found but its interpreter
+  can't import `webview`, that now prints one line saying so with the
+  underlying error, instead of silently opening a browser tab;
+  `SNT_DEBUG_LAUNCH=1` prints the full traceback.
+
+### Changed
+- The browser fallback message now gives the two commands that
+  actually fix it (create a venv, install `requirements-optional.txt`)
+  instead of a bare `pip install pywebview` that lands in whichever
+  interpreter happens to own `pip`.
+- The desktop app renders a free-text section read-only in the song
+  map (first six lines, then an ellipsis) and disables its editor bar
+  with a hint pointing at the web UI, rather than showing an empty
+  chart row for a section that has no chart items.
+- "Duplicate as reference" on a free-text section produces a normal
+  chart section — a `section_ref` has no free text of its own to show.
+- **The Notation Reference now explains the marks rather than naming
+  them.** Every mark gets its real name, where the word comes from, and
+  what it actually tells a player to do — `segno` as the place-marker
+  `ds` jumps back to, `coda` as the separate tail you break off to, the
+  1st/2nd endings as the "two different last bars" case — plus a note
+  on the standard D.S.–segno–coda shape and why it's three words
+  instead of three near-identical pages. A chart nobody but its author
+  can read isn't much of a chart.
+
+### Fixed
+- **Icon buttons in the section header had their glyphs off-centre**
+  (the ↑ ↓ ⧉ 🗑 row, and the sidebar's +). They carry both `.btn` and
+  `.icon-btn`; `.btn`'s `padding: 6px 12px` was being applied inside
+  `.icon-btn`'s fixed 28×28 box, leaving almost no content area and
+  pushing the glyph to one side. Now centred with flex and zero
+  padding — the glyphs in use have very different bearings and
+  baselines, so `text-align`/`line-height` alone can't place them
+  reliably.
+
 ## [0.19.0] — 2026-09-17
 
 Two roadmap items land together: the browser front end gets the same

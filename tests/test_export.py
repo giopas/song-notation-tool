@@ -137,3 +137,51 @@ def test_build_pdf_handles_long_lyrics_without_crashing():
     pdf_bytes = export.build_pdf(doc)
     assert pdf_bytes.startswith(b"%PDF-1.4")
     assert b"%%EOF" in pdf_bytes
+
+
+# ==============================================================================
+#  Free-text sections (render:"free") — v0.20
+# ==============================================================================
+
+def _free_section(text):
+    sec = model.new_section("notes", "Stage notes", "Custom", render="free")
+    sec["free_text"] = text
+    return sec
+
+
+def test_txt_export_prints_free_text_verbatim():
+    doc = _doc_with_one_section()
+    doc["sections"].append(_free_section("Wait for the nod.\n>>> swell, then hit it"))
+    text = "\n".join(export.build_song_lines(doc))
+    assert "Wait for the nod." in text
+    assert ">>> swell, then hit it" in text
+
+
+def test_free_section_ignores_chart_and_tab_items():
+    """A section switched to free keeps its old items (so switching back is
+    lossless) but must not render them alongside the free text."""
+    sec = _free_section("just words")
+    sec["items"] = [model.make_token("B", None),
+                    model.make_measure(8, {"G": "5 - - -"})]
+    doc = model.new_document(title="T")
+    doc["sections"].append(sec)
+    text = "\n".join(export.build_song_lines(doc))
+    assert "just words" in text
+    assert "G|" not in text          # no tab grid
+    lines = [ln for ln in text.splitlines() if ln.strip() == "B"]
+    assert not lines                  # no chart row
+
+
+def test_empty_free_section_prints_no_body():
+    doc = model.new_document(title="T")
+    doc["sections"].append(_free_section("   \n  "))
+    text = "\n".join(export.build_song_lines(doc))
+    assert "[Stage notes]" in text    # the header still appears
+
+
+def test_build_pdf_with_free_section():
+    doc = _doc_with_one_section()
+    doc["sections"].append(_free_section("\n".join(f"note {i}" for i in range(120))))
+    pdf_bytes = export.build_pdf(doc)
+    assert pdf_bytes.startswith(b"%PDF-1.4")
+    assert b"%%EOF" in pdf_bytes

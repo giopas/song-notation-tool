@@ -203,3 +203,28 @@ def test_resolve_display_items_leaves_block_ref_unchanged():
     items = [make_block_ref("riff1", repeat=3)]
     out = resolve_display_items(items, 5)
     assert out == items
+
+
+# ==============================================================================
+#  Free-text line estimates — v0.20
+# ==============================================================================
+
+def test_free_text_line_count_counts_lines_plus_separator():
+    from render import free_text_line_count
+    assert free_text_line_count("") == 0
+    assert free_text_line_count("   \n  ") == 0
+    assert free_text_line_count("one") == 2
+    assert free_text_line_count("one\ntwo\nthree") == 4
+
+
+def test_estimate_section_lines_counts_free_text():
+    from render import estimate_section_lines
+    sec = {"render": "free", "free_text": "a\nb\nc", "items": []}
+    # label + 3 lines + separator + trailing blank
+    assert estimate_section_lines(sec) == 6
+
+
+def test_estimate_section_lines_ignores_free_text_when_not_free_mode():
+    from render import estimate_section_lines
+    sec = {"render": "chart", "free_text": "a\nb\nc", "items": []}
+    assert estimate_section_lines(sec) == 0

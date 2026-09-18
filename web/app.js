@@ -68,6 +68,12 @@ function measureItems(section) {
 function setChartItems(section, newItems) {
   section.items = [...newItems, ...measureItems(section)];
 }
+function setMeasureItems(section, newItems) {
+  section.items = [...chartItems(section), ...newItems];
+}
+function stringsForInstrument(instrument) {
+  return (META.instruments || {})[instrument] || ["G", "D", "A", "E"];
+}
 function newSectionId() {
   return "section_" + Date.now().toString(36) + Math.floor(Math.random() * 1000);
 }
@@ -75,7 +81,7 @@ function makeSection(name, type, instrument) {
   return {
     id: newSectionId(), name, type, instrument: instrument || defaultInstrument(),
     repeat: 1, transpose: 0, render: "chart", annotation: "",
-    lyrics_text: "", print_lyrics: false, items: [],
+    lyrics_text: "", print_lyrics: false, free_text: "", items: [],
   };
 }
 function defaultInstrument() {
@@ -183,11 +189,26 @@ function buildSectionCard(sec, idx) {
   node.querySelector(".sec-name").value = sec.name || "";
   node.querySelector(".sec-repeat").value = sec.repeat || 1;
 
+  const renderSel = node.querySelector(".sec-render");
+  renderSel.value = sec.render || "chart";
+
   const lineInput = node.querySelector(".sec-chart-line");
   lineInput.value = sec.chart_line || "";
 
+  node.querySelector(".sec-free-text").value = sec.free_text || "";
+
+  // Populate tab beats dropdown
+  const beatsSelect = node.querySelector(".tab-beats-select");
+  (META.tab_beats_options || [8, 16, 32, 64]).forEach((b) => {
+    const opt = document.createElement("option");
+    opt.value = b; opt.textContent = b;
+    if (b === (META.tab_beats_default || 8)) opt.selected = true;
+    beatsSelect.appendChild(opt);
+  });
+
   wireSectionEvents(node, sec, idx);
   updateSectionPreview(node, sec);
+  updateTabGridVisibility(node, sec);
   return node;
 }
 
@@ -210,6 +231,30 @@ function wireSectionEvents(node, sec, idx) {
   node.querySelector(".sec-repeat").addEventListener("change", (e) => {
     byId().repeat = Math.max(1, parseInt(e.target.value, 10) || 1);
     schedulePreviewUpdate();
+  });
+
+  node.querySelector(".sec-render").addEventListener("change", (e) => {
+    const s = byId();
+    s.render = e.target.value;
+    updateTabGridVisibility(node, s);
+    schedulePreviewUpdate();
+  });
+
+  node.querySelector(".tab-add-measure").addEventListener("click", () => {
+    const s = byId();
+    const beats = parseInt(node.querySelector(".tab-beats-select").value, 10) || 8;
+    const strings = stringsForInstrument(s.instrument);
+    const stringMap = {};
+    strings.forEach((st) => { stringMap[st] = ""; });
+    const measures = measureItems(s);
+    measures.push({ kind: "measure", beats, strings: stringMap });
+    setMeasureItems(s, measures);
+    rebuildTabGrid(node, s);
+    schedulePreviewUpdate();
+  });
+
+  node.querySelector(".tab-beats-select").addEventListener("change", () => {
+    // Just changes default for new measures; existing measures keep their beats
   });
 
   const lineInput = node.querySelector(".sec-chart-line");
@@ -238,10 +283,56 @@ function wireSectionEvents(node, sec, idx) {
   }, 150);
   lineInput.addEventListener("input", onLineChange);
 
+  // Free-text mode: stored verbatim, never parsed. No debounce on the
+  // model write (it's a plain string assignment); only the export preview
+  // recompute is throttled.
+  node.querySelector(".sec-free-text").addEventListener("input", (e) => {
+    byId().free_text = e.target.value;
+    schedulePreviewUpdate();
+  });
+
+  // Quick-insert palette. Inserting through the same input event the user
+  // would have produced by typing means the existing debounced parse,
+  // error display and preview refresh all run unchanged.
+  node.querySelector(".sec-insert-strip").addEventListener("click", (e) => {
+    const btn = e.target.closest(".ins-btn");
+    if (!btn) return;
+    insertAtCursor(node.querySelector(".sec-chart-line"),
+                   btn.dataset.ins, parseInt(btn.dataset.caret, 10) || 0);
+  });
+
   node.querySelector(".sec-up").addEventListener("click", () => moveSection(sec.id, -1));
   node.querySelector(".sec-down").addEventListener("click", () => moveSection(sec.id, 1));
   node.querySelector(".sec-dup").addEventListener("click", () => duplicateSection(sec.id));
   node.querySelector(".sec-del").addEventListener("click", () => deleteSection(sec.id));
+}
+
+/**
+ * Drop `text` into `input` at the caret, space-separated from whatever is
+ * already there (the chart-line grammar is whitespace-delimited, so a
+ * missing space is the one way an insert could corrupt a valid line).
+ * `caretBack` leaves the caret that many characters from the end of the
+ * inserted text — 4 for "[ ]x2" puts it between the brackets, 1 for a
+ * quote pair puts it between the quotes.
+ */
+function insertAtCursor(input, text, caretBack) {
+  if (!input || !text) return;
+  const value = input.value;
+  const start = input.selectionStart == null ? value.length : input.selectionStart;
+  const end = input.selectionEnd == null ? value.length : input.selectionEnd;
+  const before = value.slice(0, start);
+  const after = value.slice(end);
+
+  const needsLeadingSpace = before.length > 0 && !/\s$/.test(before);
+  const needsTrailingSpace = after.length > 0 && !/^\s/.test(after);
+  const insert = (needsLeadingSpace ? " " : "") + text + (needsTrailingSpace ? " " : "");
+
+  input.value = before + insert + after;
+  const caret = before.length + insert.length -
+    (needsTrailingSpace ? 1 : 0) - (caretBack || 0);
+  input.focus();
+  input.setSelectionRange(caret, caret);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function updateSectionPreview(node, sec, parseResult) {
@@ -274,6 +365,200 @@ function updateSectionPreview(node, sec, parseResult) {
     symRow.textContent = "";
     emptyEl.classList.add("hidden");
   }
+}
+
+// ---------------------------------------------------------------------------
+//  Tab grid — render-mode toggle and measure editing
+// ---------------------------------------------------------------------------
+function updateTabGridVisibility(node, sec) {
+  const mode = sec.render || "chart";
+  const lineRow = node.querySelector(".sec-line-row");
+  const freeText = node.querySelector(".sec-free-text");
+  const chartPreview = node.querySelector(".sec-preview");
+  const tabGrid = node.querySelector(".sec-tab-grid");
+  const emptyHint = node.querySelector(".sec-empty-hint");
+  const errEl = node.querySelector(".sec-error");
+
+  // "free" is the odd one out: the whole chart apparatus — typed line,
+  // insert palette, rendered preview, tab grid, parse errors — is replaced
+  // by one textarea. The section's items are left alone rather than
+  // cleared, so switching back to Chart brings the chart line back intact.
+  if (mode === "free") {
+    lineRow.classList.add("hidden");
+    chartPreview.classList.add("hidden");
+    tabGrid.classList.add("hidden");
+    emptyHint.classList.add("hidden");
+    errEl.classList.add("hidden");
+    freeText.classList.remove("hidden");
+    return;
+  }
+  freeText.classList.add("hidden");
+
+  if (mode === "chart") {
+    lineRow.classList.remove("hidden");
+    chartPreview.classList.remove("hidden");
+    tabGrid.classList.add("hidden");
+  } else if (mode === "tab") {
+    lineRow.classList.add("hidden");
+    chartPreview.classList.add("hidden");
+    tabGrid.classList.remove("hidden");
+    emptyHint.classList.add("hidden");
+    rebuildTabGrid(node, sec);
+  } else { // "both"
+    lineRow.classList.remove("hidden");
+    chartPreview.classList.remove("hidden");
+    tabGrid.classList.remove("hidden");
+    rebuildTabGrid(node, sec);
+  }
+}
+
+function rebuildTabGrid(node, sec) {
+  const body = node.querySelector(".tab-grid-body");
+  const measures = measureItems(sec);
+  const strings = stringsForInstrument(sec.instrument);
+
+  if (!measures.length) {
+    body.innerHTML = '<p style="color:var(--lbl-gray);font-size:12px;font-style:italic;margin:4px 0;">' +
+      'No measures yet — click "+ Measure" to add one.</p>';
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "tab-grid-table";
+
+  // Header row: measure numbers with delete buttons
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  headerRow.appendChild(document.createElement("th")); // empty corner
+  measures.forEach((m, mi) => {
+    const th = document.createElement("th");
+    th.colSpan = m.beats || 8;
+    const hdr = document.createElement("span");
+    hdr.className = "tab-measure-header";
+    hdr.innerHTML = 'M' + (mi + 1) + ' ';
+    const delBtn = document.createElement("button");
+    delBtn.className = "tab-del-measure";
+    delBtn.title = "Delete measure " + (mi + 1);
+    delBtn.textContent = "×";
+    delBtn.addEventListener("click", () => {
+      const allMeasures = measureItems(sec);
+      allMeasures.splice(mi, 1);
+      setMeasureItems(sec, allMeasures);
+      rebuildTabGrid(node, sec);
+      schedulePreviewUpdate();
+    });
+    hdr.appendChild(delBtn);
+    th.appendChild(hdr);
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // One row per string
+  const tbody = document.createElement("tbody");
+  strings.forEach((st) => {
+    const tr = document.createElement("tr");
+    const label = document.createElement("td");
+    label.className = "tab-string-label";
+    label.textContent = st + "|";
+    tr.appendChild(label);
+
+    measures.forEach((m, mi) => {
+      const beats = m.beats || 8;
+      const raw = (m.strings || {})[st] || "";
+      const tokens = raw.split(/\s+/).filter(Boolean);
+      while (tokens.length < beats) tokens.push("-");
+
+      for (let bi = 0; bi < beats; bi++) {
+        const td = document.createElement("td");
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "tab-cell";
+        input.value = tokens[bi] || "-";
+        input.maxLength = 3;
+        input.addEventListener("input", () => {
+          commitTabCell(sec, mi, st, beats, node);
+        });
+        input.addEventListener("focus", () => input.select());
+        // Arrow key navigation between cells
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowRight" || (e.key === "Tab" && !e.shiftKey)) {
+            const next = td.nextElementSibling;
+            if (next && next.querySelector("input")) {
+              e.preventDefault();
+              next.querySelector("input").focus();
+            }
+          } else if (e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey)) {
+            const prev = td.previousElementSibling;
+            if (prev && prev.querySelector("input")) {
+              e.preventDefault();
+              prev.querySelector("input").focus();
+            }
+          } else if (e.key === "ArrowDown") {
+            const rowIdx = Array.from(tr.parentElement.children).indexOf(tr);
+            const colIdx = Array.from(tr.children).indexOf(td);
+            const nextRow = tr.parentElement.children[rowIdx + 1];
+            if (nextRow && nextRow.children[colIdx]) {
+              const nextInput = nextRow.children[colIdx].querySelector("input");
+              if (nextInput) { e.preventDefault(); nextInput.focus(); }
+            }
+          } else if (e.key === "ArrowUp") {
+            const rowIdx = Array.from(tr.parentElement.children).indexOf(tr);
+            const colIdx = Array.from(tr.children).indexOf(td);
+            const prevRow = tr.parentElement.children[rowIdx - 1];
+            if (prevRow && prevRow.children[colIdx]) {
+              const prevInput = prevRow.children[colIdx].querySelector("input");
+              if (prevInput) { e.preventDefault(); prevInput.focus(); }
+            }
+          }
+        });
+        td.appendChild(input);
+        tr.appendChild(td);
+      }
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  body.innerHTML = "";
+  body.appendChild(table);
+}
+
+function commitTabCell(sec, measureIdx, stringName, beats, node) {
+  const body = node.querySelector(".tab-grid-body");
+  const table = body.querySelector("table");
+  if (!table) return;
+
+  const strings = stringsForInstrument(sec.instrument);
+  const measures = measureItems(sec);
+  const m = measures[measureIdx];
+  if (!m) return;
+
+  // Find the row for this string
+  const strIdx = strings.indexOf(stringName);
+  const tbody = table.querySelector("tbody");
+  const row = tbody.children[strIdx];
+  if (!row) return;
+
+  // Collect all beat values for this string in this measure
+  // Cells start at column 1 (col 0 is the string label)
+  // We need to figure out the column offset for this measure
+  let colOffset = 1; // skip string label
+  for (let i = 0; i < measureIdx; i++) {
+    colOffset += (measures[i].beats || 8);
+  }
+
+  const tokens = [];
+  for (let bi = 0; bi < beats; bi++) {
+    const cell = row.children[colOffset + bi];
+    const input = cell ? cell.querySelector("input") : null;
+    let val = (input ? input.value.trim() : "-") || "-";
+    tokens.push(val);
+  }
+
+  if (!m.strings) m.strings = {};
+  m.strings[stringName] = tokens.join(" ");
+  setMeasureItems(sec, measures);
+  schedulePreviewUpdate();
 }
 
 // ---------------------------------------------------------------------------
@@ -313,7 +598,8 @@ function duplicateSection(id) {
   const newSec = {
     id: newSectionId(), name: source.name + " (ref)", type: source.type,
     instrument: source.instrument, repeat: 1, transpose: 0,
-    render: source.render, annotation: "",
+    render: source.render === "free" ? "chart" : source.render, annotation: "",
+    free_text: "",
     items: [{ kind: "section_ref", section: source.id, repeat: 1, all: false, transpose: 0 }],
     chart_line: `=${source.id}`,
   };
@@ -613,6 +899,15 @@ async function init() {
 
   document.getElementById("btn-help").addEventListener("click", () => {
     document.getElementById("help-strip").classList.toggle("hidden");
+  });
+  document.getElementById("btn-notation-ref").addEventListener("click", () => {
+    document.getElementById("notation-ref-backdrop").classList.remove("hidden");
+  });
+  document.getElementById("notation-ref-close").addEventListener("click", () => {
+    document.getElementById("notation-ref-backdrop").classList.add("hidden");
+  });
+  document.getElementById("notation-ref-backdrop").addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) e.target.classList.add("hidden");
   });
   document.getElementById("btn-preview-toggle").addEventListener("click", () => togglePreview());
   document.getElementById("btn-preview-close").addEventListener("click", () => togglePreview(false));

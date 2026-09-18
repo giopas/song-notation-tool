@@ -8,7 +8,7 @@ an instrument's string list or the default tab beat count.
 
 from __future__ import annotations
 
-APP_VERSION = "0.19.0"
+APP_VERSION = "0.20.0"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
 # Section-type presets shown in the New Section dialog / web UI.
@@ -28,7 +28,8 @@ INSTRUMENT_STRINGS = {
     "Bass (5-string)":          ["G", "D", "A", "E", "B"],
 }
 
-RENDER_MODE_LABELS = {"chart": "Chart", "tab": "Tab grid", "both": "Chart + Tab"}
+RENDER_MODE_LABELS = {"chart": "Chart", "tab": "Tab grid",
+                      "both": "Chart + Tab", "free": "Free text"}
 
 # Default number of beats per tab measure. Can be overridden per measure.
 TAB_BEATS_DEFAULT = 8

@@ -192,3 +192,36 @@ def test_set_measure_items_preserves_existing_chart_items():
     sec["items"] = [tok]
     songmap.set_measure_items(sec, [model.make_measure(8, {"E": "- - - - - - - -"})])
     assert sec["items"] == [tok, model.make_measure(8, {"E": "- - - - - - - -"})]
+
+
+# ==============================================================================
+#  Reference lookup — v0.20
+# ==============================================================================
+
+def test_find_section_matches_id_then_name():
+    import model, songmap
+    doc = model.new_document(title="T")
+    sec = model.new_section("chorus1", "Interlude", "Interlude")
+    doc["sections"] = [sec]
+    assert songmap.find_section(doc, "chorus1") is sec
+    assert songmap.find_section(doc, "Interlude") is sec
+    assert songmap.find_section(doc, "interlude") is sec   # case-insensitive
+    assert songmap.find_section(doc, "nope") is None
+
+
+def test_section_display_name_falls_back_to_the_key():
+    import model, songmap
+    doc = model.new_document(title="T")
+    doc["sections"] = [model.new_section("chorus1", "Interlude", "Interlude")]
+    assert songmap.section_display_name(doc, "chorus1") == "Interlude"
+    assert songmap.section_display_name(doc, "nope") == "nope"
+
+
+def test_section_refs_to_finds_a_ref_written_by_name():
+    import model, songmap
+    doc = model.new_document(title="T")
+    target = model.new_section("chorus1", "Interlude", "Interlude")
+    user = model.new_section("s2", "Later", "Verse")
+    user["items"] = [model.make_section_ref("Interlude")]
+    doc["sections"] = [target, user]
+    assert songmap.section_refs_to(doc, "chorus1") == ["Later"]

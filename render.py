@@ -94,7 +94,11 @@ def _symbol_str(item: dict) -> str:
             s += f" {tag}"
         return s
     if k == "group":
-        inner = " ".join(_symbol_str(x) for x in item["items"])
+        # Frets belong inline here: the group renders on the symbol row
+        # only (there's no fret row to align a bracketed run against), so
+        # dropping them would silently lose "3A 12D" down to "A D" — which
+        # is exactly what an expanded x2 reference looks like.
+        inner = " ".join(_fret_str(x) + _symbol_str(x) for x in item["items"])
         s = f"[{inner}]"
         if item.get("repeat", 1) != 1:
             s += f"(x{item['repeat']})"
@@ -121,6 +125,107 @@ def render_chart_row(items, label: str = ""):
     fret_line = " " * label_w + "".join(f"{f:<{w}}" for f, w in zip(frets, cols))
     sym_line = f"{label:<{label_w}}" + "".join(f"{s:<{w}}" for s, w in zip(symbols, cols))
     return [fret_line.rstrip(), sym_line.rstrip()]
+
+
+# ==============================================================================
+#  Reference expansion — show what a reference actually plays.
+#
+#  A section_ref / block_ref is stored as a pointer (that's what makes
+#  "edit the riff once, every user updates" work), but a player reading the
+#  chart needs the notes, not the pointer: "=chorus1" tells them nothing,
+#  least of all when the id was minted before the section was renamed. So
+#  the pointer stays in the data and gets expanded at render time, here.
+#
+#  Guarded against cycles (A refs B refs A) by carrying the set of keys
+#  currently being expanded; a cycle renders as the bare reference rather
+#  than recursing forever.
+# ==============================================================================
+
+MAX_REF_DEPTH = 8
+
+
+def _ref_placeholder(item: dict, doc: dict):
+    """What to show when a reference can't be expanded — the target's
+    name if we can find it, otherwise the key exactly as written."""
+    import songmap
+    if item.get("kind") == "section_ref":
+        new_it = dict(item)
+        new_it["section"] = songmap.section_display_name(doc, item.get("section", ""))
+        return new_it
+    return item
+
+
+def _expanded(items, repeat, shift):
+    """Wrap an expanded body so its repeat count still reads on the chart:
+    a bare run for x1, a bracketed group otherwise."""
+    from model import make_group
+    body = list(items)
+    if shift:
+        body = resolve_display_items(body, shift)
+    if repeat and repeat != 1:
+        return [make_group(body, repeat=repeat)]
+    return body
+
+
+def resolve_references(items, doc: dict, _seen=None, _depth=0):
+    """
+    Return `items` with every section_ref / block_ref replaced by the items
+    it points at, recursively. Anything that can't be resolved — a missing
+    target, a cycle, or nesting deeper than MAX_REF_DEPTH — is left as a
+    reference so the chart still says *something* rather than silently
+    dropping a section's entire content.
+    """
+    import songmap
+
+    doc = doc or {}
+    _seen = _seen or frozenset()
+    out = []
+
+    for it in (items or []):
+        kind = it.get("kind")
+
+        if kind == "group":
+            new_it = dict(it)
+            new_it["items"] = resolve_references(
+                it.get("items", []), doc, _seen, _depth + 1)
+            out.append(new_it)
+            continue
+
+        if kind == "section_ref":
+            key = it.get("section", "")
+            target = songmap.find_section(doc, key)
+            marker = ("section", target.get("id") if target else key)
+            if target is None or marker in _seen or _depth >= MAX_REF_DEPTH:
+                out.append(_ref_placeholder(it, doc))
+                continue
+            body = resolve_references(
+                [i for i in target.get("items", []) if i.get("kind") != "measure"],
+                doc, _seen | {marker}, _depth + 1)
+            if not body:
+                out.append(_ref_placeholder(it, doc))
+                continue
+            out.extend(_expanded(body, it.get("repeat", 1), it.get("transpose", 0)))
+            continue
+
+        if kind == "block_ref":
+            key = it.get("block", "")
+            block = (doc.get("blocks") or {}).get(key)
+            marker = ("block", key)
+            if not block or marker in _seen or _depth >= MAX_REF_DEPTH:
+                out.append(it)
+                continue
+            body = resolve_references(
+                [i for i in block.get("items", []) if i.get("kind") != "measure"],
+                doc, _seen | {marker}, _depth + 1)
+            if not body:
+                out.append(it)
+                continue
+            out.extend(_expanded(body, it.get("repeat", 1), it.get("transpose", 0)))
+            continue
+
+        out.append(it)
+
+    return out
 
 
 # ==============================================================================

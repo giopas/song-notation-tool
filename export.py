@@ -91,7 +91,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
 
         eff = transpose.effective_transpose(
             doc.get("transpose", 0), sec.get("transpose", 0))
-        chart = songmap.chart_items(sec)
+        chart = render.resolve_references(songmap.chart_items(sec), doc)
         if sec.get("render") != "free" and chart:
             resolved = render.resolve_display_items(chart, eff)
             lines += render.render_chart_row(resolved)
@@ -257,7 +257,7 @@ def build_pdf(doc: dict, instruments=None, orient: str = "portrait") -> bytes:
         eff = transpose.effective_transpose(
             doc.get("transpose", 0), sec.get("transpose", 0))
         free_mode = sec.get("render") == "free"
-        chart = songmap.chart_items(sec)
+        chart = render.resolve_references(songmap.chart_items(sec), doc)
         chart_rows = (render.render_chart_row(render.resolve_display_items(chart, eff))
                       if chart and not free_mode else [])
         measures = [] if free_mode else songmap.measure_items(sec)

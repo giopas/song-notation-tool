@@ -78,7 +78,31 @@ sentence on it.
   instead of three near-identical pages. A chart nobody but its author
   can read isn't much of a chart.
 
+- **References print what they play.** A `section_ref` / `block_ref` is
+  stored as a pointer — that's what makes "edit the riff once, every
+  section using it updates" work — but the chart used to render the
+  pointer itself, so a duplicated-as-reference section printed `=chorus1`
+  where the notes should be. The pointer stays in the data and is now
+  expanded at render time (`render.resolve_references`), in the section
+  card's preview row, the Preview pane, and the TXT and PDF exports. A
+  repeat expands into a bracketed group (`[3A 12D](x2)`), a `+N`/`-N`
+  shift expands transposed, and a reference that can't be resolved — a
+  missing target, or a cycle — is left as a reference rather than
+  silently dropping the section's content.
+- **References can be written by section name, not just id.** Ids are
+  minted once and never change, so a section created as "Chorus" and
+  later renamed "Interlude" keeps id `chorus1` — correct, but `=chorus1`
+  on screen reads like a mistake. `=Interlude` now resolves too
+  (case-insensitive, spaces and dashes interchangeable with
+  underscores), ids still win on a tie, and "Duplicate as reference"
+  writes the name whenever it's a bare identifier and unambiguous.
+  Existing documents are unaffected — every id-based reference still
+  resolves exactly as before.
+
 ### Fixed
+- **A group's symbol row dropped its fret numbers** — `[3A 12D]x2`
+  printed as `[A D](x2)`. Harmless while groups were only ever typed by
+  hand; not harmless once an expanded reference renders as one.
 - **Section cards wasted most of the window.** Three separate causes,
   found by measuring the real layout in a headless browser rather than
   eyeballing it:

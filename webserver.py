@@ -217,10 +217,17 @@ def _with_chart_lines(doc: dict) -> dict:
     return out
 
 
-def _parse_chart_line(line: str):
+def _parse_chart_line(line: str, doc: dict = None):
+    """Parse one chart line and render it the way the export will.
+
+    `doc` is optional context: with it, a `=section` / riff reference on the
+    line is expanded to the items it points at, so the section card's
+    preview shows what will actually be played rather than the pointer.
+    Without it (a bare parse), references render as themselves."""
     try:
         items, annotation = grammar.parse(line)
-        rendered = render_mod.render_chart_row(items) if items else []
+        display = render_mod.resolve_references(items, doc) if doc else items
+        rendered = render_mod.render_chart_row(display) if display else []
         return {
             "ok": True,
             "items": items,
@@ -370,7 +377,8 @@ class Handler(BaseHTTPRequestHandler):
 
             if path == "/api/parse":
                 body = self._read_json_body()
-                return self._send_json(_parse_chart_line(body.get("line", "")))
+                return self._send_json(
+                    _parse_chart_line(body.get("line", ""), body.get("doc")))
 
             if path == "/api/render":
                 # Live preview pane (Enhancement 1): render an in-progress,

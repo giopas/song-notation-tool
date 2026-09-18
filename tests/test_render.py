@@ -228,3 +228,95 @@ def test_estimate_section_lines_ignores_free_text_when_not_free_mode():
     from render import estimate_section_lines
     sec = {"render": "chart", "free_text": "a\nb\nc", "items": []}
     assert estimate_section_lines(sec) == 0
+
+
+# ==============================================================================
+#  Reference expansion — v0.20
+# ==============================================================================
+
+def _doc_with_ref(ref_key, **ref_kw):
+    import model, grammar
+    doc = model.new_document(title="T")
+    # id minted as "chorus1", section later renamed "Interlude" — the exact
+    # shape that made a reference read as a stale, wrong-looking id.
+    target = model.new_section("chorus1", "Interlude", "Interlude")
+    target["items"] = grammar.parse_items("3A 12D")
+    src = model.new_section("s2", "Interlude (ref)", "Interlude")
+    src["items"] = [model.make_section_ref(ref_key, **ref_kw)]
+    doc["sections"] = [target, src]
+    return doc, src
+
+
+def test_section_ref_expands_to_the_target_items():
+    from render import resolve_references
+    doc, src = _doc_with_ref("chorus1")
+    out = resolve_references(src["items"], doc)
+    assert [it["symbol"] for it in out] == ["A", "D"]
+    assert [it["fret"] for it in out] == [3, 12]
+
+
+def test_section_ref_resolves_by_name_as_well_as_id():
+    from render import resolve_references
+    doc, src = _doc_with_ref("Interlude")
+    out = resolve_references(src["items"], doc)
+    assert [it["symbol"] for it in out] == ["A", "D"]
+
+
+def test_repeated_section_ref_expands_into_a_repeated_group():
+    from render import resolve_references
+    doc, src = _doc_with_ref("chorus1", repeat=3)
+    out = resolve_references(src["items"], doc)
+    assert len(out) == 1
+    assert out[0]["kind"] == "group" and out[0]["repeat"] == 3
+    assert [it["symbol"] for it in out[0]["items"]] == ["A", "D"]
+
+
+def test_shifted_section_ref_expands_transposed():
+    from render import resolve_references
+    doc, src = _doc_with_ref("chorus1", transpose=2)
+    out = resolve_references(src["items"], doc)
+    assert [it["symbol"] for it in out] == ["B", "E"]
+
+
+def test_unresolvable_section_ref_is_left_as_a_reference():
+    from render import resolve_references
+    doc, src = _doc_with_ref("nope")
+    out = resolve_references(src["items"], doc)
+    assert out[0]["kind"] == "section_ref" and out[0]["section"] == "nope"
+
+
+def test_reference_cycle_does_not_recurse_forever():
+    import model
+    from render import resolve_references, render_chart_row
+    a = model.new_section("a", "A", "Verse"); a["items"] = [model.make_section_ref("b")]
+    b = model.new_section("b", "B", "Verse"); b["items"] = [model.make_section_ref("a")]
+    doc = model.new_document(title="Cycle"); doc["sections"] = [a, b]
+    out = resolve_references(a["items"], doc)      # must terminate
+    assert render_chart_row(out)
+
+
+def test_block_ref_expands_from_the_riff_library():
+    import model, grammar
+    from render import resolve_references
+    doc = model.new_document(title="T")
+    doc["blocks"] = {"riff1": {"id": "riff1", "name": "riff1",
+                               "items": grammar.parse_items("5A 7D")}}
+    items = [model.make_block_ref("riff1")]
+    out = resolve_references(items, doc)
+    assert [it["fret"] for it in out] == [5, 7]
+
+
+def test_reference_inside_a_group_is_expanded_too():
+    import model, grammar
+    from render import resolve_references
+    doc, _ = _doc_with_ref("chorus1")
+    items = [model.make_group([model.make_section_ref("chorus1")], repeat=2)]
+    out = resolve_references(items, doc)
+    assert [it["symbol"] for it in out[0]["items"]] == ["A", "D"]
+
+
+def test_group_symbol_row_keeps_fret_numbers():
+    import model, grammar
+    from render import render_chart_row
+    rows = render_chart_row([model.make_group(grammar.parse_items("3A 12D"), repeat=2)])
+    assert "3A 12D" in "\n".join(rows)

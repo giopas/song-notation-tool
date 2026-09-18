@@ -62,15 +62,56 @@ def can_delete_block(doc: dict, block_id: str):
 #  Section-name / block-id references (renaming, deleting a section)
 # ==============================================================================
 
+def _same_section_key(doc: dict, ref_key, section_id) -> bool:
+    if ref_key == section_id:
+        return True
+    target = find_section(doc, ref_key) if ref_key else None
+    return bool(target) and target.get("id") == section_id
+
+
 def section_refs_to(doc: dict, section_id: str):
     """Section names that hold a section_ref pointing at `section_id`."""
     out = []
     for sec in doc.get("sections", []):
         for it in _walk_items(sec.get("items", [])):
-            if it.get("kind") == "section_ref" and it.get("section") == section_id:
+            if it.get("kind") == "section_ref" and _same_section_key(
+                    doc, it.get("section"), section_id):
                 out.append(sec.get("name") or sec.get("id", ""))
                 break
     return out
+
+
+def _ident(text: str) -> str:
+    """Normalised key for matching a reference against a section name:
+    case-folded, spaces and dashes as underscores."""
+    return (text or "").strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def find_section(doc: dict, key: str):
+    """
+    The section a `=key` reference points at, or None.
+
+    Ids are the stable identity (renaming a section never changes its id,
+    so existing references keep working), but a reference may also be
+    written with the section's *name* — `=Interlude` rather than the
+    `=chorus1` that section happened to be created as. Id wins on a tie.
+    """
+    sections = doc.get("sections", [])
+    for sec in sections:
+        if sec.get("id") == key:
+            return sec
+    k = _ident(key)
+    for sec in sections:
+        if _ident(sec.get("name", "")) == k:
+            return sec
+    return None
+
+
+def section_display_name(doc: dict, key: str) -> str:
+    """The name to show for a `=key` reference — the target's current name
+    when it resolves, otherwise the key as written."""
+    sec = find_section(doc, key)
+    return (sec.get("name") or sec.get("id") or key) if sec else key
 
 
 # ==============================================================================

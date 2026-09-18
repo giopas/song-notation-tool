@@ -19,7 +19,11 @@ const API = {
   }),
   openExample: () => fetchJSON("/api/songs/example", { method: "POST" }),
   deleteSong: (name) => fetchJSON(`/api/songs/${encodeURIComponent(name)}`, { method: "DELETE" }),
-  parseLine: (line) => fetchJSON("/api/parse", { method: "POST", body: JSON.stringify({ line }) }),
+  // `doc` is optional context so the server can expand =section / riff
+  // references into the items they point at for the preview row.
+  parseLine: (line, doc) => fetchJSON("/api/parse", {
+    method: "POST", body: JSON.stringify(doc ? { line, doc } : { line }),
+  }),
   render: (doc, instruments) => fetchJSON("/api/render", {
     method: "POST", body: JSON.stringify({ doc, instruments }),
   }),
@@ -216,7 +220,7 @@ function buildSectionCard(sec, idx) {
   // background — failures are silent, since this is only a display nicety
   // and the typed line is already on screen.
   if (lineInput.value.trim() && sec.render !== "free") {
-    API.parseLine(lineInput.value)
+    API.parseLine(lineInput.value, currentDoc)
       .then((result) => { if (result.ok) updateSectionPreview(node, sec, result); })
       .catch(() => {});
   }
@@ -280,7 +284,7 @@ function wireSectionEvents(node, sec, idx) {
       return;
     }
     try {
-      const result = await API.parseLine(line);
+      const result = await API.parseLine(line, currentDoc);
       if (result.ok) {
         setChartItems(s, result.items);
         s.chart_line = result.unparsed;
@@ -603,6 +607,20 @@ function moveSection(id, delta) {
   schedulePreviewUpdate();
 }
 
+/**
+ * How to spell a reference to `sec`: its name when that is a bare
+ * identifier the grammar accepts and no other section shares it, else the
+ * id. Both resolve, but the name is the one that stays meaningful after a
+ * rename — and the one a person can read.
+ */
+function refKeyFor(sec) {
+  const name = (sec.name || "").trim();
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) return sec.id;
+  const clashes = currentDoc.sections.filter(
+    (s) => (s.name || "").trim().toLowerCase() === name.toLowerCase()).length;
+  return clashes === 1 ? name : sec.id;
+}
+
 function duplicateSection(id) {
   const i = currentDoc.sections.findIndex((s) => s.id === id);
   if (i < 0) return;
@@ -612,8 +630,8 @@ function duplicateSection(id) {
     instrument: source.instrument, repeat: 1, transpose: 0,
     render: source.render === "free" ? "chart" : source.render, annotation: "",
     free_text: "",
-    items: [{ kind: "section_ref", section: source.id, repeat: 1, all: false, transpose: 0 }],
-    chart_line: `=${source.id}`,
+    items: [{ kind: "section_ref", section: refKeyFor(source), repeat: 1, all: false, transpose: 0 }],
+    chart_line: `=${refKeyFor(source)}`,
   };
   currentDoc.sections.splice(i + 1, 0, newSec);
   renderEditor();

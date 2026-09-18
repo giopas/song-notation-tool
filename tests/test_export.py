@@ -185,3 +185,20 @@ def test_build_pdf_with_free_section():
     pdf_bytes = export.build_pdf(doc)
     assert pdf_bytes.startswith(b"%PDF-1.4")
     assert b"%%EOF" in pdf_bytes
+
+
+def test_txt_export_expands_a_section_reference():
+    """A reference prints what it plays, not the pointer — the pointer is
+    meaningless to someone reading the chart off a music stand."""
+    import grammar
+    doc = model.new_document(title="T")
+    target = model.new_section("chorus1", "Interlude", "Interlude")
+    target["items"] = grammar.parse_items("3A 12D")
+    ref = model.new_section("s2", "Interlude (ref)", "Interlude")
+    ref["items"] = [model.make_section_ref("chorus1")]
+    doc["sections"] = [target, ref]
+
+    text = "\n".join(export.build_song_lines(doc))
+    assert "=chorus1" not in text
+    assert text.count("A  D") == 2          # once for each section
+    assert export.build_pdf(doc).startswith(b"%PDF-1.4")

@@ -60,7 +60,21 @@ whichever way you made it.
   sections…" divides a pasted-in whole song on blank lines and assigns
   it across the existing sections (adding new ones for any leftover)
   in one step
-- **Marks** — barlines, 1st/2nd endings, segno, coda, D.C./D.S., `simile`
+- **Marks** — barlines, 1st/2nd endings, segno, coda, D.C./D.S., `simile`,
+  with a quick-insert palette beside every chart line so you never have to
+  remember the spelling, and a Notation panel explaining what each one
+  tells a player to do
+- **Free-text sections** — a fourth render mode for the bits this notation
+  doesn't cover: a plain text box, kept and printed exactly as typed.
+  Switching to it is non-destructive, so switching back restores the
+  chart line intact
+- **References print what they play** — a duplicated-as-reference section
+  shows the notes, not the pointer, and is spelled by the target's
+  current name on screen while the file stores a rename-safe id
+- **Print through the OS** — the real print panel, with a preview, not a
+  silent job
+- **Colour, layout and page-fill choices** per song — see
+  [Printing and page layout](#printing-and-page-layout) below
 - **Stage View** (Ctrl/Cmd+P) — full-window, high-contrast, read-only
 - **Live page-count indicator**, and a PDF export that never splits a
   section across a page break
@@ -68,9 +82,12 @@ whichever way you made it.
   expanded, and PDF targets one page (Portrait A4 default)
 - **Light / Dark theme** — switch on the fly
 - **Export** — save as `.txt` (plain text) or `.pdf` (formatted sheet with
-  footer)
+  a footer carrying the version, date and project link); exports open a
+  real save panel and report where they landed
 - **Project files** — save/load sessions as `.sng` (plain JSON,
-  human-readable); `.sng` files from earlier versions load without loss
+  human-readable); `.sng` files from earlier versions load without loss.
+  Songs live under `~/Documents/Song Notation Tool`, not inside this
+  checkout, and the app shows you the folder
 - **Zero dependencies** — pure Python standard library, works out of the box
 - **"Start here" on first launch** — *New song*, *Open example*, or
   *Import project* instead of a blank grid
@@ -195,6 +212,10 @@ dropped in at the cursor), and **free-text sections**. Tab-grid
 section's render mode to Tab or Both, add measures, and type fret
 numbers straight into the cells. See [ROADMAP.md](ROADMAP.md) for
 what's still desktop-only (riff/block management, chiefly).
+
+The window is an app shell: the toolbar, the song list and the songs
+folder stay put and only the section list scrolls, so Save, Preview
+and Export are reachable from anywhere in a long song.
 
 ### Printing and page layout
 

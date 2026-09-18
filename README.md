@@ -196,6 +196,32 @@ section's render mode to Tab or Both, add measures, and type fret
 numbers straight into the cells. See [ROADMAP.md](ROADMAP.md) for
 what's still desktop-only (riff/block management, chiefly).
 
+### Where your files are kept
+
+Songs live in **`~/Documents/Song Notation Tool`** — under your home
+directory, not inside this checkout, so they're covered by whatever backs
+up the rest of your Documents and a `git clean` or a fresh clone can't
+take them with it. Any `.sng` files left in the old in-repo `songs/`
+folder are moved there automatically the first time you run
+`webserver.py`, and it says what it moved. Nothing is ever overwritten: a
+name that already exists in the target is left alone and reported.
+
+The folder is shown in the sidebar, with **Reveal** (open it in Finder)
+and **Change…** next to it when you're running in the native window. The
+choice is remembered in:
+
+```
+~/Library/Application Support/Song Notation Tool/config.json
+```
+
+`--dir` still overrides it for a single run without changing the setting.
+
+**Exports** (TXT/PDF) open a normal macOS save panel in the native window,
+pre-filled with `<Artist> - <Title>.pdf` and starting in whichever folder
+you exported to last; the app then tells you the full path it wrote. In a
+plain browser tab there's no save panel available, so an export is an
+ordinary download and your browser's settings decide where it lands.
+
 ---
 
 ## 📁 File Formats

@@ -74,6 +74,23 @@
       </div>
       <ul id="song-list"></ul>
       <button id="btn-open-example" class="btn subtle">Open example song</button>
+
+      <!-- Where your files are. Shown rather than assumed: songs used to be
+           written inside the source tree, where a git clean would take them
+           with it, and an export in the native window has no browser
+           downloads bar to tell you where it went. -->
+      <div id="songs-folder">
+        <span class="songs-folder-label">Songs folder</span>
+        <span class="songs-folder-path"></span>
+        <div class="songs-folder-actions">
+          <button id="btn-reveal-songs" class="btn subtle hidden"
+                  title="Open this folder in Finder">Reveal</button>
+          <button id="btn-songs-folder" class="btn subtle hidden"
+                  title="Choose a different folder to keep your songs in">Change…</button>
+        </div>
+        <span class="songs-folder-hint hidden">Run with <code>--dir</code> to use
+          a different folder, or open the app in its own window to change it here.</span>
+      </div>
     </aside>
 
     <main id="main">

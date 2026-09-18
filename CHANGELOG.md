@@ -78,6 +78,28 @@ sentence on it.
   instead of three near-identical pages. A chart nobody but its author
   can read isn't much of a chart.
 
+- **Your files live in your home directory, and the app says where.**
+  Songs were written to `./songs` inside the checkout. They were
+  gitignored, so they never got committed — but "not in the repo's
+  history" isn't "safe": a `git clean -xdf`, a fresh clone, or deleting
+  the checkout took the whole folder with it. Songs are the user's data,
+  not part of this program, so they now default to
+  `~/Documents/Song Notation Tool`, where the usual backups cover them.
+  Anything still in the old folder is moved there on first run and
+  reported by name; a name that already exists in the target is left
+  alone rather than overwritten, and the old folder is never deleted.
+  The folder is shown in the sidebar with **Reveal** and **Change…**
+  buttons (native window only — a browser tab can't open a folder
+  picker), and the choice is remembered in a small config file under
+  `~/Library/Application Support/Song Notation Tool/`. `--dir` still
+  overrides it for one run without changing the setting.
+- **Export asks where to put the file.** In the native window an export
+  now opens a real save panel, pre-filled with `<Artist> - <Title>.pdf`
+  and starting in the folder you exported to last, then reports the full
+  path it wrote. Previously the export was an HTTP download with no
+  download UI behind it in the native window — which is a good way to
+  lose a file. In a browser tab it's still an ordinary download (there's
+  no save panel to reach from there), but it now says so.
 - **References print what they play.** A `section_ref` / `block_ref` is
   stored as a pointer — that's what makes "edit the riff once, every
   section using it updates" work — but the chart used to render the

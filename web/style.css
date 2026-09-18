@@ -151,6 +151,27 @@ button {
 }
 
 /* ---------- start-here ---------- */
+/* ---------- songs-folder box ---------- */
+#songs-folder {
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; color: var(--lbl-gray);
+}
+.songs-folder-label { text-transform: uppercase; letter-spacing: 0.04em; }
+.songs-folder-path {
+  font-family: var(--mono); font-size: 11px; color: var(--fg);
+  word-break: break-all; line-height: 1.4;
+}
+.songs-folder-actions { display: flex; gap: 4px; margin-top: 2px; }
+.songs-folder-actions .btn { padding: 3px 8px; font-size: 11px; }
+.songs-folder-hint { line-height: 1.4; }
+.songs-folder-hint code {
+  background: var(--input-bg); padding: 0 3px; border-radius: 3px;
+  font-family: var(--mono);
+}
+
+/* ---------- start-here ---------- */
 #start-here { text-align: center; padding: 60px 20px; color: var(--lbl-gray); }
 #start-here h2 { color: var(--fg); }
 #start-actions { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }

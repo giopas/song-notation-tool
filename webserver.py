@@ -70,6 +70,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 import export
 import grammar
+import userpaths
 import model
 import songmap
 import transpose
@@ -107,6 +108,80 @@ class _JsApi:
             return False
         webbrowser.open_new_tab(url)
         return True
+
+    # ── Export ────────────────────────────────────────────────────────
+    # In a browser tab an export is a download and the browser decides
+    # where it lands. In the native window there's no download UI at all,
+    # so without this an export would either vanish or land somewhere the
+    # user never chose. Here the document is rendered in Python and written
+    # to a path the OS save panel returned — so "where did it go?" is
+    # answered before the file is written, not after.
+    def export_document(self, doc: dict, fmt: str = "txt", orient: str = "portrait"):
+        import webview
+        try:
+            doc = model.migrate_document(doc or {})
+            fmt = "pdf" if str(fmt).startswith("pdf") else "txt"
+            default_name = default_export_name(doc, fmt)
+
+            window = _RUNTIME.get("webview_window")
+            if window is None:
+                return {"ok": False, "error": "no window"}
+            chosen = window.create_file_dialog(
+                webview.SAVE_DIALOG,
+                directory=userpaths.last_export_dir(),
+                save_filename=default_name,
+            )
+            if not chosen:
+                return {"ok": False, "cancelled": True}
+            path = chosen if isinstance(chosen, str) else chosen[0]
+
+            if fmt == "txt":
+                data = ("\n".join(export.build_song_lines(doc)) + "\n").encode("utf-8")
+            else:
+                data = export.build_pdf(doc, orient=orient)
+            with open(path, "wb") as f:
+                f.write(data)
+
+            userpaths.set_last_export_dir(os.path.dirname(path))
+            return {"ok": True, "path": path}
+        except Exception as exc:  # noqa: BLE001 — surfaced in the UI, never fatal
+            return {"ok": False, "error": str(exc)}
+
+    # ── Songs folder ──────────────────────────────────────────────────
+    def choose_songs_folder(self):
+        """Pick a new songs folder. Existing songs are left where they
+        are — this points the app at a folder, it doesn't move data."""
+        import webview
+        try:
+            window = _RUNTIME.get("webview_window")
+            if window is None:
+                return {"ok": False, "error": "no window"}
+            chosen = window.create_file_dialog(
+                webview.FOLDER_DIALOG, directory=userpaths.songs_dir())
+            if not chosen:
+                return {"ok": False, "cancelled": True}
+            path = chosen if isinstance(chosen, str) else chosen[0]
+            userpaths.set_songs_dir(path)
+            Handler.store = SongStore(path)
+            return {"ok": True, "path": path}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc)}
+
+    def reveal(self, path: str = "") -> bool:
+        """Open a folder in Finder / Explorer / the desktop file manager."""
+        target = os.path.abspath(os.path.expanduser(path or userpaths.songs_dir()))
+        if not os.path.isdir(target):
+            target = os.path.dirname(target)
+        try:
+            if sys.platform == "darwin":
+                subprocess.Popen(["open", target])
+            elif os.name == "nt":
+                os.startfile(target)  # noqa: S606
+            else:
+                subprocess.Popen(["xdg-open", target])
+            return True
+        except Exception:  # noqa: BLE001
+            return False
 
 
 def _shutdown():
@@ -300,6 +375,9 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/meta":
                 return self._send_json({
                     "app_version": APP_VERSION,
+                    "songs_dir": self.store.dir,
+                    "export_dir": userpaths.last_export_dir(),
+                    "config_path": userpaths.config_path(),
                     "section_types": SECTION_TYPES,
                     "render_modes": RENDER_MODE_LABELS,
                     "instruments": INSTRUMENT_STRINGS,
@@ -541,8 +619,10 @@ def _maybe_reexec_into_venv(argv):
 def main(argv=None):
     _maybe_reexec_into_venv(list(sys.argv[1:] if argv is None else argv))
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    parser.add_argument("--dir", default="songs",
-                         help="Folder of .sng files to serve (default: ./songs)")
+    parser.add_argument("--dir", default=None,
+                         help="Folder of .sng files to serve (default: your "
+                              "configured songs folder, initially "
+                              "~/Documents/Song Notation Tool)")
     parser.add_argument("--host", default="localhost",
                          help="Bind address (use 0.0.0.0 to reach it from "
                               "other devices on the network — default: localhost)")
@@ -557,7 +637,28 @@ def main(argv=None):
                               "devices on the network)")
     args = parser.parse_args(argv)
 
-    Handler.store = SongStore(args.dir)
+    # Songs are the user's data, so they live under the user's home by
+    # default — not in ./songs inside the checkout, where a `git clean` or
+    # a re-clone would take them. --dir still overrides, per run, without
+    # touching the stored setting.
+    if args.dir:
+        songs_dir = os.path.abspath(os.path.expanduser(args.dir))
+    else:
+        songs_dir = userpaths.songs_dir()
+        legacy = os.path.join(os.path.dirname(os.path.abspath(__file__)), "songs")
+        moved, skipped = userpaths.migrate_legacy_songs(legacy, songs_dir)
+        if moved:
+            print(f"Moved {len(moved)} song{'s' if len(moved) != 1 else ''} out of "
+                  f"the source folder into {songs_dir}:")
+            for name in moved:
+                print(f"  {name}")
+        if skipped:
+            print(f"Left {len(skipped)} file(s) in {legacy} "
+                  f"(a file of the same name was already in the songs folder):")
+            for name in skipped:
+                print(f"  {name}")
+
+    Handler.store = SongStore(songs_dir)
 
     class ThreadingHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         allow_reuse_address = True
@@ -570,7 +671,10 @@ def main(argv=None):
     open_host = "localhost" if args.host == "0.0.0.0" else args.host
     url = f"http://{open_host}:{args.port}"
 
-    print(f"Song Notation Tool v{APP_VERSION} — serving {os.path.abspath(args.dir)}")
+    print(f"Song Notation Tool v{APP_VERSION}")
+    print(f"Songs folder: {songs_dir}")
+    if not args.dir:
+        print(f"  (change it in the app, or edit {userpaths.config_path()})")
 
     use_webview = False
     pywebview_missing = False

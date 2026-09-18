@@ -30,6 +30,11 @@ song_writer_v.0.1[0-4].py
 # but keep the curated examples/ folder, which ships with the repo.
 *.sng
 
+# Legacy in-repo songs folder. Songs now live under
+# ~/Documents/Song Notation Tool and are moved out of here automatically
+# on first run; this stays ignored so an old checkout can't commit them.
+songs/
+
 # Test artifacts (the tests/ source is tracked; caches are not)
 .pytest_cache/
 

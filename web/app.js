@@ -693,8 +693,33 @@ function showClosedOverlay(message) {
   overlay.classList.remove("hidden");
 }
 
+/** True in the native window, where pywebview's js_api bridge exists. */
+function nativeApi() {
+  return (window.pywebview && window.pywebview.api) || null;
+}
+
 async function exportCurrent(kind) {
   if (!currentDoc) return;
+  const fmt = kind === "txt" ? "txt" : "pdf";
+  const orient = kind === "pdf-landscape" ? "landscape" : "portrait";
+
+  // Native window: ask the OS where to put it, so the file lands somewhere
+  // the user picked and we can say exactly where. A browser tab has no such
+  // dialog available to us — there the download below is the right answer,
+  // and the browser's own settings decide the folder.
+  const api = nativeApi();
+  if (api && api.export_document) {
+    const res = await api.export_document(currentDoc, fmt, orient);
+    if (res && res.ok) {
+      toast(`Saved to ${res.path}`);
+    } else if (res && res.cancelled) {
+      // user closed the panel — say nothing
+    } else {
+      toast(`Export failed: ${(res && res.error) || "unknown error"}`);
+    }
+    return;
+  }
+
   let url, filename, body;
   if (kind === "txt") {
     url = "/api/export.txt";
@@ -722,6 +747,47 @@ async function exportCurrent(kind) {
   a.href = dlUrl; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(dlUrl);
+  toast(`Downloaded ${filename} — check your browser's downloads folder`);
+}
+
+// ---------------------------------------------------------------------------
+//  Songs folder — shown in the sidebar so "where is my file?" is answerable
+//  without leaving the app.
+// ---------------------------------------------------------------------------
+function renderSongsFolder() {
+  const box = document.getElementById("songs-folder");
+  if (!box) return;
+  const dir = META.songs_dir || "";
+  box.querySelector(".songs-folder-path").textContent = dir;
+  box.querySelector(".songs-folder-path").title = dir;
+
+  const api = nativeApi();
+  const changeBtn = box.querySelector("#btn-songs-folder");
+  const revealBtn = box.querySelector("#btn-reveal-songs");
+  // Both actions need the native bridge; in a browser tab there's no way to
+  // open a folder picker or a Finder window, so say what to do instead.
+  const native = !!(api && api.choose_songs_folder);
+  changeBtn.classList.toggle("hidden", !native);
+  revealBtn.classList.toggle("hidden", !native);
+  box.querySelector(".songs-folder-hint").classList.toggle("hidden", native);
+}
+
+async function changeSongsFolder() {
+  const api = nativeApi();
+  if (!api || !api.choose_songs_folder) return;
+  const res = await api.choose_songs_folder();
+  if (!res || !res.ok) {
+    if (res && !res.cancelled) toast(`Could not change folder: ${res.error || "?"}`);
+    return;
+  }
+  META.songs_dir = res.path;
+  renderSongsFolder();
+  currentFilename = null;
+  currentDoc = null;
+  document.getElementById("editor").classList.add("hidden");
+  document.getElementById("start-here").classList.remove("hidden");
+  await refreshSongList();
+  toast(`Songs folder is now ${res.path}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -926,6 +992,13 @@ async function init() {
   META = await API.meta();
   document.getElementById("app-version").textContent = `v${META.app_version}`;
   wireMetaForm();
+  renderSongsFolder();
+  document.getElementById("btn-songs-folder").addEventListener("click",
+    () => changeSongsFolder().catch((e) => toast(String(e))));
+  document.getElementById("btn-reveal-songs").addEventListener("click", () => {
+    const api = nativeApi();
+    if (api && api.reveal) api.reveal(META.songs_dir || "");
+  });
 
   document.getElementById("btn-help").addEventListener("click", () => {
     document.getElementById("help-strip").classList.toggle("hidden");

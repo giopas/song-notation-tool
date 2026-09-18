@@ -225,3 +225,79 @@ def test_section_refs_to_finds_a_ref_written_by_name():
     user["items"] = [model.make_section_ref("Interlude")]
     doc["sections"] = [target, user]
     assert songmap.section_refs_to(doc, "chorus1") == ["Later"]
+
+
+# ==============================================================================
+#  User file locations — v0.20
+# ==============================================================================
+
+def test_songs_dir_defaults_under_the_user_home_not_the_repo(monkeypatch, tmp_path):
+    import userpaths
+    monkeypatch.setattr(userpaths, "config_path", lambda: str(tmp_path / "cfg.json"))
+    d = userpaths.songs_dir()
+    assert d == userpaths.default_songs_dir()
+    assert "Documents" in d
+
+
+def test_songs_dir_round_trips_through_the_config(monkeypatch, tmp_path):
+    import userpaths
+    monkeypatch.setattr(userpaths, "config_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(userpaths, "config_path", lambda: str(tmp_path / "cfg.json"))
+    assert userpaths.set_songs_dir(str(tmp_path / "Tunes"))
+    assert userpaths.songs_dir() == str(tmp_path / "Tunes")
+
+
+def test_last_export_dir_falls_back_when_the_folder_is_gone(monkeypatch, tmp_path):
+    import userpaths
+    monkeypatch.setattr(userpaths, "config_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(userpaths, "config_path", lambda: str(tmp_path / "cfg.json"))
+    gone = tmp_path / "unplugged-drive"
+    gone.mkdir()
+    userpaths.set_last_export_dir(str(gone))
+    assert userpaths.last_export_dir() == str(gone)
+    gone.rmdir()
+    assert userpaths.last_export_dir() == userpaths.default_export_dir()
+
+
+def test_broken_config_falls_back_to_defaults(monkeypatch, tmp_path):
+    import userpaths
+    bad = tmp_path / "cfg.json"
+    bad.write_text("{not json at all")
+    monkeypatch.setattr(userpaths, "config_path", lambda: str(bad))
+    assert userpaths.load_config() == {}
+    assert userpaths.songs_dir() == userpaths.default_songs_dir()
+
+
+def test_migration_moves_songs_out_of_the_repo(tmp_path):
+    import userpaths
+    legacy = tmp_path / "repo" / "songs"; legacy.mkdir(parents=True)
+    target = tmp_path / "Documents" / "Song Notation Tool"
+    (legacy / "a.sng").write_text("{}")
+    (legacy / "b.sng").write_text("{}")
+    (legacy / "notes.txt").write_text("not a song")
+
+    moved, skipped = userpaths.migrate_legacy_songs(str(legacy), str(target))
+    assert sorted(moved) == ["a.sng", "b.sng"] and skipped == []
+    assert (target / "a.sng").exists()
+    assert not (legacy / "a.sng").exists()
+    assert (legacy / "notes.txt").exists()      # untouched
+
+
+def test_migration_never_overwrites_and_never_deletes(tmp_path):
+    import userpaths
+    legacy = tmp_path / "repo" / "songs"; legacy.mkdir(parents=True)
+    target = tmp_path / "songs-target"; target.mkdir()
+    (legacy / "clash.sng").write_text("old")
+    (target / "clash.sng").write_text("newer")
+
+    moved, skipped = userpaths.migrate_legacy_songs(str(legacy), str(target))
+    assert moved == [] and skipped == ["clash.sng"]
+    assert (target / "clash.sng").read_text() == "newer"   # not clobbered
+    assert (legacy / "clash.sng").read_text() == "old"     # not deleted
+
+
+def test_migration_is_a_no_op_when_source_and_target_match(tmp_path):
+    import userpaths
+    d = tmp_path / "songs"; d.mkdir(); (d / "a.sng").write_text("{}")
+    assert userpaths.migrate_legacy_songs(str(d), str(d)) == ([], [])
+    assert (d / "a.sng").exists()

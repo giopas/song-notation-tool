@@ -266,3 +266,86 @@ def test_both_layouts_build_a_valid_pdf():
     for layout in ("banner", "gutter"):
         doc["section_layout"] = layout
         assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+# ==============================================================================
+#  Colour and page-fill — v0.20
+# ==============================================================================
+
+def test_section_color_is_per_type_and_collapses_in_bw():
+    from constants import section_color, SECTION_COLORS
+    assert section_color("Solo") == SECTION_COLORS["Solo"]
+    assert section_color("Verse") != section_color("Solo")
+    assert section_color("Solo", "bw") == (0.0, 0.0, 0.0)
+    assert section_color("Solo", "bw") == section_color("Verse", "bw")
+
+
+def test_an_unknown_section_type_still_gets_a_colour():
+    from constants import section_color, DEFAULT_SECTION_COLOR
+    assert section_color("Something Else") == DEFAULT_SECTION_COLOR
+
+
+def test_both_colour_modes_build_a_valid_pdf():
+    doc = _layout_doc()
+    for mode in ("color", "bw"):
+        doc["color_mode"] = mode
+        assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+def test_fit_scales_a_short_chart_up():
+    doc = _layout_doc()
+    doc["pdf_scale"] = "fit"
+    assert export.resolve_scale(doc, None, "portrait") > 1.0
+
+
+def test_fit_never_adds_a_page():
+    """The whole contract of fit: bigger type, same page count."""
+    doc = _layout_doc()
+    base = export._build_pdf(doc, None, "portrait", 1.0)[1]
+    scale = export.resolve_scale(doc, None, "portrait")
+    assert export._build_pdf(doc, None, "portrait", scale)[1] <= base
+
+
+def test_fit_respects_the_page_width():
+    """A long line is what caps the scale — scaled type must not run off
+    the side of the paper, which no page count would catch."""
+    import grammar
+    doc = model.new_document(title="T")
+    wide = model.new_section("w", "Wide", "Verse", render="free")
+    wide["free_text"] = "|--|12-|  " * 12
+    doc["sections"] = [wide]
+    scale = export.resolve_scale(doc, None, "portrait")
+    longest = max(len(ln) for ln in export._body_lines_for_width(doc, None))
+    assert scale < 1.0                                    # shrank to fit
+    assert scale >= export.MIN_FIT_SCALE
+    assert longest * 4.6 * scale <= (595 - 2 * 28) + 0.5
+
+
+def test_explicit_scales_are_honoured_and_junk_falls_back_to_fit():
+    doc = _layout_doc()
+    doc["pdf_scale"] = "1.5"
+    assert export.resolve_scale(doc, None, "portrait") == 1.5
+    doc["pdf_scale"] = "150%"
+    assert export.resolve_scale(doc, None, "portrait") == 1.5
+    doc["pdf_scale"] = "normal"
+    assert export.resolve_scale(doc, None, "portrait") == 1.0
+    doc["pdf_scale"] = "nonsense"
+    assert export.resolve_scale(doc, None, "portrait") > 1.0   # fell back to fit
+
+
+def test_scaling_does_not_change_the_txt_export():
+    """Scale and colour are PDF concerns; the TXT chart is plain text."""
+    doc = _layout_doc()
+    a = export.build_song_lines(doc)
+    doc["pdf_scale"] = "2.0"; doc["color_mode"] = "bw"
+    assert export.build_song_lines(doc) == a
+
+
+def test_fit_will_not_shrink_past_legibility():
+    """A chart too wide to fit even at the floor stops at the floor rather
+    than disappearing — landscape is the real answer at that point."""
+    doc = model.new_document(title="T")
+    wide = model.new_section("w", "Wide", "Verse", render="free")
+    wide["free_text"] = "|--|12-|  " * 60
+    doc["sections"] = [wide]
+    assert export.resolve_scale(doc, None, "portrait") == export.MIN_FIT_SCALE

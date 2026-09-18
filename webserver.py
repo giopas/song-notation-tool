@@ -78,7 +78,7 @@ import render as render_mod
 from examples import example_document
 from constants import (
     APP_VERSION, INSTRUMENT_STRINGS, SECTION_TYPES, RENDER_MODE_LABELS,
-    SECTION_LAYOUT_LABELS,
+    SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
     TAB_BEATS_DEFAULT, default_export_name,
 )
 
@@ -421,6 +421,8 @@ class Handler(BaseHTTPRequestHandler):
                     "export_dir": userpaths.last_export_dir(),
                     "config_path": userpaths.config_path(),
                     "section_layouts": SECTION_LAYOUT_LABELS,
+                    "color_modes": COLOR_MODE_LABELS,
+                    "pdf_scales": PDF_SCALE_LABELS,
                     "section_types": SECTION_TYPES,
                     "render_modes": RENDER_MODE_LABELS,
                     "instruments": INSTRUMENT_STRINGS,

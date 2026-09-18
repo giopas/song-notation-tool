@@ -31,6 +31,48 @@ INSTRUMENT_STRINGS = {
 SECTION_LAYOUT_LABELS = {"banner": "Sections on top",
                          "gutter": "Sections on the left"}
 
+# Print colours, one per section type, mirroring the accent each section
+# card carries in the UI so screen and paper agree at a glance. These are
+# darkened versions of the on-screen pastels: a colour that reads well on
+# a dark editor background is washed out on white paper.
+SECTION_COLORS = {
+    "Intro":      (0.05, 0.47, 0.42),   # teal
+    "Verse":      (0.13, 0.33, 0.70),   # blue
+    "Pre-Chorus": (0.05, 0.42, 0.62),   # cyan
+    "Chorus":     (0.72, 0.16, 0.28),   # red
+    "Refrain":    (0.60, 0.20, 0.42),   # pink
+    "Bridge":     (0.42, 0.22, 0.66),   # mauve
+    "Interlude":  (0.20, 0.45, 0.28),   # green
+    "Solo":       (0.78, 0.42, 0.05),   # amber
+    "Breakdown":  (0.45, 0.32, 0.18),   # brown
+    "Outro":      (0.30, 0.32, 0.60),   # periwinkle
+    "Custom":     (0.25, 0.25, 0.30),   # slate
+}
+DEFAULT_SECTION_COLOR = (0.16, 0.24, 0.42)
+
+COLOR_MODE_LABELS = {"color": "Colour", "bw": "Black & white"}
+
+# PDF sizing. "fit" scales the whole chart up until it fills the page
+# without needing another one — the point being a chart you can read from
+# a music stand, or off the floor.
+PDF_SCALE_LABELS = {
+    "fit": "Fit to page",
+    "1.0": "100%",
+    "1.25": "125%",
+    "1.5": "150%",
+    "2.0": "200%",
+}
+
+
+def section_color(section_type: str, color_mode: str = "color"):
+    """RGB for a section's heading and its content. Black-and-white mode
+    collapses every section to near-black so a mono printer (or a
+    photocopy) doesn't turn the palette into indistinguishable greys."""
+    if color_mode == "bw":
+        return (0.0, 0.0, 0.0)
+    return SECTION_COLORS.get(section_type, DEFAULT_SECTION_COLOR)
+
+
 RENDER_MODE_LABELS = {"chart": "Chart", "tab": "Tab grid",
                       "both": "Chart + Tab", "free": "Free text"}
 

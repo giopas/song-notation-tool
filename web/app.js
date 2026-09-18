@@ -161,6 +161,8 @@ function renderEditor() {
   document.getElementById("meta-time").value = currentDoc.meta.time || "";
   document.getElementById("meta-bpm").value = currentDoc.meta.bpm || "";
   document.getElementById("meta-layout").value = currentDoc.section_layout || "banner";
+  document.getElementById("meta-color").value = currentDoc.color_mode || "color";
+  document.getElementById("meta-scale").value = String(currentDoc.pdf_scale || "fit");
 
   const list = document.getElementById("section-list");
   list.innerHTML = "";
@@ -1046,19 +1048,29 @@ async function init() {
   document.getElementById("app-version").textContent = `v${META.app_version}`;
   wireMetaForm();
 
-  const layoutSel = document.getElementById("meta-layout");
-  Object.entries(META.section_layouts || { banner: "Sections on top" })
-    .forEach(([value, label]) => {
+  // Layout, Colour and Size are all properties of the *song*, not of this
+  // machine — they travel with the .sng so a chart prints the same way
+  // wherever it's opened.
+  [["meta-layout", "section_layout", META.section_layouts, "banner"],
+   ["meta-color", "color_mode", META.color_modes, "color"],
+   ["meta-scale", "pdf_scale", META.pdf_scales, "fit"],
+  ].forEach(([id, key, labels, fallback]) => {
+    const sel = document.getElementById(id);
+    Object.entries(labels || {}).forEach(([value, label]) => {
       const opt = document.createElement("option");
       opt.value = value; opt.textContent = label;
-      layoutSel.appendChild(opt);
+      sel.appendChild(opt);
     });
-  layoutSel.addEventListener("change", (e) => {
-    if (!currentDoc) return;
-    // A property of the song, not of this machine — it travels with the
-    // .sng so the chart prints the same way wherever it's opened.
-    currentDoc.section_layout = e.target.value;
-    schedulePreviewUpdate();
+    if (!sel.options.length) {
+      const opt = document.createElement("option");
+      opt.value = fallback; opt.textContent = fallback;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener("change", (e) => {
+      if (!currentDoc) return;
+      currentDoc[key] = e.target.value;
+      schedulePreviewUpdate();
+    });
   });
 
   renderSongsFolder();

@@ -204,8 +204,25 @@ size, scaling, page range — and a preview before anything reaches paper.
 It's deliberately not a silent print job. In a browser tab the same PDF
 opens in a new tab, where Cmd/Ctrl+P does the same thing.
 
-**Layout** (next to BPM) chooses where each section's name goes in the
-exported chart:
+Three settings next to BPM shape the exported chart. All three are
+properties of the song, saved in the `.sng`, and apply to the PDF, Print
+and the Preview pane (TXT is plain text, so colour and size don't reach
+it).
+
+**Colour** prints each section — its heading *and* its notes — in a
+colour chosen by section type, so you can find your place on a stand at a
+glance and every Verse looks like every other Verse. **Black & white**
+collapses them all to black for a mono printer or a photocopy, where a
+palette just becomes indistinguishable greys.
+
+**Size** is how much of the paper the chart uses. **Fit to page** scales
+the whole thing up until it fills the sheet without needing another page
+— the point being a chart you can read from a music stand or off the
+floor. It also shrinks a chart whose longest line would otherwise run off
+the edge. The fixed percentages are there when you want a specific size
+regardless.
+
+**Layout** chooses where each section's name goes in the exported chart:
 
 - **Sections on top** — a full-width header band above each section.
 - **Sections on the left** — the name sits in a left-hand column beside

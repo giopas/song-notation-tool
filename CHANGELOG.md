@@ -85,6 +85,24 @@ sentence on it.
   `lp` job: a stage chart is exactly the kind of thing worth eyeballing
   first. In a browser tab it opens in a new tab instead, where Cmd/Ctrl+P
   does the same.
+- **Colour, or black and white.** The PDF now prints each section — its
+  heading *and* its notes — in a colour chosen by section type, so every
+  Verse looks like every other Verse and you can find your place on a
+  stand at a glance. The palette mirrors the accent each section card
+  carries in the editor, darkened for white paper (a colour that reads
+  well on a dark background is washed out in print). **Black & white**
+  collapses every section to black, for a mono printer or a photocopy
+  where a palette just becomes indistinguishable greys.
+- **Fit to page.** A new Size setting scales the whole chart up until it
+  fills the sheet without needing another page — a chart you can read
+  from a music stand, or off the floor. It's exact rather than a guess:
+  the width bound is computed from the longest line, and the height is
+  bisected on real builds, with "fits" meaning "needs no more pages than
+  it did at 100%". It shrinks too — a chart whose longest line already
+  ran off the edge of the paper was never "fitted" by leaving it there —
+  down to a legibility floor, past which landscape is the honest answer.
+  Fixed percentages (100/125/150/200%) are there for when you want a
+  specific size regardless.
 - **Sections on the left, optionally.** A new per-song "Layout" setting
   puts each section's name in a left-hand column beside its first line
   instead of a full-width header band above it. That's three lines saved
@@ -149,6 +167,11 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **The Layout control didn't match the fields beside it.** A `<select>`
+  needs both the shared styling *and* `appearance: none`, or macOS draws
+  its own white pill over the top — which is what made it look pasted in
+  from another application. All three meta selects now match the inputs
+  exactly, chevron included.
 - **The toolbar and song list scrolled away.** The page was an ordinary
   scrolling document, so working on a section near the end of a long song
   left Save, Preview, Export and the song list all off-screen — you had

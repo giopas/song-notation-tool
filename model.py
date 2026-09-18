@@ -24,6 +24,8 @@ RENDER_MODES = ("chart", "tab", "both", "free")
 #              which fits far more of a song on one page
 SECTION_LAYOUTS = ("banner", "gutter")
 
+COLOR_MODES = ("color", "bw")
+
 
 # ==============================================================================
 #  Item constructors — thin helpers that guarantee the required keys exist.
@@ -72,6 +74,8 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "lyrics_text": "",
         "print_lyrics": False,
         "section_layout": "banner",
+        "color_mode": "color",
+        "pdf_scale": "fit",
         "blocks": {},
         "sections": [],
     }

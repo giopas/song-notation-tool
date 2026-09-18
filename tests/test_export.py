@@ -38,7 +38,7 @@ def test_build_song_lines_reads_meta_from_doc_not_a_ui():
     assert "THIRD STATE" in text
     assert "20Minutes" in text
     assert "Key: B" in text
-    assert "[Intro]" in text
+    assert "  Intro" in text
     assert "Bass (4-string)" in text
 
 
@@ -50,12 +50,12 @@ def test_build_song_lines_filters_by_instrument():
     doc["sections"].append(sec2)
 
     bass_only = "\n".join(export.build_song_lines(doc, instruments={"Bass (4-string)"}))
-    assert "[Intro]" in bass_only
-    assert "[Verse]" not in bass_only
+    assert "  Intro" in bass_only
+    assert "Verse" not in bass_only
 
     both = "\n".join(export.build_song_lines(doc, instruments=None))
-    assert "[Intro]" in both
-    assert "[Verse]" in both
+    assert "  Intro" in both
+    assert "  Verse" in both
 
 
 def test_build_song_lines_empty_doc_still_has_footer():
@@ -176,7 +176,7 @@ def test_empty_free_section_prints_no_body():
     doc = model.new_document(title="T")
     doc["sections"].append(_free_section("   \n  "))
     text = "\n".join(export.build_song_lines(doc))
-    assert "[Stage notes]" in text    # the header still appears
+    assert "Stage notes" in text      # the header still appears
 
 
 def test_build_pdf_with_free_section():
@@ -240,7 +240,7 @@ def _layout_doc():
 def test_banner_layout_is_the_default_and_keeps_the_header_band():
     doc = _layout_doc()
     text = "\n".join(export.build_song_lines(doc))
-    assert "[Intro]" in text and "[Verse 1]" in text
+    assert "  Intro" in text and "  Verse 1" in text
 
 
 def test_gutter_layout_puts_the_name_beside_the_first_line():
@@ -251,7 +251,7 @@ def test_gutter_layout_puts_the_name_beside_the_first_line():
     assert "|--|3-|" in intro
     verse = next(ln for ln in lines if ln.startswith("Verse 1"))
     assert "(x2)" in verse and "C" in verse
-    assert "[Intro]" not in "\n".join(lines)     # no banner
+    assert not any(ln.startswith("---") for ln in lines)   # no banner rules
 
 
 def test_gutter_layout_is_shorter_than_the_banner_it_replaces():
@@ -389,8 +389,8 @@ def test_mixed_instruments_stay_on_each_section():
     text = "\n".join(export.build_song_lines(doc))
     header = next(ln for ln in text.splitlines() if "Time:" in ln)
     assert "Bass" not in header and "Guitar" not in header
-    assert "[Intro]   Bass (4-string)" in text
-    assert "[Verse]   Guitar (6-string)" in text
+    assert "Intro   Bass (4-string)" in text
+    assert "Verse   Guitar (6-string)" in text
 
 
 def test_uniform_instrument_ignores_filtered_out_sections():
@@ -429,3 +429,10 @@ def test_colour_headings_stay_reversed_out():
 def test_bw_headings_are_identical_across_section_types():
     from constants import heading_fill
     assert heading_fill("Solo", "bw") == heading_fill("Chorus", "bw")
+
+
+def test_section_names_print_without_brackets():
+    doc = _layout_doc()
+    text = "\n".join(export.build_song_lines(doc))
+    assert "[" not in text and "]" not in text
+    assert "Intro" in text

@@ -59,6 +59,10 @@ sentence on it.
   `SNT_DEBUG_LAUNCH=1` prints the full traceback.
 
 ### Changed
+- **Section names print without square brackets** in both TXT and PDF.
+  The brackets marked the name out from its surroundings, but a banner
+  band or a divider rule already does that — they were two more
+  characters between the reader and the name.
 - The browser fallback message now gives the two commands that
   actually fix it (create a venv, install `requirements-optional.txt`)
   instead of a bare `pip install pywebview` that lands in whichever

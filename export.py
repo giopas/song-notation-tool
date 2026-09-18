@@ -114,7 +114,7 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
             rep = sec.get("repeat", 1)
             rep_str = f" (x{rep})" if rep and rep != 1 else ""
             instr = "" if one else f"   {sec.get('instrument', '')}"
-            out.append(f"[ {sec.get('name', '')} ]{rep_str}{instr}")
+            out.append(f"{sec.get('name', '')}{rep_str}{instr}")
     return out
 
 
@@ -236,7 +236,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
             rep_str = f"  (x{rep})" if rep and rep != 1 else ""
             instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
             lines += [div("-"),
-                      f"  [{sec['name']}]{rep_str}{instr}",
+                      f"  {sec['name']}{rep_str}{instr}",
                       div("-"), ""]
 
         body_indent = gutter_w if gutter else render.BODY_INDENT
@@ -474,7 +474,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             txt(MARGIN, cy, _gutter_label(sec), sz=MONO_SZ, bold=True)
         else:
             instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
-            sec_label = f"[ {sec['name']} ]{rep_str}{instr}"
+            sec_label = f"{sec['name']}{rep_str}{instr}"
             fill_rgb, label_rgb = heading_fill(sec.get("type", ""), colors)
             rfill(MARGIN, cy - LINE_H, W - 2 * MARGIN, LINE_H + 2 * S, *fill_rgb)
             color(*label_rgb)

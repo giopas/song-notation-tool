@@ -45,6 +45,17 @@ def _all_instruments(doc):
 #  TXT export
 # ==============================================================================
 
+def uniform_instrument(doc: dict, instruments=None):
+    """The one instrument every printed section uses, or None if they
+    differ. A song played entirely on one bass doesn't need that repeated
+    on every section heading — it's a fact about the song, so it belongs
+    once, in the header, next to the key and the tempo."""
+    names = {sec.get("instrument", "") for sec in doc.get("sections", [])
+             if instruments is None or sec.get("instrument") in instruments}
+    names.discard("")
+    return next(iter(names)) if len(names) == 1 else None
+
+
 def _mix(rgb, toward_grey: float):
     """`rgb` faded toward mid-grey — for secondary text (annotations, tab
     string labels) that should read as part of its section without
@@ -76,6 +87,7 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
     Tab grids are excluded: their column count adapts to the page width
     on its own (mpl_for), so they can't overflow it."""
     out = []
+    one = uniform_instrument(doc, instruments)
     gutter = doc.get("section_layout") == "gutter"
     gutter_w = 0
     if gutter:
@@ -101,7 +113,8 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
         if not gutter:
             rep = sec.get("repeat", 1)
             rep_str = f" (x{rep})" if rep and rep != 1 else ""
-            out.append(f"[ {sec.get('name', '')} ]{rep_str}   {sec.get('instrument', '')}")
+            instr = "" if one else f"   {sec.get('instrument', '')}"
+            out.append(f"[ {sec.get('name', '')} ]{rep_str}{instr}")
     return out
 
 
@@ -188,6 +201,9 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         meta_parts.append(f"BPM: {meta['bpm']}")
     if meta.get("time"):
         meta_parts.append(f"Time: {meta['time']}")
+    one_instrument = uniform_instrument(doc, instruments)
+    if one_instrument:
+        meta_parts.append(one_instrument)
     if meta_parts:
         lines.append("  " + "   ".join(meta_parts))
     lines += [div("="), ""]
@@ -218,8 +234,9 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         else:
             rep = sec.get("repeat", 1)
             rep_str = f"  (x{rep})" if rep and rep != 1 else ""
+            instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
             lines += [div("-"),
-                      f"  [{sec['name']}]{rep_str}   {sec.get('instrument', '')}",
+                      f"  [{sec['name']}]{rep_str}{instr}",
                       div("-"), ""]
 
         body_indent = gutter_w if gutter else render.BODY_INDENT
@@ -391,6 +408,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
         meta_parts.append(f"BPM: {meta['bpm']}")
     if meta.get("time"):
         meta_parts.append(f"Time: {meta['time']}")
+    one_instrument = uniform_instrument(doc, instruments)
+    if one_instrument:
+        meta_parts.append(one_instrument)
     if meta_parts:
         txt(MARGIN, H - 41 * S, "   |   ".join(meta_parts), sz=7.5 * S)
     cy_holder[0] = H - 54 * S
@@ -453,15 +473,19 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             color(*rgb)
             txt(MARGIN, cy, _gutter_label(sec), sz=MONO_SZ, bold=True)
         else:
-            sec_label = f"[ {sec['name']} ]{rep_str}   {sec.get('instrument', '')}"
+            instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
+            sec_label = f"[ {sec['name']} ]{rep_str}{instr}"
             rfill(MARGIN, cy - LINE_H, W - 2 * MARGIN, LINE_H + 2 * S, *rgb)
             color(1, 1, 1)
             txt(MARGIN + 4 * S, cy - LINE_H + 3 * S, sec_label,
                 sz=HEAD_SZ, bold=True)
-            cy -= LINE_H + 6 * S
+            cy -= LINE_H + 14 * S
 
         if free_mode and (sec.get("free_text") or "").strip():
-            color(*rgb)
+            # The notes are always black. Colour is a label — it tells you
+            # which section you're in; tinting the notes themselves just
+            # makes them harder to read, which is the opposite of the point.
+            color(0, 0, 0)
             for ln in sec["free_text"].splitlines():
                 txt(BODY_X, cy, ln, sz=MONO_SZ)
                 cy -= LINE_H
@@ -470,14 +494,14 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             cy -= 2 * S
 
         if chart_rows:
-            color(*rgb)
+            color(0, 0, 0)
             for ln in chart_rows:
                 txt(BODY_X, cy, ln, sz=MONO_SZ)
                 cy -= LINE_H
             cy -= 2 * S
 
         if sec.get("annotation"):
-            color(*_mix(rgb, 0.45))
+            color(0.3, 0.3, 0.3)
             txt(BODY_X, cy, f'"{sec["annotation"]}"', sz=MONO_SZ)
             cy -= LINE_H
 
@@ -497,13 +521,13 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
                     * CHAR_W + CHAR_W
                     for j in range(i))
 
-            color(*_mix(rgb, 0.45))
+            color(*_mix(rgb, 0.5))
             for i, m_idx in enumerate(batch):
                 txt(col_x(i), cy, f"M{m_idx + 1}", sz=7 * S)
             cy -= LINE_H
 
             for st in strings:
-                color(*_mix(rgb, 0.3))
+                color(*_mix(rgb, 0.35))
                 txt(MARGIN, cy, f"{st}|", sz=MONO_SZ)
                 for i, m_idx in enumerate(batch):
                     beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
@@ -513,7 +537,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
                         tokens.append("-")
                     tokens = tokens[:beats]
                     row_str = "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
-                    color(*rgb)
+                    color(0, 0, 0)
                     txt(col_x(i), cy, row_str, sz=MONO_SZ)
                 cy -= LINE_H
                 if cy < FOOTER_H + LINE_H:
@@ -522,7 +546,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             hline(MARGIN, cy, W - MARGIN, gray=0.82)
             cy -= 3 * S
 
-        cy -= 8 * S
+        cy -= 18 * S
         cy_holder[0] = cy
 
     finish_page()

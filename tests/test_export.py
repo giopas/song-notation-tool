@@ -349,3 +349,60 @@ def test_fit_will_not_shrink_past_legibility():
     wide["free_text"] = "|--|12-|  " * 60
     doc["sections"] = [wide]
     assert export.resolve_scale(doc, None, "portrait") == export.MIN_FIT_SCALE
+
+
+# ==============================================================================
+#  One instrument for the whole song — v0.20
+# ==============================================================================
+
+def _two_section_doc(instr_a="Bass (4-string)", instr_b="Bass (4-string)"):
+    import grammar
+    doc = model.new_document(title="T")
+    a = model.new_section("a", "Intro", "Intro", instrument=instr_a)
+    a["items"] = grammar.parse_items("C G")
+    b = model.new_section("b", "Verse", "Verse", instrument=instr_b)
+    b["items"] = grammar.parse_items("D A")
+    doc["sections"] = [a, b]
+    return doc
+
+
+def test_uniform_instrument_detects_a_single_instrument_song():
+    doc = _two_section_doc()
+    assert export.uniform_instrument(doc) == "Bass (4-string)"
+
+
+def test_uniform_instrument_is_none_when_sections_differ():
+    doc = _two_section_doc(instr_b="Guitar (6-string)")
+    assert export.uniform_instrument(doc) is None
+
+
+def test_single_instrument_moves_to_the_header_and_off_the_sections():
+    doc = _two_section_doc()
+    text = "\n".join(export.build_song_lines(doc))
+    header = next(ln for ln in text.splitlines() if "Key:" in ln or "Time:" in ln)
+    assert "Bass (4-string)" in header
+    assert text.count("Bass (4-string)") == 1        # nowhere else
+
+
+def test_mixed_instruments_stay_on_each_section():
+    doc = _two_section_doc(instr_b="Guitar (6-string)")
+    text = "\n".join(export.build_song_lines(doc))
+    header = next(ln for ln in text.splitlines() if "Time:" in ln)
+    assert "Bass" not in header and "Guitar" not in header
+    assert "[Intro]   Bass (4-string)" in text
+    assert "[Verse]   Guitar (6-string)" in text
+
+
+def test_uniform_instrument_ignores_filtered_out_sections():
+    """Printing only the bass parts of a mixed song is a single-instrument
+    chart, and should read like one."""
+    doc = _two_section_doc(instr_b="Guitar (6-string)")
+    assert export.uniform_instrument(doc, {"Bass (4-string)"}) == "Bass (4-string)"
+    text = "\n".join(export.build_song_lines(doc, instruments={"Bass (4-string)"}))
+    assert "Guitar" not in text
+    assert text.count("Bass (4-string)") == 1
+
+
+def test_a_single_instrument_header_still_builds_a_pdf():
+    doc = _two_section_doc()
+    assert export.build_pdf(doc).startswith(b"%PDF-1.4")

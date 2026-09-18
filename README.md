@@ -209,11 +209,15 @@ properties of the song, saved in the `.sng`, and apply to the PDF, Print
 and the Preview pane (TXT is plain text, so colour and size don't reach
 it).
 
-**Colour** prints each section — its heading *and* its notes — in a
-colour chosen by section type, so you can find your place on a stand at a
-glance and every Verse looks like every other Verse. **Black & white**
-collapses them all to black for a mono printer or a photocopy, where a
-palette just becomes indistinguishable greys.
+**Colour** gives each section heading a colour chosen by its type, so you
+can find your place on a stand at a glance and every Verse looks like
+every other Verse. The notes stay black — colour is there to label, not
+to tint what you're reading. **Black & white** collapses the headings to
+black for a mono printer or a photocopy, where a palette just becomes
+indistinguishable greys.
+
+When every section of a song uses the same instrument, it's printed once
+in the header beside the key and tempo rather than on every section.
 
 **Size** is how much of the paper the chart uses. **Fit to page** scales
 the whole thing up until it fills the sheet without needing another page

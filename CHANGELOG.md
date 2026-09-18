@@ -85,14 +85,21 @@ sentence on it.
   `lp` job: a stage chart is exactly the kind of thing worth eyeballing
   first. In a browser tab it opens in a new tab instead, where Cmd/Ctrl+P
   does the same.
-- **Colour, or black and white.** The PDF now prints each section — its
-  heading *and* its notes — in a colour chosen by section type, so every
-  Verse looks like every other Verse and you can find your place on a
-  stand at a glance. The palette mirrors the accent each section card
-  carries in the editor, darkened for white paper (a colour that reads
-  well on a dark background is washed out in print). **Black & white**
-  collapses every section to black, for a mono printer or a photocopy
-  where a palette just becomes indistinguishable greys.
+- **Colour, or black and white.** The PDF now colours each section's
+  *heading* by section type, so every Verse looks like every other Verse
+  and you can find your place on a stand at a glance. The notes
+  themselves stay black — colour is a label, and tinting the notes only
+  makes them harder to read. The palette mirrors the accent each section
+  card carries in the editor, darkened for white paper (a colour that
+  reads well on a dark background is washed out in print). **Black &
+  white** collapses every heading to black, for a mono printer or a
+  photocopy where a palette just becomes indistinguishable greys.
+- **One instrument, stated once.** When every printed section uses the
+  same instrument, it moves up beside the key and tempo in the header
+  instead of being repeated on every section heading — it's a fact about
+  the song, not about each section. Songs that genuinely switch
+  instrument keep the per-section label. Filtering the export to one
+  instrument counts as a single-instrument chart and reads like one.
 - **Fit to page.** A new Size setting scales the whole chart up until it
   fills the sheet without needing another page — a chart you can read
   from a music stand, or off the floor. It's exact rather than a guess:
@@ -167,6 +174,11 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **Sections were squeezed against their own headings.** The gap between
+  a section's name and its first line, and between one section and the
+  next, was barely a line — readable at 100%, cramped at any larger
+  scale, and hard to scan on a stand. Both gaps are now generous and
+  scale with the type.
 - **The Layout control didn't match the fields beside it.** A `<select>`
   needs both the shared styling *and* `appearance: none`, or macOS draws
   its own white pill over the top — which is what made it look pasted in

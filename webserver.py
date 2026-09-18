@@ -78,6 +78,7 @@ import render as render_mod
 from examples import example_document
 from constants import (
     APP_VERSION, INSTRUMENT_STRINGS, SECTION_TYPES, RENDER_MODE_LABELS,
+    SECTION_LAYOUT_LABELS,
     TAB_BEATS_DEFAULT, default_export_name,
 )
 
@@ -145,6 +146,38 @@ class _JsApi:
             userpaths.set_last_export_dir(os.path.dirname(path))
             return {"ok": True, "path": path}
         except Exception as exc:  # noqa: BLE001 — surfaced in the UI, never fatal
+            return {"ok": False, "error": str(exc)}
+
+    def print_document(self, doc: dict, orient: str = "portrait"):
+        """
+        Print through the operating system's own print dialog.
+
+        Deliberately not a silent `lp` job: the PDF is written to a temp
+        file and handed to the OS default viewer, so the user gets the
+        real print panel — printer, paper size, scaling, page range — and
+        a preview of what they're about to put on paper. A stage chart is
+        exactly the kind of thing you want to eyeball before printing.
+        """
+        import tempfile
+        try:
+            doc = model.migrate_document(doc or {})
+            data = export.build_pdf(doc, orient=orient)
+            name = default_export_name(doc, "pdf")
+            path = os.path.join(tempfile.mkdtemp(prefix="song-notation-"), name)
+            with open(path, "wb") as f:
+                f.write(data)
+
+            if sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+            elif os.name == "nt":
+                try:
+                    os.startfile(path, "print")  # noqa: S606
+                except OSError:
+                    os.startfile(path)           # noqa: S606
+            else:
+                subprocess.Popen(["xdg-open", path])
+            return {"ok": True, "path": path}
+        except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc)}
 
     # ── Songs folder ──────────────────────────────────────────────────
@@ -387,6 +420,7 @@ class Handler(BaseHTTPRequestHandler):
                     "songs_dir": self.store.dir,
                     "export_dir": userpaths.last_export_dir(),
                     "config_path": userpaths.config_path(),
+                    "section_layouts": SECTION_LAYOUT_LABELS,
                     "section_types": SECTION_TYPES,
                     "render_modes": RENDER_MODE_LABELS,
                     "instruments": INSTRUMENT_STRINGS,

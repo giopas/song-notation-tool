@@ -196,6 +196,27 @@ section's render mode to Tab or Both, add measures, and type fret
 numbers straight into the cells. See [ROADMAP.md](ROADMAP.md) for
 what's still desktop-only (riff/block management, chiefly).
 
+### Printing and page layout
+
+**Print…** (in the Export menu) builds the PDF and hands it to your
+system's PDF viewer, so you get the real OS print panel — printer, paper
+size, scaling, page range — and a preview before anything reaches paper.
+It's deliberately not a silent print job. In a browser tab the same PDF
+opens in a new tab, where Cmd/Ctrl+P does the same thing.
+
+**Layout** (next to BPM) chooses where each section's name goes in the
+exported chart:
+
+- **Sections on top** — a full-width header band above each section.
+- **Sections on the left** — the name sits in a left-hand column beside
+  the section's first line. This saves three lines per section, which for
+  most songs is the difference between a one-page chart and a two-page
+  one.
+
+It's a property of the song, saved in the `.sng`, so a chart prints the
+same way wherever it's opened, and it applies to TXT, PDF, Print and the
+Preview pane alike.
+
 ### Where your files are kept
 
 Songs live in **`~/Documents/Song Notation Tool`** — under your home

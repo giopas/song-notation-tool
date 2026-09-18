@@ -220,3 +220,49 @@ def test_free_text_and_chart_sections_share_one_left_margin():
             if ln.strip() and not set(ln.strip()) <= {"=", "-"}]
     indents = {len(ln) - len(ln.lstrip()) for ln in body}
     assert indents == {render.BODY_INDENT}
+
+
+# ==============================================================================
+#  Section layout — v0.20
+# ==============================================================================
+
+def _layout_doc():
+    import grammar
+    doc = model.new_document(title="T")
+    a = model.new_section("i", "Intro", "Intro", render="free")
+    a["free_text"] = "|--|3-|"
+    b = model.new_section("v", "Verse 1", "Verse", repeat=2)
+    b["items"] = grammar.parse_items("C G")
+    doc["sections"] = [a, b]
+    return doc
+
+
+def test_banner_layout_is_the_default_and_keeps_the_header_band():
+    doc = _layout_doc()
+    text = "\n".join(export.build_song_lines(doc))
+    assert "[Intro]" in text and "[Verse 1]" in text
+
+
+def test_gutter_layout_puts_the_name_beside_the_first_line():
+    doc = _layout_doc()
+    doc["section_layout"] = "gutter"
+    lines = export.build_song_lines(doc)
+    intro = next(ln for ln in lines if ln.startswith("Intro"))
+    assert "|--|3-|" in intro
+    verse = next(ln for ln in lines if ln.startswith("Verse 1"))
+    assert "(x2)" in verse and "C" in verse
+    assert "[Intro]" not in "\n".join(lines)     # no banner
+
+
+def test_gutter_layout_is_shorter_than_the_banner_it_replaces():
+    doc = _layout_doc()
+    banner = len(export.build_song_lines(doc))
+    doc["section_layout"] = "gutter"
+    assert len(export.build_song_lines(doc)) < banner
+
+
+def test_both_layouts_build_a_valid_pdf():
+    doc = _layout_doc()
+    for layout in ("banner", "gutter"):
+        doc["section_layout"] = layout
+        assert export.build_pdf(doc).startswith(b"%PDF-1.4")

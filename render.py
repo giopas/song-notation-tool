@@ -134,7 +134,14 @@ def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
 
     fret_line = " " * label_w + "".join(f"{f:<{w}}" for f, w in zip(frets, cols))
     sym_line = f"{label:<{label_w}}" + "".join(f"{s:<{w}}" for s, w in zip(symbols, cols))
-    return [fret_line.rstrip(), sym_line.rstrip()]
+
+    # Chords with no fret numbers (or a lone group / reference) produce an
+    # all-blank fret row. Emitting it anyway put an empty line above the
+    # chart in every such section — visible in the export as one section
+    # sitting a line lower than its neighbours.
+    fret_line = fret_line.rstrip()
+    sym_line = sym_line.rstrip()
+    return [fret_line, sym_line] if fret_line else [sym_line]
 
 
 # ==============================================================================
@@ -163,6 +170,18 @@ def _ref_placeholder(item: dict, doc: dict):
         new_it["section"] = songmap.section_display_name(doc, item.get("section", ""))
         return new_it
     return item
+
+
+def make_text(text: str, repeat: int = 1):
+    """
+    A render-time-only item: literal lines, already formatted, that pass
+    through to the output untouched.
+
+    Not a stored item kind — nothing ever writes one to a .sng. It exists
+    so that expanding a reference to a *free-text* section can carry that
+    section's text, which by definition isn't chart items at all.
+    """
+    return {"kind": "text", "text": text or "", "repeat": repeat}
 
 
 def _expanded(items, repeat, shift):
@@ -208,6 +227,20 @@ def resolve_references(items, doc: dict, _seen=None, _depth=0):
             if target is None or marker in _seen or _depth >= MAX_REF_DEPTH:
                 out.append(_ref_placeholder(it, doc))
                 continue
+            # A section in free-text mode renders as its text, so a
+            # reference to it must too. Its `items` may still hold the
+            # chart it had before the switch — switching to Free is
+            # deliberately non-destructive — and expanding *those* would
+            # show content the target itself no longer displays.
+            if target.get("render") == "free":
+                free = (target.get("free_text") or "").strip()
+                if not free:
+                    out.append(_ref_placeholder(it, doc))
+                    continue
+                out.append(make_text(target.get("free_text", ""),
+                                     repeat=it.get("repeat", 1)))
+                continue
+
             body = resolve_references(
                 [i for i in target.get("items", []) if i.get("kind") != "measure"],
                 doc, _seen | {marker}, _depth + 1)
@@ -236,6 +269,56 @@ def resolve_references(items, doc: dict, _seen=None, _depth=0):
         out.append(it)
 
     return out
+
+
+def _gutter_width(label: str, indent: int) -> int:
+    """Width of the left column: a label's own gutter, or the plain body
+    indent when there's no label. Matches render_chart_row exactly."""
+    return max(len(label) + 2, 4) if label else indent
+
+
+def chart_body_lines(items, label: str = "", indent: int = BODY_INDENT):
+    """
+    Render a section's (already reference-resolved) items to output lines.
+
+    Chart items are column-aligned by render_chart_row; a `text` item —
+    which only ever comes from expanding a reference to a free-text
+    section — passes through as its own lines, because free text is not
+    column data and aligning it would corrupt it. Consecutive chart items
+    are grouped so a mixed run still aligns within each stretch, and only
+    the first line of the section carries the label.
+    """
+    lines = []
+    run = []
+    label_used = [False]
+
+    def take_label():
+        if label and not label_used[0]:
+            label_used[0] = True
+            return label
+        return ""
+
+    def flush():
+        if run:
+            lines.extend(render_chart_row(run, take_label(), indent))
+            run.clear()
+
+    for it in (items or []):
+        if it.get("kind") != "text":
+            run.append(it)
+            continue
+
+        flush()
+        text_lines = (it.get("text") or "").splitlines() or [""]
+        this_label = take_label()
+        width = _gutter_width(label, indent)
+        lines.append(f"{this_label:<{width}}" + text_lines[0])
+        lines.extend(" " * width + ln for ln in text_lines[1:])
+        if it.get("repeat", 1) != 1:
+            lines[-1] += f"  (x{it['repeat']})"
+
+    flush()
+    return lines
 
 
 # ==============================================================================

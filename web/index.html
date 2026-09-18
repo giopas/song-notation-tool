@@ -25,6 +25,7 @@
           <button data-fmt="txt">Export TXT</button>
           <button data-fmt="pdf">Export PDF (portrait)</button>
           <button data-fmt="pdf-landscape">Export PDF (landscape)</button>
+          <button data-fmt="print">Print…</button>
         </div>
       </div>
       <button id="btn-close" class="btn subtle" title="Save this song, then close the window (or stop the server if you're in a browser tab).">⏻ Save &amp; Close</button>
@@ -111,6 +112,9 @@
           <label>Key <input id="meta-key" type="text" size="4" placeholder="B"></label>
           <label>Time <input id="meta-time" type="text" size="4" placeholder="4/4"></label>
           <label>BPM <input id="meta-bpm" type="text" size="4" placeholder=""></label>
+          <label title="Where each section's name goes in the exported chart: a header band above it, or a left-hand column beside it. The left column fits far more of a song on one page.">Layout
+            <select id="meta-layout"></select>
+          </label>
         </div>
 
         <div id="section-list"></div>

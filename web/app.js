@@ -160,6 +160,7 @@ function renderEditor() {
   document.getElementById("meta-key").value = currentDoc.meta.key || "";
   document.getElementById("meta-time").value = currentDoc.meta.time || "";
   document.getElementById("meta-bpm").value = currentDoc.meta.bpm || "";
+  document.getElementById("meta-layout").value = currentDoc.section_layout || "banner";
 
   const list = document.getElementById("section-list");
   list.innerHTML = "";
@@ -708,6 +709,41 @@ function showClosedOverlay(message) {
   overlay.classList.remove("hidden");
 }
 
+/**
+ * Print through the OS. In the native window the PDF is built and handed
+ * to the system viewer, which brings up the real print panel — printer,
+ * paper size, scaling, page range — rather than a silent job. In a
+ * browser tab the same PDF opens in a new tab, where Cmd/Ctrl+P does the
+ * same thing.
+ */
+async function printCurrent() {
+  const api = nativeApi();
+  if (api && api.print_document) {
+    const res = await api.print_document(currentDoc, "portrait");
+    toast(res && res.ok
+      ? "Opened in your PDF viewer — print from there"
+      : `Print failed: ${(res && res.error) || "unknown error"}`);
+    return;
+  }
+  const res = await fetch("/api/export.pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ doc: currentDoc, orient: "portrait" }),
+  });
+  if (!res.ok) {
+    toast("Print failed: could not build the PDF");
+    return;
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const win = window.open(url, "_blank");
+  if (!win) {
+    toast("Allow pop-ups to print, or export the PDF and print that");
+  } else {
+    toast("Opened in a new tab — print from there");
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 /** True in the native window, where pywebview's js_api bridge exists. */
 function nativeApi() {
   return (window.pywebview && window.pywebview.api) || null;
@@ -717,6 +753,8 @@ async function exportCurrent(kind) {
   if (!currentDoc) return;
   const fmt = kind === "txt" ? "txt" : "pdf";
   const orient = kind === "pdf-landscape" ? "landscape" : "portrait";
+
+  if (kind === "print") return printCurrent();
 
   // Native window: ask the OS where to put it, so the file lands somewhere
   // the user picked and we can say exactly where. A browser tab has no such
@@ -1007,6 +1045,22 @@ async function init() {
   META = await API.meta();
   document.getElementById("app-version").textContent = `v${META.app_version}`;
   wireMetaForm();
+
+  const layoutSel = document.getElementById("meta-layout");
+  Object.entries(META.section_layouts || { banner: "Sections on top" })
+    .forEach(([value, label]) => {
+      const opt = document.createElement("option");
+      opt.value = value; opt.textContent = label;
+      layoutSel.appendChild(opt);
+    });
+  layoutSel.addEventListener("change", (e) => {
+    if (!currentDoc) return;
+    // A property of the song, not of this machine — it travels with the
+    // .sng so the chart prints the same way wherever it's opened.
+    currentDoc.section_layout = e.target.value;
+    schedulePreviewUpdate();
+  });
+
   renderSongsFolder();
   document.getElementById("btn-songs-folder").addEventListener("click",
     () => changeSongsFolder().catch((e) => toast(String(e))));

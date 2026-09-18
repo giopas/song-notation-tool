@@ -18,6 +18,12 @@ MARK_NAMES = (
 
 RENDER_MODES = ("chart", "tab", "both", "free")
 
+# Where a section's name goes in the TXT/PDF output:
+#   "banner" — a full-width header band above the section (the default)
+#   "gutter" — a left-hand column beside the section's first line,
+#              which fits far more of a song on one page
+SECTION_LAYOUTS = ("banner", "gutter")
+
 
 # ==============================================================================
 #  Item constructors — thin helpers that guarantee the required keys exist.
@@ -65,6 +71,7 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "transpose": 0,
         "lyrics_text": "",
         "print_lyrics": False,
+        "section_layout": "banner",
         "blocks": {},
         "sections": [],
     }

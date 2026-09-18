@@ -67,7 +67,11 @@ def test_render_chart_row_two_lines_aligned():
 
 def test_render_chart_row_block_ref_shows_repeat():
     items = [make_block_ref("riff1", repeat=3)]
-    _, sym_line = render_chart_row(items, label="Chorus")
+    # No item here carries a fret, so there is no fret row to emit — the
+    # blank one used to be printed anyway (v0.20 fix).
+    rows = render_chart_row(items, label="Chorus")
+    assert len(rows) == 1
+    sym_line = rows[0]
     assert "riff1" in sym_line and "x3" in sym_line
 
 
@@ -338,3 +342,63 @@ def test_labelled_chart_row_still_gets_its_own_gutter():
     import grammar
     _, sym = render_chart_row(grammar.parse_items("3A 12D"), label="Verse")
     assert sym.startswith("Verse")
+
+
+# ==============================================================================
+#  A reference to a free-text section — v0.20
+# ==============================================================================
+
+def _doc_ref_to_free():
+    import model, grammar
+    doc = model.new_document(title="T")
+    target = model.new_section("chorus1", "Interlude", "Interlude", render="free")
+    target["free_text"] = "|--|3-|  |--|12-|"
+    # Switching a section to Free leaves its old chart items in place on
+    # purpose. Expanding a reference must NOT resurrect them.
+    target["items"] = grammar.parse_items("[C D]x2 G")
+    ref = model.new_section("s9", "Interlude (ref)", "Interlude")
+    ref["items"] = [model.make_section_ref("chorus1")]
+    doc["sections"] = [target, ref]
+    return doc, ref
+
+
+def test_reference_to_a_free_section_expands_its_text_not_its_dormant_items():
+    from render import resolve_references, chart_body_lines
+    doc, ref = _doc_ref_to_free()
+    out = resolve_references(ref["items"], doc)
+    assert [it["kind"] for it in out] == ["text"]
+    lines = chart_body_lines(out)
+    assert lines == ["  |--|3-|  |--|12-|"]
+    assert "C" not in "\n".join(lines)
+
+
+def test_repeated_reference_to_a_free_section_marks_the_repeat():
+    import model
+    from render import resolve_references, chart_body_lines
+    doc, _ = _doc_ref_to_free()
+    out = resolve_references([model.make_section_ref("chorus1", repeat=2)], doc)
+    assert chart_body_lines(out)[-1].endswith("(x2)")
+
+
+def test_reference_to_an_empty_free_section_stays_a_reference():
+    import model
+    from render import resolve_references
+    doc, _ = _doc_ref_to_free()
+    doc["sections"][0]["free_text"] = "   "
+    out = resolve_references([model.make_section_ref("chorus1")], doc)
+    assert out[0]["kind"] == "section_ref"
+
+
+def test_multiline_free_text_keeps_its_own_indent_under_a_label():
+    from render import chart_body_lines, make_text
+    lines = chart_body_lines([make_text("one\ntwo")], label="Verse")
+    assert lines[0].startswith("Verse")
+    assert lines[0].endswith("one")
+    assert lines[1] == " " * len(lines[0][:lines[0].index("one")]) + "two"
+
+
+def test_chart_row_with_no_frets_emits_one_line_not_a_blank_one():
+    import grammar
+    from render import render_chart_row
+    assert len(render_chart_row(grammar.parse_items("C G Am"))) == 1
+    assert len(render_chart_row(grammar.parse_items("3A 12D"))) == 2

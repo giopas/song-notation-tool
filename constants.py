@@ -28,6 +28,9 @@ INSTRUMENT_STRINGS = {
     "Bass (5-string)":          ["G", "D", "A", "E", "B"],
 }
 
+SECTION_LAYOUT_LABELS = {"banner": "Sections on top",
+                         "gutter": "Sections on the left"}
+
 RENDER_MODE_LABELS = {"chart": "Chart", "tab": "Tab grid",
                       "both": "Chart + Tab", "free": "Free text"}
 

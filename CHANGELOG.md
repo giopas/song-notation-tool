@@ -78,6 +78,22 @@ sentence on it.
   instead of three near-identical pages. A chart nobody but its author
   can read isn't much of a chart.
 
+- **Print, through the OS's own print dialog.** A "Print…" item in the
+  Export menu builds the PDF and hands it to the system viewer, so you
+  get the real print panel — printer, paper size, scaling, page range —
+  and a preview before anything reaches paper. Deliberately not a silent
+  `lp` job: a stage chart is exactly the kind of thing worth eyeballing
+  first. In a browser tab it opens in a new tab instead, where Cmd/Ctrl+P
+  does the same.
+- **Sections on the left, optionally.** A new per-song "Layout" setting
+  puts each section's name in a left-hand column beside its first line
+  instead of a full-width header band above it. That's three lines saved
+  per section — for most songs the difference between a one-page chart
+  and a two-page one, which is the whole point of this program. Stored in
+  the `.sng` as `section_layout`, so a chart prints the same way wherever
+  it's opened, and honoured by TXT, PDF, Print and the Preview pane
+  alike. Defaults to the existing banner style; nothing changes for an
+  existing song.
 - **Your files live in your home directory, and the app says where.**
   Songs were written to `./songs` inside the checkout. They were
   gitignored, so they never got committed — but "not in the repo's
@@ -133,6 +149,16 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **A reference to a free-text section showed the wrong content.**
+  Switching a section to Free deliberately keeps its old chart items, so
+  switching back is lossless — but expanding a reference walked those
+  dormant items and printed a chart the target itself no longer displays.
+  A reference now renders whatever its target renders: free text for a
+  free section, the chart row for a chart one.
+- **A chart row with no fret numbers printed a blank line above itself.**
+  `render_chart_row` always emitted both rows, and an all-blank fret row
+  `rstrip()`s to an empty string — so any section of plain chords, or a
+  lone expanded reference, sat one line lower than its neighbours.
 - **A section's annotation could be set but never removed.** Typing
   `"like this"` on a chart line stored it as the section's `annotation`,
   `grammar.unparse()` then (correctly) left it out of the line, and

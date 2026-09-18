@@ -197,10 +197,37 @@ button {
 
 /* ---------- meta form ---------- */
 #meta-form {
-  display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
+  display: flex; flex-direction: column; gap: 12px;
   background: var(--card-bg); border: 1px solid var(--border);
   border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
 }
+.meta-row {
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
+}
+
+/* The print group is framed and tinted so it reads as "how this comes out
+   on paper" rather than as three more facts about the song. Dashed, in the
+   mauve accent, because it's a presentation choice — nothing here changes
+   a single note. */
+.meta-print {
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 9px;
+  border: 1px dashed var(--mauve);
+  border-radius: 7px;
+  background: rgba(203, 166, 247, 0.06);
+  align-self: flex-start;
+  max-width: 100%;
+}
+.meta-print-title {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--mauve); opacity: 0.85; padding-right: 2px; white-space: nowrap;
+}
+.meta-print label { font-size: 10px; }
+/* Slightly smaller than the song fields: secondary controls, and it keeps
+   the frame from dominating the row above it. */
+.meta-print select { font-size: 13px; height: 29px; padding: 4px 24px 4px 7px; }
+.meta-print select { background-position: calc(100% - 13px) 12px, calc(100% - 8px) 12px; }
 #meta-form label {
   display: flex; flex-direction: column; gap: 4px;
   font-size: 11px; color: var(--lbl-gray); text-transform: uppercase;

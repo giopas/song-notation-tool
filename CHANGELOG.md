@@ -179,6 +179,12 @@ sentence on it.
   next, was barely a line — readable at 100%, cramped at any larger
   scale, and hard to scan on a stand. Both gaps are now generous and
   scale with the type.
+- **The print settings looked like song data.** Layout, Colour and Size
+  sat in the same row as Title, Artist, Key, Time and BPM, so they read
+  as five more facts about the song rather than three choices about how
+  it comes out on paper. They're now on their own second line, in a
+  dashed, tinted frame labelled "Print & export" — nothing inside it
+  changes a single note.
 - **The Layout control didn't match the fields beside it.** A `<select>`
   needs both the shared styling *and* `appearance: none`, or macOS draws
   its own white pill over the top — which is what made it look pasted in

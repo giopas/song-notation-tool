@@ -366,6 +366,18 @@ function insertAtCursor(input, text, caretBack) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+/** Lick lines under the chart row — as many as the tallest lick needs. */
+function setExtraPreviewRows(node, rows) {
+  const box = node.querySelector(".sec-preview");
+  [...box.querySelectorAll(".sec-preview-lick")].forEach((el) => el.remove());
+  rows.forEach((text) => {
+    const div = document.createElement("div");
+    div.className = "sec-preview-lick";
+    div.textContent = text;
+    box.appendChild(div);
+  });
+}
+
 function updateSectionPreview(node, sec, parseResult) {
   const fretRow = node.querySelector(".sec-preview-fret");
   const symRow = node.querySelector(".sec-preview-sym");
@@ -384,16 +396,23 @@ function updateSectionPreview(node, sec, parseResult) {
   errEl.classList.add("hidden");
 
   if (rendered && rendered.length) {
-    fretRow.textContent = rendered[0] || "";
-    symRow.textContent = rendered[1] || "";
+    // A row is 1..N lines now: an optional fret row, the symbol row, and
+    // one line per string for any lick. The first two elements are reused
+    // so the fret/symbol colouring stays; anything beyond is appended.
+    const hasFret = parseResult ? !!parseResult.fret_row : rendered.length > 1;
+    fretRow.textContent = hasFret ? rendered[0] : "";
+    symRow.textContent = hasFret ? (rendered[1] || "") : rendered[0];
+    setExtraPreviewRows(node, rendered.slice(hasFret ? 2 : 1));
     emptyEl.classList.add("hidden");
   } else if (!items.length && !measureItems(sec).length) {
     fretRow.textContent = "";
     symRow.textContent = "";
+    setExtraPreviewRows(node, []);
     emptyEl.classList.remove("hidden");
   } else if (rendered) {
     fretRow.textContent = "";
     symRow.textContent = "";
+    setExtraPreviewRows(node, []);
     emptyEl.classList.add("hidden");
   }
 }

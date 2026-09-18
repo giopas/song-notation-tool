@@ -111,6 +111,17 @@ def _symbol_str(item: dict) -> str:
 BODY_INDENT = 2   # every body line in the TXT/PDF export starts here
 
 
+def _lick_lines(item: dict):
+    """A lick's printable lines: 'G 5 7 5', one per string, as typed."""
+    out = []
+    for ln in item.get("lines", []):
+        frets = ln.get("frets", [])
+        width = max((len(f) for f in frets), default=1)
+        cells = " ".join(f"{f:>{width}}" for f in frets)
+        out.append(f"{ln.get('string', '')} {cells}")
+    return out
+
+
 def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
     """
     Render one section's chart items as two column-aligned text lines:
@@ -129,11 +140,25 @@ def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
 
     frets = [_fret_str(it) for it in items]
     symbols = [_symbol_str(it) for it in items]
+
+    # A lick occupies the same column as any other item, but stacks its
+    # string lines underneath the chord row — so it reads where it's
+    # played, in among the chords, rather than in a separate grid.
+    licks = [_lick_lines(it) if it.get("kind") == "lick" else [] for it in items]
+    n_lick_rows = max((len(l) for l in licks), default=0)
+
     label_w = max(len(label) + 2, 4) if label else indent
-    cols = [max(len(f), len(s)) + 2 for f, s in zip(frets, symbols)]
+    cols = [max(len(f), len(s), *(len(x) for x in lk) if lk else (0,)) + 2
+            for f, s, lk in zip(frets, symbols, licks)]
 
     fret_line = " " * label_w + "".join(f"{f:<{w}}" for f, w in zip(frets, cols))
     sym_line = f"{label:<{label_w}}" + "".join(f"{s:<{w}}" for s, w in zip(symbols, cols))
+
+    lick_rows = []
+    for r in range(n_lick_rows):
+        cells = [(lk[r] if r < len(lk) else "") for lk in licks]
+        lick_rows.append((" " * label_w +
+                          "".join(f"{c:<{w}}" for c, w in zip(cells, cols))).rstrip())
 
     # Chords with no fret numbers (or a lone group / reference) produce an
     # all-blank fret row. Emitting it anyway put an empty line above the
@@ -141,7 +166,8 @@ def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
     # sitting a line lower than its neighbours.
     fret_line = fret_line.rstrip()
     sym_line = sym_line.rstrip()
-    return [fret_line, sym_line] if fret_line else [sym_line]
+    rows = ([fret_line, sym_line] if fret_line else [sym_line])
+    return rows + [r for r in lick_rows if r.strip()]
 
 
 # ==============================================================================
@@ -415,6 +441,9 @@ def estimate_section_lines(section: dict, strings=None) -> int:
         chart_items = [it for it in items if it.get("kind") != "measure"]
         if chart_items:
             lines += 2  # fret row + symbol row
+            # plus however many string lines the tallest lick needs
+            lines += max((len(it.get("lines", [])) for it in chart_items
+                          if it.get("kind") == "lick"), default=0)
 
     if render_mode in ("tab", "both"):
         measures = [it for it in items if it.get("kind") == "measure"]
@@ -477,6 +506,24 @@ def resolve_display_items(items, eff_semitones: int):
             new_it = dict(it)
             new_it["symbol"] = r.symbol
             new_it["fret"] = r.fret
+            out.append(new_it)
+        elif kind == "lick":
+            # A lick is fret positions on named strings, so transposing it
+            # is arithmetic on the frets — the strings don't move. Anything
+            # that would fall off either end of the neck is left alone
+            # rather than silently clamped to a fret you'd actually play.
+            new_lines = []
+            for ln in it.get("lines", []):
+                frets = []
+                for f in ln.get("frets", []):
+                    if f in ("-", "x", "X"):
+                        frets.append(f)
+                        continue
+                    shifted = int(f) + eff_semitones
+                    frets.append(str(shifted) if 0 <= shifted <= 24 else f)
+                new_lines.append({"string": ln.get("string", ""), "frets": frets})
+            new_it = dict(it)
+            new_it["lines"] = new_lines
             out.append(new_it)
         elif kind == "group":
             new_it = dict(it)

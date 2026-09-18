@@ -13,13 +13,25 @@ Pure functions, fully unit-testable. See DESIGN_v0_16.md section 4.
 from __future__ import annotations
 import re
 
-from model import make_token, make_group, make_block_ref, make_section_ref, make_mark
+from model import (make_token, make_group, make_block_ref, make_section_ref,
+                    make_mark, make_lick)
 
 MAX_FRET = 24
 
 
 class ParseError(ValueError):
     pass
+
+
+# A quote is a quote. macOS (and every word processor) turns a typed " into
+# a curly one, and a line pasted from anywhere is likely to carry them — so
+# accept all four rather than rejecting the line with a message that points
+# at the text instead of at the character.
+_QUOTES = '"\u201c\u201d\u2018\u2019'
+
+
+def _strip_quotes(word: str) -> str:
+    return word.strip(_QUOTES)
 
 
 # ==============================================================================
@@ -34,13 +46,22 @@ def _lex(line: str):
         if c.isspace():
             i += 1
             continue
-        if c == '"':
+        if c in _QUOTES:
             j = i + 1
-            while j < n and line[j] != '"':
+            while j < n and line[j] not in _QUOTES:
                 j += 1
             end = min(j + 1, n)
             tokens.append(line[i:end])
             i = end
+            continue
+        if c == '{':
+            j = i + 1
+            while j < n and line[j] != '}':
+                j += 1
+            if j >= n:
+                raise ParseError(f"unmatched '{{' in: {line!r}")
+            tokens.append(line[i:j + 1])
+            i = j + 1
             continue
         if c == '[':
             depth = 1
@@ -202,6 +223,55 @@ def _parse_group(word: str):
     return make_group(parse_items(inner), repeat=repeat)
 
 
+# ==============================================================================
+#  Licks — a short tab figure written inline, where it's played
+#
+#      {G 5 7 5 | D - - 3}
+#
+#  Each |-separated line is one string: its name, then its frets. Positions
+#  align by index across the lines, and "-" means that string isn't played
+#  there. An optional ":" after the string name reads more naturally for
+#  some people, so both "G 5 7 5" and "G: 5 7 5" are accepted.
+# ==============================================================================
+
+_LICK_FRET_RE = re.compile(r'^(?:[-x]|0|[1-9][0-9]?)$', re.IGNORECASE)
+
+
+def _parse_lick(word: str):
+    inner = word[1:-1].strip()
+    if not inner:
+        raise ParseError("empty lick: {}")
+
+    lines = []
+    for raw in inner.split("|"):
+        parts = raw.replace(":", " ").split()
+        if not parts:
+            continue
+        name, frets = parts[0], parts[1:]
+        if not name:
+            raise ParseError(f"lick line has no string name: {raw.strip()!r}")
+        if not frets:
+            raise ParseError(f"lick line {name!r} has no frets")
+        for f in frets:
+            if not _LICK_FRET_RE.match(f):
+                raise ParseError(
+                    f"{f!r} is not a fret in lick line {name!r} "
+                    f"(0-{MAX_FRET}, '-' for not played, or 'x' for muted)")
+            if f not in ("-", "x", "X") and int(f) > MAX_FRET:
+                raise ParseError(f"fret {f} exceeds MAX_FRET ({MAX_FRET}) in lick")
+        lines.append({"string": name, "frets": frets})
+
+    if not lines:
+        raise ParseError("empty lick: {}")
+    return make_lick(lines)
+
+
+def _unparse_lick(item: dict) -> str:
+    body = " | ".join(f"{ln['string']} " + " ".join(ln["frets"])
+                      for ln in item.get("lines", []))
+    return "{" + body + "}"
+
+
 def _parse_section_ref(word: str):
     ident = word[1:]
     if not _IDENT_RE.match(ident):
@@ -240,8 +310,11 @@ def parse(text: str):
         if _STANDALONE_SHIFT_RE.match(tok):
             _apply_shift(items, int(tok))
             continue
-        if tok.startswith('"'):
-            annotation = tok.strip('"')
+        if tok[0] in _QUOTES:
+            annotation = _strip_quotes(tok)
+            continue
+        if tok.startswith('{'):
+            items.append(_parse_lick(tok))
             continue
         mk = _match_mark(tok)
         if mk:
@@ -263,6 +336,8 @@ def _unparse_item(it: dict) -> str:
     if k == "token":
         fret = it.get("fret")
         return (str(fret) if fret is not None else "") + it["symbol"]
+    if k == "lick":
+        return _unparse_lick(it)
     if k == "mark":
         return _MARK_TO_TEXT[it["mark"]]
     if k == "group":

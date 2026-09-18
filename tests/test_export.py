@@ -449,3 +449,27 @@ def test_exports_carry_the_project_link_in_the_footer():
     # The PDF stores its content stream compressed, so check the source
     # the footer is drawn from rather than the bytes.
     assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+def test_a_long_title_shrinks_instead_of_running_off_the_page():
+    """The title is proportional, so it isn't covered by the monospace
+    width bound that sizes the body — it needs its own cap, and shrinking
+    it beats dragging the whole chart's scale down."""
+    short = export._fit_text_size("NUTSHELL", 539, 33.0)
+    long = export._fit_text_size(
+        "THE MAN WHO SOLD THE WORLD (MTV UNPLUGGED)  -  NIRVANA", 539, 33.0)
+    assert short == 33.0            # fits at the size asked for
+    assert long < 33.0              # capped
+    assert len("THE MAN WHO SOLD THE WORLD (MTV UNPLUGGED)  -  NIRVANA") \
+        * 0.58 * long <= 539 + 0.5
+
+
+def test_a_lick_survives_both_exporters():
+    import grammar
+    doc = model.new_document(title="T")
+    sec = model.new_section("c", "Chorus", "Chorus")
+    sec["items"] = grammar.parse_items("[C]x3 {e 4 4 3 4 | B - - 3 -} [F]x1")
+    doc["sections"] = [sec]
+    text = "\n".join(export.build_song_lines(doc))
+    assert "e 4 4 3 4" in text and "B - - 3 -" in text
+    assert export.build_pdf(doc).startswith(b"%PDF-1.4")

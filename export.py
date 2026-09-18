@@ -57,6 +57,20 @@ def uniform_instrument(doc: dict, instruments=None):
     return next(iter(names)) if len(names) == 1 else None
 
 
+# Helvetica's average advance is around 0.55 em for mixed-case text and a
+# little wider for the all-caps title; 0.58 is a deliberately pessimistic
+# single number, since guessing narrow here means text off the page.
+_PROPORTIONAL_EM = 0.58
+
+
+def _fit_text_size(text: str, max_width: float, desired: float) -> float:
+    """`desired`, or smaller if the text wouldn't fit in `max_width`."""
+    n = len(text or "")
+    if n <= 0:
+        return desired
+    return min(desired, max_width / (n * _PROPORTIONAL_EM))
+
+
 def _mix(rgb, toward_grey: float):
     """`rgb` faded toward mid-grey — for secondary text (annotations, tab
     string labels) that should read as part of its section without
@@ -406,7 +420,13 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
     rfill(0, H - band_h, W, band_h, *band_rgb)
     color(*band_text)
     hdr_txt = title.upper() + (f"  -  {artist}" if artist else "")
-    txt(MARGIN, H - 28 * S, hdr_txt, sz=TITLE_SZ, bold=True)
+    # The title is set in a proportional face, so it isn't covered by the
+    # monospace width bound that sizes the body. A long title at a high
+    # scale would simply run off the right edge — so it gets its own cap
+    # and shrinks on its own rather than dragging the whole chart down
+    # with it.
+    txt(MARGIN, H - 28 * S, hdr_txt,
+        sz=_fit_text_size(hdr_txt, W - 2 * MARGIN, TITLE_SZ), bold=True)
     meta_parts = []
     if meta.get("key"):
         meta_parts.append(f"Key: {meta['key']}")
@@ -418,7 +438,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
     if one_instrument:
         meta_parts.append(one_instrument)
     if meta_parts:
-        txt(MARGIN, H - 41 * S, "   |   ".join(meta_parts), sz=7.5 * S)
+        meta_line = "   |   ".join(meta_parts)
+        txt(MARGIN, H - 41 * S, meta_line,
+            sz=_fit_text_size(meta_line, W - 2 * MARGIN, 7.5 * S))
     cy_holder[0] = H - 54 * S
 
     if doc.get("print_lyrics") and (meta_lyrics := (doc.get("lyrics_text") or "")).strip():

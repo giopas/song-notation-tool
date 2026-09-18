@@ -53,6 +53,9 @@
       <li><strong>Tab grid</strong>: switch a section's render mode to "Tab" or "Both" (dropdown
         in the section header) to show an editable tablature grid. Add measures with the
         "+ Measure" button and type fret numbers into the cells.</li>
+      <li><strong>Licks</strong>: write a short tab figure inline with
+        <code>{G 5 7 5 | D - - 3}</code> — one line per string, printed in among
+        the chords at the point it's played.</li>
       <li><strong>Free text</strong>: switch a section's render mode to "Free" for a plain
         text box instead of a chart line — anything you type there is kept and exported
         verbatim, for the bits this notation doesn't cover.</li>
@@ -241,11 +244,28 @@
             <tr><td>Group / repeat</td><td>Wrap in <code>[ ]</code> with <code>xN</code> after bracket</td><td><code>[5A 7D]x2</code> <code>[C G]x4</code></td></tr>
             <tr><td>Standalone repeat</td><td><code>xN</code> right after any item</td><td><code>Am x3</code></td></tr>
             <tr><td>Annotation</td><td>Double-quoted text, or the Annotation field under the section</td><td><code>"keep it simple"</code></td></tr>
+            <tr><td>Lick (inline tab)</td><td><code>{ }</code> with one <code>|</code>-separated line per string: its name, then its frets</td><td><code>{G 5 7 5 | D - - 3}</code></td></tr>
             <tr><td>Riff reference</td><td>Bare identifier (not a chord name)</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
             <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
             <tr><td>Transpose shift</td><td><code>+N</code> or <code>-N</code> on ref or group</td><td><code>riff1+2</code> <code>=verse1-1</code> <code>[5A 7D]x2+3</code></td></tr>
           </tbody>
         </table>
+
+        <h4>Licks — a bit of tab, in among the chords</h4>
+        <p>Some things aren't a chord. When you want to remember the actual
+          notes of a short figure, write it in braces at the point it's
+          played:</p>
+        <p><code>C {G 5 7 5 | D - - 3} G Am</code></p>
+        <p>Each <code>|</code>-separated line is one string — its name, then its
+          frets. Positions line up by column across the lines, so a fret on
+          <code>G</code> at the third position sounds with whatever is third on
+          <code>D</code>; <code>-</code> means that string isn't played there, and
+          <code>x</code> means muted. Write as many lines as the figure needs.</p>
+        <p>It prints as a small tab block sitting under its own column in the
+          chart row, so it stays where it belongs in the sequence rather than
+          being exiled to a separate grid. A <code>G: 5 7 5</code> spelling works
+          too if the colon reads better to you. Transposing a section moves a
+          lick's frets with it — same strings, shifted positions.</p>
 
         <h4>Marks</h4>
         <p class="modal-hint" style="margin-top:0">These are the standard sheet-music
@@ -353,6 +373,7 @@
           <button type="button" class="ins-btn" data-ins="x2" title="Repeat the item before the cursor twice">x2</button>
           <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat — caret lands inside the brackets">[ ]x2</button>
           <button type="button" class="ins-btn" data-ins="&quot;&quot;" data-caret="1" title="Free annotation in quotes">&quot;&quot;</button>
+          <button type="button" class="ins-btn" data-ins="{G 5 7 5 | D - - 3}" data-caret="1" title="A lick: a short tab figure printed in among the chords, one line per string">{ }</button>
           <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
           <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
           <button type="button" class="ins-btn" data-ins="dc" title="D.C. — repeat from the beginning">dc</button>

@@ -64,6 +64,9 @@ whichever way you made it.
   with a quick-insert palette beside every chart line so you never have to
   remember the spelling, and a Notation panel explaining what each one
   tells a player to do
+- **Licks** — `{G 5 7 5 | D - - 3}` writes a short tab figure inline, at
+  the point it's played, printed as a small tab block in among the chords
+  instead of in a separate grid; transposes with the section
 - **Free-text sections** — a fourth render mode for the bits this notation
   doesn't cover: a plain text box, kept and printed exactly as typed.
   Switching to it is non-destructive, so switching back restores the

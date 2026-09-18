@@ -9,7 +9,8 @@ from __future__ import annotations
 
 FORMAT_VERSION = 2
 
-ITEM_KINDS = ("token", "group", "block_ref", "section_ref", "measure", "mark")
+ITEM_KINDS = ("token", "group", "block_ref", "section_ref", "measure", "mark",
+              "lick")
 
 MARK_NAMES = (
     "repeat_open", "repeat_close", "ending_1", "ending_2",
@@ -53,6 +54,25 @@ def make_section_ref(section, repeat=1, all=False, transpose=0):
 
 def make_measure(beats, strings):
     return {"kind": "measure", "beats": beats, "strings": dict(strings)}
+
+
+def make_lick(lines):
+    """
+    A short tab figure sitting inline in a chart line — the lick you want
+    to remember, written where it's played rather than banished to a
+    separate tab grid.
+
+    `lines` is an ordered list of {"string": "G", "frets": ["5", "7", "5"]}.
+    Positions align by index across the lines, so a fret on the G string at
+    index 2 is played with whatever sits at index 2 on the D string; "-"
+    means that string isn't played at that position. The order is as typed,
+    top line first, which is how tab reads.
+    """
+    out = []
+    for ln in lines or []:
+        out.append({"string": str(ln.get("string", "")),
+                    "frets": [str(f) for f in ln.get("frets", [])]})
+    return {"kind": "lick", "lines": out}
 
 
 def make_mark(mark):

@@ -402,3 +402,58 @@ def test_chart_row_with_no_frets_emits_one_line_not_a_blank_one():
     from render import render_chart_row
     assert len(render_chart_row(grammar.parse_items("C G Am"))) == 1
     assert len(render_chart_row(grammar.parse_items("3A 12D"))) == 2
+
+
+# ==============================================================================
+#  Licks render in among the chords — v0.20
+# ==============================================================================
+
+def test_lick_stacks_under_its_own_column_in_the_chart_row():
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("C {G 5 7 5 | D - - 3} G Am"))
+    assert len(rows) == 3                       # symbol row + two string lines
+    sym, g_row, d_row = rows
+    assert "C" in sym and "G" in sym and "Am" in sym
+    assert g_row.strip().startswith("G 5 7 5")
+    assert d_row.strip().startswith("D - - 3")
+    # the lick sits in its own column, after C and before the following G
+    assert sym.index("C") < g_row.index("G 5")
+
+
+def test_a_row_without_a_lick_has_no_extra_lines():
+    import grammar
+    from render import render_chart_row
+    assert len(render_chart_row(grammar.parse_items("C G Am"))) == 1
+    assert len(render_chart_row(grammar.parse_items("5A 7D"))) == 2
+
+
+def test_licks_of_different_heights_share_the_row():
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("{G 5} C {e 1 | B 2 | G 3}"))
+    assert len(rows) == 4                       # symbol row + three string lines
+
+
+def test_transposing_moves_a_licks_frets_not_its_strings():
+    import grammar
+    from render import resolve_display_items
+    out = resolve_display_items(grammar.parse_items("{G 5 7 5 | D - - 3}"), 2)
+    assert [ln["string"] for ln in out[0]["lines"]] == ["G", "D"]
+    assert out[0]["lines"][0]["frets"] == ["7", "9", "7"]
+    assert out[0]["lines"][1]["frets"] == ["-", "-", "5"]
+
+
+def test_transposing_leaves_a_lick_fret_that_would_fall_off_the_neck():
+    import grammar
+    from render import resolve_display_items
+    out = resolve_display_items(grammar.parse_items("{G 0 23}"), -2)
+    assert out[0]["lines"][0]["frets"] == ["0", "21"]   # 0-2 would be negative
+
+
+def test_lick_lines_are_counted_in_the_page_estimate():
+    import grammar
+    from render import estimate_section_lines
+    plain = {"render": "chart", "items": grammar.parse_items("C G")}
+    with_lick = {"render": "chart", "items": grammar.parse_items("C {G 5 | D 3}")}
+    assert estimate_section_lines(with_lick) == estimate_section_lines(plain) + 2

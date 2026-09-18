@@ -147,3 +147,52 @@ def test_round_trip(items):
 def test_round_trip_all_fixtures_together():
     for items in ROUND_TRIP_FIXTURES:
         assert parse_items(unparse(items)) == items
+
+
+# ==============================================================================
+#  Licks — inline tab figures — v0.20
+# ==============================================================================
+
+def test_lick_parses_into_string_lines():
+    items = parse_items("C {G 5 7 5 | D - - 3} G")
+    lick = items[1]
+    assert lick["kind"] == "lick"
+    assert [ln["string"] for ln in lick["lines"]] == ["G", "D"]
+    assert lick["lines"][0]["frets"] == ["5", "7", "5"]
+    assert lick["lines"][1]["frets"] == ["-", "-", "3"]
+
+
+def test_lick_round_trips():
+    line = "C {G 5 7 5 | D - - 3} G"
+    assert unparse(parse_items(line)) == line
+
+
+def test_lick_accepts_a_colon_after_the_string_name():
+    a = parse_items("{G: 5 7 5}")
+    b = parse_items("{G 5 7 5}")
+    assert a == b
+
+
+def test_lick_takes_muted_and_unplayed_positions():
+    frets = parse_items("{A 5 x - 7}")[0]["lines"][0]["frets"]
+    assert frets == ["5", "x", "-", "7"]
+
+
+def test_lick_rejects_a_bad_fret():
+    for bad in ("{G 5 99}", "{G 5 z}", "{G}", "{}"):
+        with pytest.raises(ParseError):
+            parse_items(bad)
+
+
+def test_unmatched_lick_brace_is_an_error():
+    with pytest.raises(ParseError):
+        parse_items("C {G 5 7")
+
+
+def test_curly_quotes_are_accepted_as_annotation_quotes():
+    """macOS and every word processor substitute typed quotes; a line
+    pasted from anywhere is likely to carry them."""
+    for lo, hi in (("“", "”"), ("‘", "’"), ('"', '"')):
+        items, ann = parse(f'C {lo}keep it simple{hi} G')
+        assert ann == "keep it simple"
+        assert [it["symbol"] for it in items] == ["C", "G"]

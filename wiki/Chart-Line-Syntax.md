@@ -43,7 +43,9 @@ reference, or section reference — `xN` glued on with no space.
 
 ## Annotations
 
-A double-quoted string anywhere on the line is dropped from the
+Any of the four quote characters works — `"`, and the curly `“ ” ‘ ’`
+that macOS and every word processor substitute for a typed one. A
+double-quoted string anywhere on the line is dropped from the
 playable items and kept separately as the section's annotation (shown
 in italics under the chart row):
 
@@ -125,6 +127,38 @@ riff1+2
 =verse1-1
 [5A 7D]x2+3
 ```
+
+## Licks — a bit of tab, in among the chords
+
+Some things aren't a chord. When you want to remember the actual notes of
+a short figure, write it in braces at the point it's played:
+
+```
+C {G 5 7 5 | D - - 3} G Am
+```
+
+Each `|`-separated line is one string — its name, then its frets.
+Positions align by column across the lines, so a fret on `G` at the third
+position sounds with whatever is third on `D`. `-` means that string
+isn't played there and `x` means muted. Write as many lines as the figure
+needs.
+
+A `G: 5 7 5` spelling is accepted too, if the colon reads better.
+
+It renders as a small tab block sitting under its own column in the chart
+row:
+
+```
+  C           G  Am
+     G 5 7 5
+     D - - 3
+```
+
+— so it stays where it belongs in the sequence, rather than being exiled
+to a separate tab grid. Transposing the section moves a lick's frets with
+it: same strings, shifted positions. A fret that would fall off either
+end of the neck is left as it was rather than silently clamped to a
+position you'd actually play.
 
 ## Marks
 

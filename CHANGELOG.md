@@ -27,6 +27,17 @@ sentence on it.
   display, and live preview all run unchanged — the chart line stays
   typed text you can still edit by hand. The palette moves below the
   line on narrow windows rather than squeezing the input it serves.
+- **Licks — a bit of tab, in among the chords.** Some things aren't a
+  chord. `{G 5 7 5 | D - - 3}` in a chart line writes a short tab figure
+  at the point it's played: one `|`-separated line per string, its name
+  then its frets, positions aligning by column across the lines, `-` for
+  not played and `x` for muted. It prints as a small tab block under its
+  own column in the chart row, so it stays in sequence with the chords
+  rather than being exiled to a separate grid — as many string lines as
+  the figure needs. Transposing a section moves a lick's frets with it
+  (same strings, shifted positions), and a fret that would fall off
+  either end of the neck is left alone rather than silently clamped to a
+  position you'd actually play. `{ }` is on the quick-insert palette.
 - **Free-text sections** — a fourth per-section render mode, `free`,
   alongside Chart / Tab / Both. The section shows one plain textarea;
   nothing in it is parsed, transposed, validated, or column-aligned,
@@ -186,6 +197,23 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **Curly quotes were a parse error.** macOS — and every word processor —
+  substitutes a typed `"` with `"` or `"`, so an annotation typed
+  anywhere but a plain terminal failed with `cannot parse item`, pointing
+  at the text rather than at the character. All four quote characters are
+  now accepted.
+- **A long title ran off the page at high scale.** Fit-to-page bounds the
+  width using the monospace body, but the title is set in a proportional
+  face and isn't covered by that measurement — at 2.5x a long title
+  simply overflowed the right margin. The title and meta line now get
+  their own size cap and shrink on their own rather than dragging the
+  whole chart's scale down with them.
+- **A section card's preview only ever showed two lines.** Fine while a
+  chart row was always a fret row and a symbol row; a lick adds one line
+  per string. The row is now rendered in full, and `/api/parse` reports
+  whether the first line is frets so the front end doesn't have to guess
+  from the count (it was guessing wrong for a row with no fret numbers,
+  colouring the chords as frets).
 - **Sections were squeezed against their own headings.** The gap between
   a section's name and its first line, and between one section and the
   next, was barely a line — readable at 100%, cramped at any larger

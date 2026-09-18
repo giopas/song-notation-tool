@@ -406,3 +406,26 @@ def test_uniform_instrument_ignores_filtered_out_sections():
 def test_a_single_instrument_header_still_builds_a_pdf():
     doc = _two_section_doc()
     assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+def test_bw_headings_are_grey_on_black_not_black_on_white():
+    """Black & white fills the heading bands with light grey and sets the
+    text in black — a solid black band per section is a lot of toner for
+    something that only has to say "new section starts here"."""
+    from constants import heading_fill, title_fill
+    band, text = heading_fill("Verse", "bw")
+    assert band == (0.86, 0.86, 0.86) and text == (0.0, 0.0, 0.0)
+    assert min(band) > max(text)                 # light band, dark text
+    title_band, title_text = title_fill("bw")
+    assert min(title_band) > max(title_text)
+
+
+def test_colour_headings_stay_reversed_out():
+    from constants import heading_fill, section_color
+    band, text = heading_fill("Solo", "color")
+    assert band == section_color("Solo") and text == (1.0, 1.0, 1.0)
+
+
+def test_bw_headings_are_identical_across_section_types():
+    from constants import heading_fill
+    assert heading_fill("Solo", "bw") == heading_fill("Chorus", "bw")

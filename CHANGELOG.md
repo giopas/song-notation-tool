@@ -92,8 +92,12 @@ sentence on it.
   makes them harder to read. The palette mirrors the accent each section
   card carries in the editor, darkened for white paper (a colour that
   reads well on a dark background is washed out in print). **Black &
-  white** collapses every heading to black, for a mono printer or a
-  photocopy where a palette just becomes indistinguishable greys.
+  white** fills every heading band with a light grey and sets the text in
+  black, for a mono printer or a photocopy where a palette just becomes
+  indistinguishable greys — grey rather than solid black because a
+  full-width black band per section is a lot of toner for something that
+  only has to say "new section starts here", and black text on grey
+  survives a photocopy better than white reversed out of black.
 - **One instrument, stated once.** When every printed section uses the
   same instrument, it moves up beside the key and tempo in the header
   instead of being repeated on every section heading — it's a fact about

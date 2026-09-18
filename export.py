@@ -28,7 +28,7 @@ import render
 import songmap
 import transpose
 from constants import (APP_VERSION, INSTRUMENT_STRINGS, TAB_BEATS_DEFAULT,
-                        section_color)
+                        section_color, heading_fill, title_fill)
 
 DEFAULT_TXT_WIDTH = 100
 
@@ -396,9 +396,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
         return max(1, min(n_measures, int(usable / COL_W)))
 
     band_h = 46 * S
-    band_rgb = (0.0, 0.0, 0.0) if colors == "bw" else (0.10, 0.12, 0.22)
+    band_rgb, band_text = title_fill(colors)
     rfill(0, H - band_h, W, band_h, *band_rgb)
-    color(1, 1, 1)
+    color(*band_text)
     hdr_txt = title.upper() + (f"  -  {artist}" if artist else "")
     txt(MARGIN, H - 28 * S, hdr_txt, sz=TITLE_SZ, bold=True)
     meta_parts = []
@@ -475,8 +475,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
         else:
             instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
             sec_label = f"[ {sec['name']} ]{rep_str}{instr}"
-            rfill(MARGIN, cy - LINE_H, W - 2 * MARGIN, LINE_H + 2 * S, *rgb)
-            color(1, 1, 1)
+            fill_rgb, label_rgb = heading_fill(sec.get("type", ""), colors)
+            rfill(MARGIN, cy - LINE_H, W - 2 * MARGIN, LINE_H + 2 * S, *fill_rgb)
+            color(*label_rgb)
             txt(MARGIN + 4 * S, cy - LINE_H + 3 * S, sec_label,
                 sz=HEAD_SZ, bold=True)
             cy -= LINE_H + 14 * S

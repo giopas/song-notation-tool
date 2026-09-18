@@ -64,6 +64,30 @@ PDF_SCALE_LABELS = {
 }
 
 
+# Black-and-white printing fills the heading bands with a light grey and
+# sets the text in black, rather than reversing white out of solid black.
+# A full-width solid band per section is a lot of toner for something
+# that only has to say "new section starts here" — grey says it just as
+# clearly, and survives a photocopy better than reversed-out text.
+BW_BAND_FILL = (0.86, 0.86, 0.86)
+BW_TITLE_FILL = (0.80, 0.80, 0.80)
+BW_BAND_TEXT = (0.0, 0.0, 0.0)
+
+
+def heading_fill(section_type: str, color_mode: str = "color"):
+    """(band_rgb, text_rgb) for a section's heading band."""
+    if color_mode == "bw":
+        return BW_BAND_FILL, BW_BAND_TEXT
+    return section_color(section_type, color_mode), (1.0, 1.0, 1.0)
+
+
+def title_fill(color_mode: str = "color"):
+    """(band_rgb, text_rgb) for the song's title band at the top."""
+    if color_mode == "bw":
+        return BW_TITLE_FILL, BW_BAND_TEXT
+    return (0.10, 0.12, 0.22), (1.0, 1.0, 1.0)
+
+
 def section_color(section_type: str, color_mode: str = "color"):
     """RGB for a section's heading and its content. Black-and-white mode
     collapses every section to near-black so a mono printer (or a

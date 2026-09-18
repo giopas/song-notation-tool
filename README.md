@@ -212,9 +212,10 @@ it).
 **Colour** gives each section heading a colour chosen by its type, so you
 can find your place on a stand at a glance and every Verse looks like
 every other Verse. The notes stay black — colour is there to label, not
-to tint what you're reading. **Black & white** collapses the headings to
-black for a mono printer or a photocopy, where a palette just becomes
-indistinguishable greys.
+to tint what you're reading. **Black & white** fills the heading bands with a
+light grey and sets the text in black — for a mono printer or a
+photocopy, where a palette just becomes indistinguishable greys, and
+without spending a stripe of toner on every section.
 
 When every section of a song uses the same instrument, it's printed once
 in the header beside the key and tempo rather than on every section.

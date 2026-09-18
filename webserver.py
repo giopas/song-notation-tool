@@ -287,7 +287,10 @@ def _with_chart_lines(doc: dict) -> dict:
     for sec in doc.get("sections", []):
         sec = dict(sec)
         chart = songmap.chart_items(sec)
-        sec["chart_line"] = grammar.unparse(chart) if chart else ""
+        # References display by the target's current name; the document
+        # keeps ids (see songmap.display_ref_key).
+        sec["chart_line"] = (grammar.unparse(songmap.display_items(chart, doc))
+                             if chart else "")
         out["sections"].append(sec)
     return out
 
@@ -301,13 +304,19 @@ def _parse_chart_line(line: str, doc: dict = None):
     Without it (a bare parse), references render as themselves."""
     try:
         items, annotation = grammar.parse(line)
+        # Whatever the user typed — "=Interlude" or "=chorus1" — is stored
+        # as the target's id, so the reference survives a later rename;
+        # what comes back for display is spelled with the name again.
+        if doc:
+            items = songmap.canonicalise_refs(items, doc)
         display = render_mod.resolve_references(items, doc) if doc else items
         rendered = render_mod.render_chart_row(display) if display else []
         return {
             "ok": True,
             "items": items,
             "annotation": annotation,
-            "unparsed": grammar.unparse(items) if items else "",
+            "unparsed": (grammar.unparse(songmap.display_items(items, doc))
+                         if items else ""),
             "rendered": rendered,
         }
     except grammar.ParseError as exc:

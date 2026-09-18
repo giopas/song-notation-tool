@@ -111,6 +111,17 @@ sentence on it.
   shift expands transposed, and a reference that can't be resolved — a
   missing target, or a cycle — is left as a reference rather than
   silently dropping the section's content.
+- **References are now *displayed* by section name, always.** Writing
+  them by name (below) only helped new references; an existing
+  `=chorus1` in a saved song still read as a stale id. The chart line is
+  now a view: a reference is spelled with its target's current name
+  wherever it's shown, and whatever you type — `=Interlude`, `=chorus1`
+  — is stored as the target's id. So the display stays readable, the
+  document stays rename-safe, and renaming a section updates every
+  reference to it on screen without touching a single stored reference.
+  A name that can't be written as a reference (punctuation, or two
+  sections sharing it) still shows the id, which is never ambiguous;
+  spaces and dashes display as underscores (`=Verse_2`) and resolve back.
 - **References can be written by section name, not just id.** Ids are
   minted once and never change, so a section created as "Chorus" and
   later renamed "Interlude" keeps id `chorus1` — correct, but `=chorus1`

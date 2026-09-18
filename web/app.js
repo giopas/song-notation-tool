@@ -620,17 +620,19 @@ function moveSection(id, delta) {
 }
 
 /**
- * How to spell a reference to `sec`: its name when that is a bare
- * identifier the grammar accepts and no other section shares it, else the
- * id. Both resolve, but the name is the one that stays meaningful after a
- * rename — and the one a person can read.
+ * How a reference to `sec` is spelled on screen (mirrors
+ * songmap.display_ref_key on the server): the target's name, with spaces
+ * and dashes as underscores, when that's a bare identifier and no other
+ * section answers to it — otherwise the id, which is always unambiguous.
+ * Only ever a display form; the document stores the id.
  */
 function refKeyFor(sec) {
-  const name = (sec.name || "").trim();
-  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) return sec.id;
+  const candidate = (sec.name || "").trim().replace(/[ -]/g, "_");
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(candidate)) return sec.id;
+  const norm = (s) => (s || "").trim().toLowerCase().replace(/[ -]/g, "_");
   const clashes = currentDoc.sections.filter(
-    (s) => (s.name || "").trim().toLowerCase() === name.toLowerCase()).length;
-  return clashes === 1 ? name : sec.id;
+    (s) => norm(s.name) === norm(candidate)).length;
+  return clashes === 1 ? candidate : sec.id;
 }
 
 function duplicateSection(id) {
@@ -642,7 +644,8 @@ function duplicateSection(id) {
     instrument: source.instrument, repeat: 1, transpose: 0,
     render: source.render === "free" ? "chart" : source.render, annotation: "",
     free_text: "",
-    items: [{ kind: "section_ref", section: refKeyFor(source), repeat: 1, all: false, transpose: 0 }],
+    // The id is what's stored (rename-safe); the name is what's shown.
+    items: [{ kind: "section_ref", section: source.id, repeat: 1, all: false, transpose: 0 }],
     chart_line: `=${refKeyFor(source)}`,
   };
   currentDoc.sections.splice(i + 1, 0, newSec);

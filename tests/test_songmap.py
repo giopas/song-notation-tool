@@ -301,3 +301,86 @@ def test_migration_is_a_no_op_when_source_and_target_match(tmp_path):
     d = tmp_path / "songs"; d.mkdir(); (d / "a.sng").write_text("{}")
     assert userpaths.migrate_legacy_songs(str(d), str(d)) == ([], [])
     assert (d / "a.sng").exists()
+
+
+# ==============================================================================
+#  Reference display vs. storage — v0.20
+# ==============================================================================
+
+def _doc_renamed_section():
+    """A section created as "Chorus" (id chorus1) and later renamed."""
+    import model
+    doc = model.new_document(title="T")
+    doc["sections"] = [model.new_section("chorus1", "Interlude", "Interlude")]
+    return doc
+
+
+def test_display_ref_key_shows_the_current_name_not_the_minted_id():
+    import songmap
+    doc = _doc_renamed_section()
+    assert songmap.display_ref_key(doc, "chorus1") == "Interlude"
+
+
+def test_display_ref_key_underscores_a_name_with_spaces():
+    import model, songmap
+    doc = model.new_document(title="T")
+    doc["sections"] = [model.new_section("s1", "Verse 2", "Verse")]
+    key = songmap.display_ref_key(doc, "s1")
+    assert key == "Verse_2"
+    assert songmap.find_section(doc, key)["name"] == "Verse 2"   # round-trips
+
+
+def test_display_ref_key_falls_back_to_the_id_when_the_name_cannot_be_written():
+    import model, songmap
+    doc = model.new_document(title="T")
+    doc["sections"] = [model.new_section("s1", "4/4 breakdown!", "Custom")]
+    assert songmap.display_ref_key(doc, "s1") == "s1"
+
+
+def test_display_ref_key_falls_back_to_the_id_when_two_sections_share_a_name():
+    import model, songmap
+    doc = model.new_document(title="T")
+    doc["sections"] = [model.new_section("a", "Verse", "Verse"),
+                       model.new_section("b", "Verse", "Verse")]
+    assert songmap.display_ref_key(doc, "a") == "a"
+
+
+def test_display_ref_key_leaves_an_unresolvable_key_alone():
+    import songmap
+    assert songmap.display_ref_key(_doc_renamed_section(), "nope") == "nope"
+
+
+def test_canonicalise_refs_stores_ids_whatever_was_typed():
+    import model, songmap
+    doc = _doc_renamed_section()
+    for typed in ("Interlude", "interlude", "chorus1"):
+        out = songmap.canonicalise_refs([model.make_section_ref(typed)], doc)
+        assert out[0]["section"] == "chorus1"
+
+
+def test_canonicalise_refs_leaves_an_unknown_target_as_typed():
+    import model, songmap
+    out = songmap.canonicalise_refs(
+        [model.make_section_ref("not_yet")], _doc_renamed_section())
+    assert out[0]["section"] == "not_yet"
+
+
+def test_display_and_canonicalise_reach_into_groups():
+    import model, songmap
+    doc = _doc_renamed_section()
+    items = [model.make_group([model.make_section_ref("chorus1")])]
+    shown = songmap.display_items(items, doc)
+    assert shown[0]["items"][0]["section"] == "Interlude"
+    back = songmap.canonicalise_refs(shown, doc)
+    assert back[0]["items"][0]["section"] == "chorus1"
+    assert items[0]["items"][0]["section"] == "chorus1"    # input not mutated
+
+
+def test_a_rename_changes_the_display_but_not_the_stored_reference():
+    import model, songmap
+    doc = _doc_renamed_section()
+    ref = [model.make_section_ref("chorus1")]
+    assert songmap.display_ref_key(doc, "chorus1") == "Interlude"
+    doc["sections"][0]["name"] = "Bridge"
+    assert songmap.display_ref_key(doc, "chorus1") == "Bridge"
+    assert ref[0]["section"] == "chorus1"                  # still resolves

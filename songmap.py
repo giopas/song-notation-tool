@@ -8,6 +8,8 @@ DESIGN_v0_17.md sections 3, 5, and 8.
 
 from __future__ import annotations
 
+import re
+
 import grammar
 import model
 
@@ -105,6 +107,78 @@ def find_section(doc: dict, key: str):
         if _ident(sec.get("name", "")) == k:
             return sec
     return None
+
+
+_REF_IDENT_RE = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
+
+
+def display_ref_key(doc: dict, key: str) -> str:
+    """
+    How a `=key` reference should be *spelled on screen*.
+
+    Ids are the truth — minted once, never changed, so a reference keeps
+    working when its target is renamed. But an id is meaningless to read:
+    a section created as "Chorus" and later renamed "Interlude" still has
+    id `chorus1`, and `=chorus1` on a chart looks like a mistake. So the
+    chart line displays the target's current name whenever that name can
+    be written as a reference (spaces and dashes become underscores, which
+    `find_section` matches back), and falls back to the id when it can't.
+
+    Nothing is stored in this form: `canonicalise_refs` turns whatever was
+    typed back into ids before it reaches the document.
+    """
+    target = find_section(doc, key)
+    if target is None:
+        return key
+    candidate = (target.get("name") or "").strip().replace(" ", "_").replace("-", "_")
+    if not _REF_IDENT_RE.match(candidate):
+        return target.get("id") or key
+    # Ambiguous names stay as ids — two sections called "Verse" would both
+    # answer to "=Verse", and silently picking the first is worse than a
+    # spelling nobody loves.
+    matches = sum(1 for sec in doc.get("sections", [])
+                  if _ident(sec.get("name", "")) == _ident(candidate))
+    return candidate if matches == 1 else (target.get("id") or key)
+
+
+def _map_section_refs(items, fn):
+    """Copy `items`, rewriting every section_ref key with `fn`. Groups are
+    walked recursively; every other item passes through untouched."""
+    out = []
+    for it in items or []:
+        kind = it.get("kind")
+        if kind == "section_ref":
+            new_it = dict(it)
+            new_it["section"] = fn(it.get("section", ""))
+            out.append(new_it)
+        elif kind == "group":
+            new_it = dict(it)
+            new_it["items"] = _map_section_refs(it.get("items", []), fn)
+            out.append(new_it)
+        else:
+            out.append(it)
+    return out
+
+
+def display_items(items, doc: dict):
+    """`items` with section_ref keys spelled for a human to read."""
+    if not doc:
+        return list(items or [])
+    return _map_section_refs(items, lambda k: display_ref_key(doc, k))
+
+
+def canonicalise_refs(items, doc: dict):
+    """`items` with section_ref keys turned back into stable ids. A key
+    that doesn't resolve is left exactly as typed, so a reference to a
+    section that doesn't exist yet isn't silently rewritten."""
+    if not doc:
+        return list(items or [])
+
+    def to_id(key):
+        target = find_section(doc, key)
+        return (target.get("id") or key) if target else key
+
+    return _map_section_refs(items, to_id)
 
 
 def section_display_name(doc: dict, key: str) -> str:

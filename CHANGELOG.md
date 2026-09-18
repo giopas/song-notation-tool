@@ -149,6 +149,14 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **The toolbar and song list scrolled away.** The page was an ordinary
+  scrolling document, so working on a section near the end of a long song
+  left Save, Preview, Export and the song list all off-screen — you had
+  to scroll back to the top to do anything with what you'd just typed.
+  The window is now an app shell: a fixed-height column where only the
+  section list scrolls, with the toolbar, the song list and the songs
+  folder always in view. The Preview pane and the help strip scroll
+  within themselves.
 - **A reference to a free-text section showed the wrong content.**
   Switching a section to Free deliberately keeps its old chart items, so
   switching back is lossless — but expanding a reference walked those

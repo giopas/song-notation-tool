@@ -21,12 +21,22 @@
 
 * { box-sizing: border-box; }
 
+/* An app shell rather than a scrolling document: the window is a fixed-
+   height column, and only the section list inside it scrolls. That keeps
+   the toolbar and the song list on screen at all times — scrolling to a
+   section near the end of a long song used to leave you with no way to
+   Save, Preview or Export without scrolling back up. */
+html, body { height: 100%; }
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 button {
@@ -39,6 +49,7 @@ button {
 
 /* ---------- topbar ---------- */
 #topbar {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   row-gap: 8px;
@@ -103,6 +114,9 @@ button {
 
 /* ---------- help strip ---------- */
 #help-strip {
+  flex: 0 0 auto;
+  max-height: 45vh;
+  overflow-y: auto;
   background: var(--card-bg);
   border-bottom: 1px solid var(--border);
   padding: 12px 20px;
@@ -114,7 +128,9 @@ button {
 }
 
 /* ---------- layout ---------- */
-#layout { display: flex; min-height: calc(100vh - 48px); }
+/* min-height: 0 is what lets a flex child actually scroll instead of
+   growing to fit its content and pushing the page down. */
+#layout { display: flex; flex: 1 1 auto; min-height: 0; }
 
 #sidebar {
   width: 220px;
@@ -122,6 +138,7 @@ button {
   border-right: 1px solid var(--border);
   padding: 12px;
   flex-shrink: 0;
+  overflow-y: auto;
 }
 #sidebar-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -145,6 +162,8 @@ button {
 #main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   padding: 20px;
   max-width: 1680px;
   margin: 0 auto;

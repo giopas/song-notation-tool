@@ -27,7 +27,7 @@ import zlib
 import render
 import songmap
 import transpose
-from constants import (APP_VERSION, APP_URL, INSTRUMENT_STRINGS,
+from constants import (APP_VERSION, APP_URL, INSTRUMENT_STRINGS, LICK_RGB, REST_RGB,
                         TAB_BEATS_DEFAULT, section_color, heading_fill,
                         title_fill)
 
@@ -415,6 +415,50 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
     def color(r, g, b):
         cur_ln.append(f"{r:.3f} {g:.3f} {b:.3f} rg")
 
+    def role_rgb(role):
+        """Colour for a chart row, or for a stretch inside one.
+
+        A lick is tab sitting in a line of chord symbols; printed in the
+        same black it reads as more symbols until you look twice, so it
+        gets its own colour. A rest is the opposite case — it is the
+        absence of playing, and grey says that without it competing with
+        the notes around it. Black-and-white mode keeps the distinction
+        the only way a mono printer can: tone, not hue.
+        """
+        if role == render.ROLE_LICK:
+            return (0.30, 0.30, 0.30) if colors == "bw" else LICK_RGB
+        if role == render.ROLE_REST:
+            return REST_RGB
+        return (0, 0, 0)
+
+    def draw_chart_row(x, y, row):
+        """One rendered chart row, in the colours its roles ask for.
+
+        The text is monospace, so a span's column index is an x offset:
+        the row is drawn as the runs between its spans rather than drawn
+        once and overpainted, which in PDF would leave both layers visible.
+        """
+        text, spans = row["text"], row.get("spans") or []
+        if not spans:
+            color(*role_rgb(row.get("role")))
+            txt(x, y, text, sz=MONO_SZ)
+            return
+        base = role_rgb(row.get("role"))
+        pos = 0
+        for start, end, role in sorted(spans):
+            start, end = max(start, pos), min(end, len(text))
+            if end <= start:
+                continue
+            if start > pos:
+                color(*base)
+                txt(x + pos * CHAR_W, y, text[pos:start], sz=MONO_SZ)
+            color(*role_rgb(role))
+            txt(x + start * CHAR_W, y, text[start:end], sz=MONO_SZ)
+            pos = end
+        if pos < len(text):
+            color(*base)
+            txt(x + pos * CHAR_W, y, text[pos:], sz=MONO_SZ)
+
     def hline(x1, y, x2, width=0.25, gray=0.72):
         cur_ln.append(f"{gray:.2f} G {width} w {x1:.1f} {y:.1f} m {x2:.1f} {y:.1f} l S")
 
@@ -516,7 +560,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
         mode = sec.get("render", "chart")
         free_mode = mode == "free"
         chart = render.resolve_references(songmap.chart_items(sec), doc)
-        chart_rows = (render.chart_body_lines(
+        chart_rows = (render.chart_body_rows(
                           render.resolve_display_items(chart, eff), "", 0)
                       if chart and mode in ("chart", "both") else [])
         measures = songmap.measure_items(sec) if mode in ("tab", "both") else []
@@ -567,9 +611,8 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             cy -= 2 * S
 
         if chart_rows:
-            color(0, 0, 0)
-            for ln in chart_rows:
-                txt(BODY_X, cy, ln, sz=MONO_SZ)
+            for row in chart_rows:
+                draw_chart_row(BODY_X, cy, row)
                 cy -= LINE_H
             cy -= 2 * S
 

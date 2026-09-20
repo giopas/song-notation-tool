@@ -544,8 +544,22 @@ class SongNotationApp(tk.Tk):
             font=FONT_TINY, anchor="w")
         self.lbl_editor_hint.pack(fill="x")
 
-        self.editor_entry = tk.Entry(frame, font=FONT_CHART, relief="flat")
-        self.editor_entry.pack(fill="x", ipady=4)
+        entry_row = tk.Frame(frame)
+        entry_row.pack(fill="x")
+        self.editor_entry = tk.Entry(entry_row, font=FONT_CHART, relief="flat")
+        self.editor_entry.pack(side="left", fill="x", expand=True, ipady=4)
+
+        # One insert that isn't worth typing by hand: an empty lick grid,
+        # every string of the focused section's instrument, six positions
+        # wide. Typing frets over dashes is the interaction; nothing has to
+        # be deleted first.
+        self.btn_insert_lick = ttk.Button(
+            entry_row, text="{ tab }", width=7, style="Normal.TButton",
+            command=self._insert_empty_lick)
+        self.btn_insert_lick.pack(side="right", padx=(6, 0))
+        ToolTip(self.btn_insert_lick,
+                "Insert an empty lick: every string of this section's "
+                "instrument, six positions wide, ready to type frets over.")
         self.editor_entry.bind("<KeyRelease>", self._on_editor_keystroke)
         self.editor_entry.bind("<Tab>",       lambda e: self._on_editor_tab(1))
         self.editor_entry.bind("<Shift-Tab>", lambda e: self._on_editor_tab(-1))
@@ -560,6 +574,38 @@ class SongNotationApp(tk.Tk):
                 "Type a chart line: fret+note tokens, [groups]xN, riff refs, "
                 "=section refs, marks. Tab commits and moves on; Escape reverts; "
                 "Ctrl/Cmd+R promotes the selection to a riff.")
+
+    def _insert_empty_lick(self, slots: int = 6):
+        """Drop an empty lick for the focused section's instrument into the
+        chart line at the caret, whitespace-separated from its neighbours."""
+        if not self.focus_id:
+            return
+        # The editor bar edits a section or a riff, so take the instrument
+        # from whichever one is focused.
+        target = (self.doc.get("blocks", {}).get(self.focus_id)
+                  if self.focus_kind == "block"
+                  else self._find_section(self.focus_id))
+        if target is None:
+            return
+        strings = INSTRUMENT_STRINGS.get(target.get("instrument", ""),
+                                          ["G", "D", "A", "E"])
+        body = " | ".join(st + " " + " ".join(["-"] * max(1, slots))
+                          for st in strings)
+        text = "{" + body + "}"
+
+        entry = self.editor_entry
+        value = entry.get()
+        pos = entry.index("insert")
+        before, after = value[:pos], value[pos:]
+        if before and not before.endswith(" "):
+            text = " " + text
+        if after and not after.startswith(" "):
+            text = text + " "
+        entry.insert(pos, text)
+        # Caret on the first position, which is the one you type over first.
+        entry.icursor(pos + text.index("-"))
+        entry.focus_set()
+        self._on_editor_keystroke(None)
 
     def _build_riff_strip(self):
         outer = tk.Frame(self)

@@ -210,7 +210,27 @@ row:
 ```
 
 — so it stays where it belongs in the sequence, rather than being exiled
-to a separate tab grid. Transposing the section moves a lick's frets with
+to a separate tab grid.
+
+It **prints as tab**, one row per string, with the string named in its own
+little box at the left:
+
+```
+|G|-5-7-5-|
+|D|-----3-|
+```
+
+Every position is the same width down the whole lick, so the columns line
+up vertically and you read it the way you read a tab staff. On screen and
+in a colour PDF the lick is **blue** — it isn't a chord symbol and
+shouldn't be read as one at a glance from a stand.
+
+The `{ tab }` button beside the chart line inserts an empty one: every
+string of that section's instrument, six positions wide, all dashes. Type
+frets over the dashes; delete nothing. Widen or narrow it by adding or
+removing dashes — a lick is as long as you write it.
+
+Transposing the section moves a lick's frets with
 it: same strings, shifted positions. A fret that would fall off either
 end of the neck is left as it was rather than silently clamped to a
 position you'd actually play.

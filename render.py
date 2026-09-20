@@ -112,13 +112,29 @@ BODY_INDENT = 2   # every body line in the TXT/PDF export starts here
 
 
 def _lick_lines(item: dict):
-    """A lick's printable lines: 'G 5 7 5', one per string, as typed."""
+    """
+    A lick's printable lines, one per string, written the way tab is
+    written rather than as a bare list of numbers:
+
+        |G|-5--7--5-|
+        |D|-------3-|
+
+    Every position is the same width across every line of the lick, so
+    the columns line up vertically and a player reads down the stack the
+    way they would read a tab staff. A fret wider than one digit widens
+    every cell in that lick, not just its own.
+    """
+    lines = item.get("lines", [])
+    if not lines:
+        return []
+    fret_w = max((len(f) for ln in lines for f in ln.get("frets", [])),
+                 default=1) or 1
+    name_w = max((len(str(ln.get("string", ""))) for ln in lines), default=1)
     out = []
-    for ln in item.get("lines", []):
-        frets = ln.get("frets", [])
-        width = max((len(f) for f in frets), default=1)
-        cells = " ".join(f"{f:>{width}}" for f in frets)
-        out.append(f"{ln.get('string', '')} {cells}")
+    for ln in lines:
+        cells = "".join("-" + str(f).ljust(fret_w, "-")
+                        for f in ln.get("frets", []))
+        out.append(f"|{str(ln.get('string', '')):<{name_w}}|{cells}-|")
     return out
 
 
@@ -171,8 +187,38 @@ def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
     song map, which prints the section name in a gutter) sizes its own
     column as before.
     """
+    return [r["text"] for r in render_chart_rows(items, label, indent)]
+
+
+# A row (and, inside the symbol row, a single item) carries a role, so the
+# PDF and the browser preview can colour what they draw without re-parsing
+# the text they were handed. Roles, not colours: the palette belongs to
+# whoever is drawing.
+ROLE_FRET = "fret"
+ROLE_SYM = "sym"
+ROLE_LICK = "lick"
+ROLE_REST = "rest"
+ROLE_TEXT = "text"
+
+
+def _row(text: str, role: str, spans=None):
+    return {"text": text, "role": role, "spans": list(spans or [])}
+
+
+def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):
+    """
+    render_chart_row's rows, each as a dict:
+
+        {"text": str, "role": "fret"|"sym"|"lick"|"text",
+         "spans": [(start_col, end_col, role), ...]}
+
+    `spans` marks stretches *within* a row that a drawing front end should
+    treat differently — a rest, which prints grey, is the only one so far.
+    Column indices are into `text`, and the text is monospace everywhere it
+    is drawn, so a span converts to an x offset by multiplying.
+    """
     if not items:
-        return [label.rstrip()] if label else []
+        return [_row(label.rstrip(), ROLE_SYM)] if label else []
 
     runs = split_on_line_breaks(items)
     if len(runs) != 1:
@@ -187,7 +233,7 @@ def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
                 out.extend(_render_one_row(run, label, indent + step))
             else:
                 out.extend(_render_one_row(run, "", cont_indent + step))
-        return out or ([label.rstrip()] if label else [])
+        return out or ([_row(label.rstrip(), ROLE_SYM)] if label else [])
     _, items = runs[0]
 
     return _render_one_row(items, label, indent)
@@ -214,6 +260,14 @@ def _render_one_row(items, label: str, indent: int):
     fret_line = " " * label_w + "".join(f"{f:<{w}}" for f, w in zip(frets, cols))
     sym_line = f"{label:<{label_w}}" + "".join(f"{s:<{w}}" for s, w in zip(symbols, cols))
 
+    # Where each item starts on the symbol row, so a rest can be drawn in
+    # its own colour without the drawing code having to find it in the text.
+    sym_spans, col_x = [], label_w
+    for it, sym, w in zip(items, symbols, cols):
+        if sym and it.get("kind") == "mark" and it.get("mark") == "rest":
+            sym_spans.append((col_x, col_x + len(sym), ROLE_REST))
+        col_x += w
+
     lick_rows = []
     for r in range(n_lick_rows):
         cells = [(lk[r] if r < len(lk) else "") for lk in licks]
@@ -226,8 +280,9 @@ def _render_one_row(items, label: str, indent: int):
     # sitting a line lower than its neighbours.
     fret_line = fret_line.rstrip()
     sym_line = sym_line.rstrip()
-    rows = ([fret_line, sym_line] if fret_line else [sym_line])
-    return rows + [r for r in lick_rows if r.strip()]
+    rows = ([_row(fret_line, ROLE_FRET)] if fret_line else [])
+    rows.append(_row(sym_line, ROLE_SYM, sym_spans))
+    return rows + [_row(r, ROLE_LICK) for r in lick_rows if r.strip()]
 
 
 # ==============================================================================
@@ -368,6 +423,11 @@ def chart_body_lines(items, label: str = "", indent: int = BODY_INDENT):
     are grouped so a mixed run still aligns within each stretch, and only
     the first line of the section carries the label.
     """
+    return [r["text"] for r in chart_body_rows(items, label, indent)]
+
+
+def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT):
+    """chart_body_lines' output, tagged — see render_chart_rows."""
     lines = []
     run = []
     label_used = [False]
@@ -380,7 +440,7 @@ def chart_body_lines(items, label: str = "", indent: int = BODY_INDENT):
 
     def flush():
         if run:
-            lines.extend(render_chart_row(run, take_label(), indent))
+            lines.extend(render_chart_rows(run, take_label(), indent))
             run.clear()
 
     for it in (items or []):
@@ -392,10 +452,10 @@ def chart_body_lines(items, label: str = "", indent: int = BODY_INDENT):
         text_lines = (it.get("text") or "").splitlines() or [""]
         this_label = take_label()
         width = _gutter_width(label, indent)
-        lines.append(f"{this_label:<{width}}" + text_lines[0])
-        lines.extend(" " * width + ln for ln in text_lines[1:])
+        lines.append(_row(f"{this_label:<{width}}" + text_lines[0], ROLE_TEXT))
+        lines.extend(_row(" " * width + ln, ROLE_TEXT) for ln in text_lines[1:])
         if it.get("repeat", 1) != 1:
-            lines[-1] += f"  (x{it['repeat']})"
+            lines[-1]["text"] += f"  (x{it['repeat']})"
 
     flush()
     return lines

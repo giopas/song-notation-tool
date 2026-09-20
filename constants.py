@@ -8,7 +8,7 @@ an instrument's string list or the default tab beat count.
 
 from __future__ import annotations
 
-APP_VERSION = "0.20.0"
+APP_VERSION = "0.21.0"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
 # Printed in the footer of every export, so a chart handed to someone else
@@ -55,6 +55,19 @@ SECTION_COLORS = {
 DEFAULT_SECTION_COLOR = (0.16, 0.24, 0.42)
 
 COLOR_MODE_LABELS = {"color": "Colour", "bw": "Black & white"}
+
+# Two things on a chart line are not chord symbols and shouldn't be read
+# as if they were: a lick (tab, in among the chords) and a rest (the bar
+# you don't play). Both get a colour of their own rather than a bigger
+# label. Blue for the lick — it's the thing you look down at mid-song, so
+# it has to be findable at a glance; grey for the rest, because it should
+# recede rather than compete with the notes on either side of it.
+LICK_RGB = (0.10, 0.35, 0.78)
+REST_RGB = (0.52, 0.52, 0.55)
+
+# The same two colours as CSS hex, for the browser front end.
+LICK_HEX = "#1a59c7"
+REST_HEX = "#85858c"
 
 # PDF sizing. "fit" scales the whole chart up until it fills the page
 # without needing another one — the point being a chart you can read from

@@ -4,6 +4,62 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.21.0] — 2026-09-20
+
+A lick is tab, so it now looks like tab. Three small changes that all
+come from the same complaint: on a printed chart, a `{G 5 7 5}` sitting
+in a line of chord symbols reads as more symbols until you look twice —
+which is exactly the moment you don't have, mid-song, glancing down at a
+music stand.
+
+### Added
+- **`{ tab }` — an empty lick, built for the instrument you're on.** The
+  quick-insert palette's lick button no longer drops a worked example to
+  be deleted; it inserts a blank grid with every string of *that
+  section's* instrument already named and six positions of dashes ready
+  to type frets over:
+
+  ```
+  {G - - - - - - | D - - - - - - | A - - - - - - | E - - - - - -}
+  ```
+
+  The caret lands on the first position. Six is a starting width, not a
+  limit — add or remove dashes and the lick is as long as you write it.
+  The button is in both front ends: beside the chart line in the browser,
+  and beside the editor bar in the desktop app, where it reads the
+  focused section's (or riff's) instrument the same way.
+- **Row roles, so a front end can colour what it draws.**
+  `render.render_chart_rows()` and `render.chart_body_rows()` return each
+  rendered row as `{"text", "role", "spans"}` — the role being `fret`,
+  `sym`, `lick` or `text`, and `spans` marking stretches *within* a row
+  that print differently. The plain-text `render_chart_row()` and
+  `chart_body_lines()` are unchanged and now wrap these, so the TXT
+  exporter and every existing caller carry on as before. `/api/parse`
+  returns `roles` and `spans` alongside `rendered`.
+
+### Changed
+- **A lick prints as tab**, one row per string, the string named in a box
+  at the left, instead of as a bare row of numbers:
+
+  ```
+  |G|-5-7-5-|
+  |D|-----3-|
+  ```
+
+  Every position is the same width down the whole lick, so the columns
+  line up vertically and it reads the way a tab staff reads. A
+  two-digit fret widens every cell in that lick rather than just its own
+  — misaligned columns would defeat the point of stacking the strings.
+- **A lick prints blue**, on screen and in a colour PDF. Not decoration:
+  it's the one thing on a chart line that isn't a chord symbol, and the
+  colour is what makes it findable at a glance. Black-and-white mode
+  prints it dark grey rather than dropping the distinction, since tone is
+  all a mono printer has.
+- **A rest prints grey.** It's the absence of playing; it shouldn't
+  compete for attention with the notes on either side of it. Drawn as its
+  own coloured run inside the symbol row, so the rest of the row stays
+  black.
+
 ## [0.20.0] — 2026-09-18
 
 Two ways to stop fighting the notation, and one launch annoyance

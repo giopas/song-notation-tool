@@ -80,6 +80,18 @@ function setMeasureItems(section, newItems) {
 function stringsForInstrument(instrument) {
   return (META.instruments || {})[instrument] || ["G", "D", "A", "E"];
 }
+/**
+ * An empty lick for `instrument`: every string of it, `slots` positions
+ * wide, all unplayed — "{G - - - - - - | D - - - - - - | ...}". Typing
+ * over a dash is the whole interaction; nothing has to be deleted first.
+ */
+function emptyLick(instrument, slots) {
+  const n = Math.max(1, slots || 6);
+  const body = stringsForInstrument(instrument)
+    .map((st) => st + " " + Array(n).fill("-").join(" "))
+    .join(" | ");
+  return "{" + body + "}";
+}
 function newSectionId() {
   return "section_" + Date.now().toString(36) + Math.floor(Math.random() * 1000);
 }
@@ -335,8 +347,17 @@ function wireSectionEvents(node, sec, idx) {
   node.querySelector(".sec-insert-strip").addEventListener("click", (e) => {
     const btn = e.target.closest(".ins-btn");
     if (!btn) return;
-    insertAtCursor(node.querySelector(".sec-chart-line"),
-                   btn.dataset.ins, parseInt(btn.dataset.caret, 10) || 0);
+    // The lick button builds its insert from the section's own instrument
+    // rather than dropping a fixed example: an empty grid with every
+    // string already named and room for six positions is a thing to fill
+    // in, where "{G 5 7 5 | D - - 3}" is a thing to delete first.
+    const text = btn.dataset.insLick
+      ? emptyLick(byId().instrument, parseInt(btn.dataset.insLick, 10) || 6)
+      : btn.dataset.ins;
+    const back = btn.dataset.insLick
+      ? text.length - text.indexOf("-")   // caret on the first position
+      : parseInt(btn.dataset.caret, 10) || 0;
+    insertAtCursor(node.querySelector(".sec-chart-line"), text, back);
   });
 
   node.querySelector(".sec-up").addEventListener("click", () => moveSection(sec.id, -1));
@@ -380,12 +401,38 @@ function insertAtCursor(input, text, caretBack) {
 function setExtraPreviewRows(node, rows) {
   const box = node.querySelector(".sec-preview");
   [...box.querySelectorAll(".sec-preview-more")].forEach((el) => el.remove());
-  rows.forEach((text) => {
+  rows.forEach((row) => {
     const div = document.createElement("div");
-    div.className = "sec-preview-more";
-    div.textContent = text;
+    const role = (row && row.role) || "";
+    div.className = "sec-preview-more" + (role ? " sec-row-" + role : "");
+    paintRow(div, row);
     box.appendChild(div);
   });
+}
+
+/**
+ * Write one rendered row into `el`, colouring the stretches the server
+ * tagged — a rest, so far, which prints grey here exactly as it does on
+ * paper. Plain text when there's nothing tagged, so the common row costs
+ * no DOM.
+ */
+function paintRow(el, row) {
+  const text = (row && row.text !== undefined) ? row.text : (row || "");
+  const spans = (row && row.spans) || [];
+  if (!spans.length) { el.textContent = text; return; }
+  el.textContent = "";
+  let pos = 0;
+  [...spans].sort((a, b) => a[0] - b[0]).forEach(([start, end, role]) => {
+    const from = Math.max(start, pos), to = Math.min(end, text.length);
+    if (to <= from) return;
+    if (from > pos) el.appendChild(document.createTextNode(text.slice(pos, from)));
+    const mark = document.createElement("span");
+    mark.className = "tok-" + role;
+    mark.textContent = text.slice(from, to);
+    el.appendChild(mark);
+    pos = to;
+  });
+  if (pos < text.length) el.appendChild(document.createTextNode(text.slice(pos)));
 }
 
 /**
@@ -451,9 +498,13 @@ function updateSectionPreview(node, sec, parseResult) {
     // one line per string for any lick. The first two elements are reused
     // so the fret/symbol colouring stays; anything beyond is appended.
     const hasFret = parseResult ? !!parseResult.fret_row : rendered.length > 1;
+    const roles = (parseResult && parseResult.roles) || [];
+    const spans = (parseResult && parseResult.spans) || [];
+    const row = (i) => ({ text: rendered[i] || "", role: roles[i], spans: spans[i] });
     fretRow.textContent = hasFret ? rendered[0] : "";
-    symRow.textContent = hasFret ? (rendered[1] || "") : rendered[0];
-    setExtraPreviewRows(node, rendered.slice(hasFret ? 2 : 1));
+    paintRow(symRow, hasFret ? row(1) : row(0));
+    setExtraPreviewRows(node, rendered.slice(hasFret ? 2 : 1)
+      .map((_, i) => row(i + (hasFret ? 2 : 1))));
     emptyEl.classList.add("hidden");
   } else if (!items.length && !measureItems(sec).length) {
     fretRow.textContent = "";

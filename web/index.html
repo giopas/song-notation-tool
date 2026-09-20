@@ -250,7 +250,7 @@
             <tr><td>Annotation</td><td>Double-quoted text, or the Annotation field under the section</td><td><code>"keep it simple"</code></td></tr>
             <tr><td>Line break</td><td><code>//</code> anywhere on the line</td><td><code>A(5) D(5) // F(8) D(5)</code></td></tr>
             <tr><td>Line break, indented</td><td><code>//&gt;</code> — one <code>&gt;</code> per step of indent</td><td><code>A(5) //&gt; F(8) //&gt;&gt; D(5)</code></td></tr>
-            <tr><td>Lick (inline tab)</td><td><code>{ }</code> with one <code>|</code>-separated line per string: its name, then its frets</td><td><code>{G 5 7 5 | D - - 3}</code></td></tr>
+            <tr><td>Lick (inline tab)</td><td><code>{ }</code> with one <code>|</code>-separated line per string: its name, then its frets. Prints as blue tab; the <code>{ tab }</code> button inserts an empty grid for this section's instrument</td><td><code>{G 5 7 5 | D - - 3}</code></td></tr>
             <tr><td>Riff reference</td><td>Bare identifier (not a chord name)</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
             <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
             <tr><td>Transpose shift</td><td><code>+N</code> or <code>-N</code> on ref or group</td><td><code>riff1+2</code> <code>=verse1-1</code> <code>[5A 7D]x2+3</code></td></tr>
@@ -288,11 +288,20 @@
           <code>G</code> at the third position sounds with whatever is third on
           <code>D</code>; <code>-</code> means that string isn't played there, and
           <code>x</code> means muted. Write as many lines as the figure needs.</p>
-        <p>It prints as a small tab block sitting under its own column in the
-          chart row, so it stays where it belongs in the sequence rather than
-          being exiled to a separate grid. A <code>G: 5 7 5</code> spelling works
-          too if the colon reads better to you. Transposing a section moves a
-          lick's frets with it — same strings, shifted positions.</p>
+        <p>It prints as tab — one row per string, the string named in a box at
+          the left — sitting under its own column in the chart row, so it stays
+          where it belongs in the sequence rather than being exiled to a separate
+          grid:</p>
+        <pre>|G|-5-7-5-|
+|D|-----3-|</pre>
+        <p>On screen and in a colour PDF a lick is <strong>blue</strong>: it isn't a
+          chord symbol and shouldn't read as one at a glance. The
+          <code>{ tab }</code> button beside the chart line inserts an empty
+          one — every string of that section's instrument, six positions wide —
+          so you type frets over dashes instead of deleting an example first.
+          A <code>G: 5 7 5</code> spelling works too if the colon reads better to
+          you. Transposing a section moves a lick's frets with it — same strings,
+          shifted positions.</p>
 
         <h4>Marks</h4>
         <p class="modal-hint" style="margin-top:0">These are the standard sheet-music
@@ -406,7 +415,7 @@
           <button type="button" class="ins-btn" data-ins="x2" title="Repeat the item before the cursor twice">x2</button>
           <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat — caret lands inside the brackets">[ ]x2</button>
           <button type="button" class="ins-btn" data-ins="&quot;&quot;" data-caret="1" title="Free annotation in quotes">&quot;&quot;</button>
-          <button type="button" class="ins-btn" data-ins="{G 5 7 5 | D - - 3}" data-caret="1" title="A lick: a short tab figure printed in among the chords, one line per string">{ }</button>
+          <button type="button" class="ins-btn" data-ins-lick="6" title="A lick: a short tab figure printed in among the chords. Inserts an empty grid — every string of this section's instrument, six positions wide — for you to type frets over.">{ tab }</button>
           <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
           <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
           <button type="button" class="ins-btn" data-ins="dc" title="D.C. — repeat from the beginning">dc</button>

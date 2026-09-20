@@ -576,3 +576,10 @@ button {
   font-family: var(--mono);
   font-size: 13px;
 }
+
+
+/* A lick is tab sitting in a line of chord symbols, and a rest is the bar
+   you don't play. Neither is a chord, so neither is printed as one — the
+   same two colours the PDF uses, so the preview and the paper agree. */
+.sec-preview-more.sec-row-lick { color: var(--blue); }
+.tok-rest { color: var(--lbl-gray); }

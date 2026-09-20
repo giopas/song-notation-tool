@@ -471,7 +471,7 @@ def test_a_lick_survives_both_exporters():
     sec["items"] = grammar.parse_items("[C]x3 {e 4 4 3 4 | B - - 3 -} [F]x1")
     doc["sections"] = [sec]
     text = "\n".join(export.build_song_lines(doc))
-    assert "e 4 4 3 4" in text and "B - - 3 -" in text
+    assert "|e|-4-4-3-4-|" in text and "|B|-----3---|" in text
     assert export.build_pdf(doc).startswith(b"%PDF-1.4")
 
 
@@ -552,3 +552,51 @@ def test_fit_to_one_page_never_shrinks_below_the_floor():
         doc["sections"].append(s)
     doc["pdf_scale"] = "one"
     assert export.resolve_scale(doc) == export.MIN_ONE_PAGE_SCALE
+
+
+def test_the_pdf_prints_a_lick_in_blue_and_a_rest_in_grey():
+    """The two chart items that are not chord symbols are not printed as
+    if they were — the colour is the label."""
+    import zlib
+    import export, grammar, model
+    from constants import LICK_RGB, REST_RGB
+
+    doc = model.new_document(title="Colours")
+    sec = model.new_section("s1", "Verse", "Verse")
+    sec["items"] = grammar.parse_items("5A rest {G 5 7 5}")
+    doc["sections"] = [sec]
+
+    raw = export.build_pdf(doc)
+    streams = b""
+    for chunk in raw.split(b"stream\n")[1:]:
+        body = chunk.split(b"\nendstream")[0]
+        try:
+            streams += zlib.decompress(body)
+        except zlib.error:
+            pass
+    text = streams.decode("latin-1")
+    assert f"{LICK_RGB[0]:.3f} {LICK_RGB[1]:.3f} {LICK_RGB[2]:.3f} rg" in text
+    assert f"{REST_RGB[0]:.3f} {REST_RGB[1]:.3f} {REST_RGB[2]:.3f} rg" in text
+
+
+def test_black_and_white_printing_has_no_blue_in_it():
+    import zlib
+    import export, grammar, model
+    from constants import LICK_RGB
+
+    doc = model.new_document(title="Mono")
+    doc["color_mode"] = "bw"
+    sec = model.new_section("s1", "Verse", "Verse")
+    sec["items"] = grammar.parse_items("{G 5 7 5}")
+    doc["sections"] = [sec]
+
+    raw = export.build_pdf(doc)
+    streams = b""
+    for chunk in raw.split(b"stream\n")[1:]:
+        body = chunk.split(b"\nendstream")[0]
+        try:
+            streams += zlib.decompress(body)
+        except zlib.error:
+            pass
+    assert (f"{LICK_RGB[0]:.3f} {LICK_RGB[1]:.3f} {LICK_RGB[2]:.3f} rg"
+            not in streams.decode("latin-1"))

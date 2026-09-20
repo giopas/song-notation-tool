@@ -415,10 +415,11 @@ def test_lick_stacks_under_its_own_column_in_the_chart_row():
     assert len(rows) == 3                       # symbol row + two string lines
     sym, g_row, d_row = rows
     assert "C" in sym and "G" in sym and "Am" in sym
-    assert g_row.strip().startswith("G 5 7 5")
-    assert d_row.strip().startswith("D - - 3")
+    # written the way tab is written, one row per string
+    assert g_row.strip() == "|G|-5-7-5-|"
+    assert d_row.strip() == "|D|-----3-|"
     # the lick sits in its own column, after C and before the following G
-    assert sym.index("C") < g_row.index("G 5")
+    assert sym.index("C") < g_row.index("|G|")
 
 
 def test_a_row_without_a_lick_has_no_extra_lines():
@@ -526,7 +527,7 @@ def test_a_break_works_alongside_licks():
     from render import render_chart_row
     rows = render_chart_row(grammar.parse_items("C {G 5 7} // D G"))
     assert len(rows) == 3           # symbols + one lick line, then the next line
-    assert rows[1].strip() == "G 5 7"
+    assert rows[1].strip() == "|G|-5-7-|"
     assert rows[2].split() == ["D", "G"]
 
 
@@ -604,3 +605,49 @@ def test_estimate_section_lines_measures_a_reference_by_its_target():
     assert estimate_section_lines(src) < estimate_section_lines(src, doc=doc)
     assert (estimate_section_lines(src, doc=doc)
             == estimate_section_lines(target, doc=doc))
+
+
+# ==============================================================================
+#  Row roles — what a front end needs to colour a row without re-parsing it
+# ==============================================================================
+
+def test_rows_are_tagged_fret_symbol_and_lick():
+    import grammar
+    from render import (render_chart_rows, ROLE_FRET, ROLE_SYM, ROLE_LICK)
+    rows = render_chart_rows(grammar.parse_items("5A {G 5 7 | D - 3} 7D"))
+    assert [r["role"] for r in rows] == [ROLE_FRET, ROLE_SYM, ROLE_LICK, ROLE_LICK]
+
+
+def test_a_rest_is_tagged_where_it_sits_on_the_symbol_row():
+    import grammar
+    from render import render_chart_rows, ROLE_REST
+    rows = render_chart_rows(grammar.parse_items("5A rest 7D"))
+    sym = next(r for r in rows if r["role"] == "sym")
+    assert len(sym["spans"]) == 1
+    start, end, role = sym["spans"][0]
+    assert role == ROLE_REST
+    assert sym["text"][start:end] == "rest"
+
+
+def test_a_row_with_no_rest_has_no_spans():
+    import grammar
+    from render import render_chart_rows
+    rows = render_chart_rows(grammar.parse_items("5A 7D G"))
+    assert all(not r["spans"] for r in rows)
+
+
+def test_tagged_rows_and_plain_lines_agree():
+    import grammar
+    from render import render_chart_row, render_chart_rows
+    items = grammar.parse_items("C rest {G 5 7 5} // D G")
+    assert ([r["text"] for r in render_chart_rows(items)] ==
+            render_chart_row(items))
+
+
+def test_a_licks_columns_line_up_across_its_strings():
+    import grammar
+    from render import render_chart_rows
+    rows = render_chart_rows(grammar.parse_items("{G 12 - 0 | D - - 3}"))
+    licks = [r["text"].strip() for r in rows if r["role"] == "lick"]
+    assert len({len(t) for t in licks}) == 1        # same width, so they align
+    assert licks[0].startswith("|G|") and licks[1].startswith("|D|")

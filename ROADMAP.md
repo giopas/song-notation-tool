@@ -33,6 +33,29 @@ serves that, not by difficulty.
 | **v0.18.1** | **Native app window (not frameless) + Save & Close** — `webserver.py` opens a resizable native window when `pywebview` is installed, not a browser tab; a "⏻ Save & Close" button (and new `/api/quit` route) sits alongside its own close button. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.19.0** | **Web UI transpose + Lyrics panel** — Transpose (whole song or one section) now works the same in the browser as the desktop app; a new Lyrics panel (type/paste, import a `.txt` file, or a browser-search link) is available in both front ends, stored non-destructively and never auto-fetched or exported. See [CHANGELOG.md](CHANGELOG.md). |
 
+| **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+
+---
+
+## 🎯 Planned — v0.22 and beyond
+
+Specified in [DESIGN_v0_21.md](DESIGN_v0_21.md), in the order they are
+worth building:
+
+- [ ] **Round-trip import** — `.sng` import in the browser front end
+      (the desktop app already has it), and reopening a song from its own
+      exported TXT or PDF by embedding the document JSON in the export
+      itself rather than parsing the printed page back
+- [ ] **Techniques on tab and licks** — palm muting, slides, hammer-on /
+      pull-off, bends, vibrato, as characters you type in the tab itself
+- [ ] **Dynamics and accents** — accent one item, or open a crescendo
+      across a run, on a chart line, a lick or a tab grid
+- [ ] **Parts — several instruments in one section**, each printable or
+      hideable, so bass and guitar live in one file
+- [ ] **Lyrics under the chart** — the layout question the v0.19 Lyrics
+      panel deliberately left open
+
 ---
 
 ## 🔜 Next up (v0.18.1+)

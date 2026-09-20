@@ -349,7 +349,8 @@ def _parse_chart_line(line: str, doc: dict = None, items=None):
         if doc:
             items = songmap.canonicalise_refs(items, doc)
         display = render_mod.resolve_references(items, doc) if doc else items
-        rendered = render_mod.render_chart_row(display) if display else []
+        rows = render_mod.render_chart_rows(display) if display else []
+        rendered = [r["text"] for r in rows]
         # A chart row is 1..N lines: an optional fret row, the symbol row,
         # then one line per string for any lick. Only the server knows
         # whether the first line is frets or symbols, so say so rather than
@@ -363,6 +364,13 @@ def _parse_chart_line(line: str, doc: dict = None, items=None):
             "unparsed": (grammar.unparse(songmap.display_items(items, doc))
                          if items else ""),
             "rendered": rendered,
+            # Per row: what it is (fret / symbol / lick line) and any
+            # stretch inside it that prints in its own colour — a rest, so
+            # far. The browser colours from this rather than re-deriving it
+            # from the text, which is how the preview and the PDF stay
+            # the same chart.
+            "roles": [r["role"] for r in rows],
+            "spans": [r.get("spans") or [] for r in rows],
             "fret_row": has_fret_row,
         }
     except grammar.ParseError as exc:

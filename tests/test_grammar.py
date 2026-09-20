@@ -179,7 +179,9 @@ def test_lick_takes_muted_and_unplayed_positions():
 
 
 def test_lick_rejects_a_bad_fret():
-    for bad in ("{G 5 99}", "{G 5 z}", "{G}", "{}"):
+    # "{G}" is not here: a bare identifier in braces now names a lick to
+    # recall, which test_named_licks below covers.
+    for bad in ("{G 5 99}", "{G 5 z}", "{}"):
         with pytest.raises(ParseError):
             parse_items(bad)
 
@@ -196,3 +198,48 @@ def test_curly_quotes_are_accepted_as_annotation_quotes():
         items, ann = parse(f'C {lo}keep it simple{hi} G')
         assert ann == "keep it simple"
         assert [it["symbol"] for it in items] == ["C", "G"]
+
+
+# ---------------------------------------------------------------------------
+#  Named licks — write the figure once, recall it by name
+# ---------------------------------------------------------------------------
+
+def test_a_lick_can_be_named():
+    item = parse_items("{Riff1 = G 5 7 5 | D - - 3}")[0]
+    assert item["kind"] == "lick"
+    assert item["name"] == "Riff1"
+    assert item["lines"][0]["frets"] == ["5", "7", "5"]
+
+
+def test_named_lick_round_trips():
+    line = "C {Riff1 = G 5 7 5 | D - - 3} G"
+    assert unparse(parse_items(line)) == line
+
+
+def test_braced_identifier_is_a_reference():
+    item = parse_items("{Riff1}")[0]
+    assert item == {"kind": "lick_ref", "lick": "Riff1", "repeat": 1}
+
+
+def test_lick_reference_takes_a_repeat():
+    assert parse_items("{Riff1}x3")[0]["repeat"] == 3
+    assert parse_items("{Riff1} x3")[0]["repeat"] == 3
+    assert unparse(parse_items("{Riff1}x3")) == "{Riff1}x3"
+
+
+def test_an_unnamed_lick_still_takes_a_repeat():
+    item = parse_items("{G 5 7}x2")[0]
+    assert item["kind"] == "lick" and item["repeat"] == 2
+    assert unparse([item]) == "{G 5 7}x2"
+
+
+def test_lick_name_that_reads_as_a_chord_is_refused():
+    """'A1' on a chart line is a chord, not a name — the same rule the
+    riff library applies to a block name."""
+    with pytest.raises(ParseError):
+        parse_items("{A1 = G 5}")
+
+
+def test_named_lick_needs_tab_after_the_equals():
+    with pytest.raises(ParseError):
+        parse_items("{Riff1 = }")

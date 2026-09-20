@@ -230,6 +230,35 @@ string of that section's instrument, six positions wide, all dashes. Type
 frets over the dashes; delete nothing. Widen or narrow it by adding or
 removing dashes — a lick is as long as you write it.
 
+### Naming a lick
+
+Put a name and an `=` at the front and the lick has a handle:
+
+```
+{Riff1 = G 5 7 5 | D - - 3}
+```
+
+It prints with the name over the tab, and anywhere else in the song
+`{Riff1}` plays it again — with a repeat, if you want one:
+
+```
+Intro    {Riff1}
+Chorus   {Riff1}x3   5A 5D
+```
+
+A reference resolves at render time to the notes themselves, with the
+name above them, which is how the handwritten charts say it ("RIFF 1
+(x3)"). So editing the lick updates every place that plays it, exactly as
+a section reference does — and there is no separate library to keep in
+step: the name lives on the lick where you wrote it.
+
+Names match loosely (`{riff1}` finds `Riff1`) and can't start like a
+chord: `A1` would read as a chord symbol on a chart line, so it's
+refused. The `{ name = tab }` button fills a free name in for you —
+`Riff1`, `Riff2`, and so on — and in the browser every lick you've
+already named appears in the palette as a button that inserts the
+reference.
+
 Transposing the section moves a lick's frets with
 it: same strings, shifted positions. A fret that would fall off either
 end of the neck is left as it was rather than silently clamped to a

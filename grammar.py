@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 
 from model import (make_token, make_group, make_block_ref, make_section_ref,
-                    make_mark, make_lick)
+                    make_mark, make_lick, make_lick_ref, validate_block_name)
 
 MAX_FRET = 24
 
@@ -60,8 +60,12 @@ def _lex(line: str):
                 j += 1
             if j >= n:
                 raise ParseError(f"unmatched '{{' in: {line!r}")
-            tokens.append(line[i:j + 1])
-            i = j + 1
+            # consume any suffix glued to the closing brace ("}x3")
+            k = j + 1
+            while k < n and not line[k].isspace():
+                k += 1
+            tokens.append(line[i:k])
+            i = k
             continue
         if c == '[':
             depth = 1
@@ -147,7 +151,8 @@ def _apply_repeat(items, n):
     if not items:
         raise ParseError(f"'x{n}' has no preceding item to repeat")
     last = items[-1]
-    if last["kind"] not in ("group", "block_ref", "section_ref"):
+    if last["kind"] not in ("group", "block_ref", "section_ref",
+                            "lick", "lick_ref"):
         raise ParseError(f"repeat is not valid on a {last['kind']} item")
     last["repeat"] = n
 
@@ -242,6 +247,8 @@ def _parse_group(word: str):
 # ==============================================================================
 
 _LICK_FRET_RE = re.compile(r'^(?:[-x]|0|[1-9][0-9]?)$', re.IGNORECASE)
+# "{Riff1 = G 5 7 5 | D - - 3}" names the lick; "{Riff1}" recalls it.
+_LICK_NAME_RE = re.compile(r'^\s*([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.*)$', re.DOTALL)
 
 
 def _parse_lick(word: str):
@@ -249,34 +256,57 @@ def _parse_lick(word: str):
     if not inner:
         raise ParseError("empty lick: {}")
 
+    # A bare identifier inside the braces is a reference to a lick named
+    # somewhere else — "{Riff1}". It can't be anything else: a lick line
+    # needs a string name *and* frets, so "{Riff1}" was an error before.
+    if _IDENT_RE.match(inner):
+        return make_lick_ref(inner)
+
+    name = ""
+    m = _LICK_NAME_RE.match(inner)
+    if m:
+        name, inner = m.group(1), m.group(2).strip()
+        if not validate_block_name(name):
+            raise ParseError(
+                f"{name!r} would read as a chord on a chart line — "
+                f"name the lick something that doesn't start like a note")
+        if not inner:
+            raise ParseError(f"lick {name!r} has no tab after the '='")
+
     lines = []
     for raw in inner.split("|"):
         parts = raw.replace(":", " ").split()
         if not parts:
             continue
-        name, frets = parts[0], parts[1:]
-        if not name:
+        st_name, frets = parts[0], parts[1:]
+        if not st_name:
             raise ParseError(f"lick line has no string name: {raw.strip()!r}")
         if not frets:
-            raise ParseError(f"lick line {name!r} has no frets")
+            raise ParseError(f"lick line {st_name!r} has no frets")
         for f in frets:
             if not _LICK_FRET_RE.match(f):
                 raise ParseError(
-                    f"{f!r} is not a fret in lick line {name!r} "
+                    f"{f!r} is not a fret in lick line {st_name!r} "
                     f"(0-{MAX_FRET}, '-' for not played, or 'x' for muted)")
             if f not in ("-", "x", "X") and int(f) > MAX_FRET:
                 raise ParseError(f"fret {f} exceeds MAX_FRET ({MAX_FRET}) in lick")
-        lines.append({"string": name, "frets": frets})
+        lines.append({"string": st_name, "frets": frets})
 
     if not lines:
         raise ParseError("empty lick: {}")
-    return make_lick(lines)
+    return make_lick(lines, name=name)
 
 
 def _unparse_lick(item: dict) -> str:
     body = " | ".join(f"{ln['string']} " + " ".join(ln["frets"])
                       for ln in item.get("lines", []))
-    return "{" + body + "}"
+    name = item.get("name")
+    if name:
+        body = f"{name} = {body}"
+    out = "{" + body + "}"
+    if item.get("repeat", 1) != 1:
+        out += f"x{item['repeat']}"
+    return out
 
 
 def _parse_section_ref(word: str):
@@ -321,7 +351,16 @@ def parse(text: str):
             annotation = _strip_quotes(tok)
             continue
         if tok.startswith('{'):
-            items.append(_parse_lick(tok))
+            close = tok.rfind('}')
+            if close < 0:
+                raise ParseError(f"unmatched '{{' in: {tok!r}")
+            item = _parse_lick(tok[:close + 1])
+            repeat, all_flag, shift = _consume_suffix(tok[close + 1:])
+            if all_flag or shift:
+                raise ParseError("'all' and +/- shift are not valid on a lick")
+            if repeat != 1:
+                item["repeat"] = repeat
+            items.append(item)
             continue
         brk = _BREAK_RE.match(tok)
         if brk:
@@ -349,6 +388,11 @@ def _unparse_item(it: dict) -> str:
         return (str(fret) if fret is not None else "") + it["symbol"]
     if k == "lick":
         return _unparse_lick(it)
+    if k == "lick_ref":
+        s = "{" + it["lick"] + "}"
+        if it.get("repeat", 1) != 1:
+            s += f"x{it['repeat']}"
+        return s
     if k == "mark":
         if it["mark"] == "line_break":
             return "//" + ">" * int(it.get("indent", 0))

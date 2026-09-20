@@ -8,7 +8,7 @@ an instrument's string list or the default tab beat count.
 
 from __future__ import annotations
 
-APP_VERSION = "0.22.0"
+APP_VERSION = "0.23.0"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
 # Printed in the footer of every export, so a chart handed to someone else
@@ -34,6 +34,21 @@ INSTRUMENT_STRINGS = {
 
 SECTION_LAYOUT_LABELS = {"banner": "Sections on top",
                          "gutter": "Sections on the left"}
+
+# Where a section's words sit against its chart. "Beside" is the default:
+# the chart keeps a narrow left column and the words run down the right of
+# it, so the page says what the instrument does *during* those words
+# without the verse pushing the next section off the sheet. Nothing is
+# aligned chord-to-syllable — that would be a claim about where the
+# changes fall that a chart like this can't honestly make.
+LYRICS_LAYOUT_LABELS = {"beside": "Beside the chart",
+                        "below": "Under the chart"}
+
+# A page of chord shapes — the voicings you had to work out — printed
+# once at one end of the song rather than beside every chord symbol.
+CHORD_SHEET_LABELS = {"none": "Don't print chord shapes",
+                      "start": "Chord shapes first",
+                      "end": "Chord shapes at the end"}
 
 # Print colours, one per section type, mirroring the accent each section
 # card carries in the UI so screen and paper agree at a glance. These are

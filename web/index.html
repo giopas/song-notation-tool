@@ -16,7 +16,8 @@
       <button id="btn-help" class="icon-btn" title="How this works">?</button>
       <button id="btn-notation-ref" class="btn subtle" title="Show all available chart-line notations">Notation ⌘</button>
       <button id="btn-transpose" class="btn" title="Transpose the whole song or one section, without rewriting what you typed">Transpose ↕</button>
-      <button id="btn-lyrics" class="btn" title="Paste, import, or search for lyrics — reference only, never exported">Lyrics 📝</button>
+      <button id="btn-lyrics" class="btn" title="Paste, import or mark up lyrics, and hand each marked block to its section">Lyrics 📝</button>
+      <button id="btn-chords" class="btn" title="Chord shapes — the voicings you had to work out, printed once at the top or the bottom of the chart">Chords 🎸</button>
       <button id="btn-preview-toggle" class="btn">Preview</button>
       <button id="btn-save" class="btn">Save</button>
       <div class="dropdown">
@@ -57,6 +58,19 @@
         chart to break to a new line, and each line aligns its own columns.
         <code>//&gt;</code> breaks <em>and</em> indents, so a phrase can sit
         inside the one above it.</li>
+      <li><strong>Named licks</strong>: give a lick a name —
+        <code>{Riff1 = G 5 7 5 | D - - 3}</code> — and recall it anywhere else
+        in the song as <code>{Riff1}</code>, with a repeat if you like:
+        <code>{Riff1}x3</code>. Edit the lick once and every place that plays
+        it follows, the same way a section reference does.</li>
+      <li><strong>Lyrics</strong>: mark a sheet up with
+        <code>=== Verse 1 ===</code> lines (drag the section chips in the Lyrics
+        dialog) and "Split by markers" hands each block to its section. Markers
+        never print. A section's words print beside its chart, in their own
+        column.</li>
+      <li><strong>Chord shapes</strong>: the <strong>Chords</strong> button keeps a
+        list of voicings (<code>x32010</code> is C), printed as diagrams at the
+        start or the end of the chart.</li>
       <li><strong>Licks</strong>: write a short tab figure inline with
         <code>{G 5 7 5 | D - - 3}</code> — one line per string, printed in among
         the chords at the point it's played.</li>
@@ -135,6 +149,12 @@
             </label>
             <label title="Fit to page scales the whole chart up until it fills the paper without spilling onto another page — for reading off a music stand, or from the floor. Fit to one page goes the other way when it has to, shrinking the type until the whole song lands on a single sheet.">Size
               <select id="meta-scale"></select>
+            </label>
+            <label title="Where a section's words print: beside its chart, in a column of their own, or underneath it. Beside is usually what you want — it shows what the instrument does during those words without the verse pushing the next section off the page. Nothing is aligned chord-to-syllable either way.">Lyrics
+              <select id="meta-lyrics-layout"></select>
+            </label>
+            <label title="Print the song's chord shapes as a block of diagrams, once, at the start or the end of the chart. Shapes are edited from the Chords button in the toolbar.">Chord shapes
+              <select id="meta-chord-sheet"></select>
             </label>
             <label title="Most chart lines are short, so one column down the page wastes half of it. Two columns halve the height the chart needs, and Fit to page spends that on bigger type — the same song, easier to read. Auto only splits the page when it actually helps.">Columns
               <select id="meta-columns"></select>
@@ -215,10 +235,24 @@
       <!-- The song's sections, one chip each: click to write that section's
            words. The dropdown above still works; this is the same list laid
            out so you can see at a glance which sections already have lyrics
-           and which are still empty. -->
+           and which are still empty. In whole-song scope the chips do a
+           second job: drag one into the sheet (or click it) to drop a
+           "=== Verse 1 ===" marker where that section's words start. -->
       <div id="lyrics-chips" class="lyrics-chips"></div>
-      <textarea id="lyrics-textarea" rows="14"
-                placeholder="Paste or type lyrics here…"></textarea>
+      <p class="modal-hint lyrics-marker-hint hidden" id="lyrics-marker-hint">
+        Drag a section into the sheet — or click it — to mark where its words
+        begin. Markers show here and never print. <strong>Split by markers</strong>
+        then hands each block to its section.
+      </p>
+      <!-- The overlay behind the textarea draws the marker lines in colour:
+           a textarea can't style its own content, and the alternative (a
+           contenteditable div) breaks paste, undo and drag-and-drop, which
+           are the three things this box exists for. -->
+      <div class="lyrics-editor">
+        <pre id="lyrics-overlay" class="lyrics-overlay" aria-hidden="true"></pre>
+        <textarea id="lyrics-textarea" rows="14" spellcheck="false"
+                  placeholder="Paste or type lyrics here…"></textarea>
+      </div>
       <label class="modal-checkbox">
         <input id="lyrics-print" type="checkbox">
         Include in TXT/PDF export and the Preview pane
@@ -227,19 +261,50 @@
         <div>
           <button id="lyrics-import" class="btn subtle">Import from file…</button>
           <button id="lyrics-search" class="btn subtle">Search online ↗</button>
+          <button id="lyrics-add-section" class="btn subtle hidden"
+                  title="Create a section from here — it appears in the editor behind this dialog, and a marker for it is dropped at the cursor.">+ Section…</button>
+          <button id="lyrics-apply-markers" class="btn subtle hidden"
+                  title="Hand each marked block to the section it names. Sections the sheet doesn't name are left exactly as they are.">Split by markers</button>
           <button id="lyrics-split" class="btn subtle hidden"
-                  title="Split this sheet on blank lines and choose which section gets which block. The sheet is kept, so you can come back and give a block to a section you add later.">Split into sections…</button>
+                  title="No markers? Split this sheet on blank lines instead and choose which section gets which block.">Split on blank lines…</button>
           <input id="lyrics-file-input" type="file" accept=".txt,text/plain" class="hidden">
         </div>
         <button id="lyrics-close" class="btn accent">Done</button>
       </div>
       <p class="modal-hint">Off by default: a reference layer, never aligned to the chart
-        automatically. Check the box above to print it too. "Search online ↗" asks for the
+        automatically. Check the box above to print it too — a section's words print
+        beside its chart, in their own column, so the page shows what the instrument
+        does while they're sung. "Search online ↗" asks for the
         song title and artist, then opens a DuckDuckGo search in a new tab; nothing is
         fetched or pasted in for you.</p>
     </div>
   </div>
 
+
+  <!-- Chord shapes -->
+  <div id="chords-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3>Chord shapes</h3>
+      <p class="modal-hint" style="margin-top:0">
+        A fret per string, lowest string first — the way a chord chart writes it:
+        <code>x32010</code> is C, <code>320003</code> is G. Frets past the ninth need
+        spaces: <code>x 0 12 12 12 x</code>. Use <code>x</code> for a string you don't
+        sound. They print as a block of diagrams, once, wherever
+        <strong>Print &amp; export → Chord shapes</strong> says.
+      </p>
+      <div id="chords-rows" class="chord-rows"></div>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <div>
+          <button id="chords-add" class="btn subtle">+ Chord</button>
+          <label class="chord-where">Print
+            <select id="chords-where"></select>
+          </label>
+        </div>
+        <button id="chords-close" class="btn accent">Done</button>
+      </div>
+      <div id="chords-preview" class="chord-preview"></div>
+    </div>
+  </div>
 
   <!-- Split lyrics into sections -->
   <div id="lyrics-split-backdrop" class="modal-backdrop hidden">
@@ -447,6 +512,11 @@
           <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat — caret lands inside the brackets">[ ]x2</button>
           <button type="button" class="ins-btn" data-ins="&quot;&quot;" data-caret="1" title="Free annotation in quotes">&quot;&quot;</button>
           <button type="button" class="ins-btn" data-ins-lick="6" title="A lick: a short tab figure printed in among the chords. Inserts an empty grid — every string of this section's instrument, six positions wide — for you to type frets over.">{ tab }</button>
+          <button type="button" class="ins-btn" data-ins-lick-named="6" title="The same, but named: the lick prints with its name over it and can be recalled anywhere else in the song as {Riff1}, the way a section reference works.">{ name = tab }</button>
+          <!-- Every lick already named in this song, one button each:
+               inserts the reference rather than the notes. Filled in by
+               renderLickChips(). -->
+          <span class="sec-lick-refs"></span>
           <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
           <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
           <button type="button" class="ins-btn" data-ins="dc" title="D.C. — repeat from the beginning">dc</button>

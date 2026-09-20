@@ -86,6 +86,7 @@ import songmap
 import export as songexport
 import examples as songexamples
 import lyrics as songlyrics
+import chords as songchords
 from grammar import ParseError as ChartParseError
 from constants import (
     APP_VERSION as _CONST_APP_VERSION,
@@ -491,6 +492,14 @@ class SongNotationApp(tk.Tk):
                 "focused section. Reference text only, never exported or "
                 "auto-fetched from the web.")
 
+        self.btn_chords = ttk.Button(
+            self.topbar2, text="Chords 🎸",
+            command=self._chords_dialog, style="Normal.TButton")
+        self.btn_chords.pack(side="left", padx=3)
+        ToolTip(self.btn_chords,
+                "Chord shapes — the voicings you had to work out — printed as a "
+                "block of diagrams once, at the start or the end of the chart.")
+
         self.lbl_pages = tk.Label(self.topbar2, text="[1 page]",
                                    font=FONT_TINY, anchor="e")
         self.lbl_pages.pack(side="right", padx=(0, 4))
@@ -561,6 +570,15 @@ class SongNotationApp(tk.Tk):
         ToolTip(self.btn_insert_lick,
                 "Insert an empty lick: every string of this section's "
                 "instrument, six positions wide, ready to type frets over.")
+        self.btn_insert_named_lick = ttk.Button(
+            entry_row, text="{ name = tab }", width=13, style="Normal.TButton",
+            command=lambda: self._insert_empty_lick(named=True))
+        self.btn_insert_named_lick.pack(side="right", padx=(6, 0))
+        ToolTip(self.btn_insert_named_lick,
+                "The same, but named — the lick prints with its name over it "
+                "and can be recalled anywhere else in the song as {Riff1}, the "
+                "way a section reference works. The name is filled in for you.")
+
         self.editor_entry.bind("<KeyRelease>", self._on_editor_keystroke)
         self.editor_entry.bind("<Tab>",       lambda e: self._on_editor_tab(1))
         self.editor_entry.bind("<Shift-Tab>", lambda e: self._on_editor_tab(-1))
@@ -576,9 +594,25 @@ class SongNotationApp(tk.Tk):
                 "=section refs, marks. Tab commits and moves on; Escape reverts; "
                 "Ctrl/Cmd+R promotes the selection to a riff.")
 
-    def _insert_empty_lick(self, slots: int = 6):
+    def _next_lick_name(self) -> str:
+        """A name for the next lick in this song: Riff1, Riff2, …
+
+        The names are read back off the licks themselves (songmap derives
+        the index the same way), so nothing has to be kept in step with a
+        separate list.
+        """
+        taken = {n.lower() for n in songmap.lick_names(self.doc)}
+        for i in range(1, 999):
+            if f"riff{i}" not in taken:
+                return f"Riff{i}"
+        return "Riff"
+
+    def _insert_empty_lick(self, slots: int = 6, named: bool = False):
         """Drop an empty lick for the focused section's instrument into the
-        chart line at the caret, whitespace-separated from its neighbours."""
+        chart line at the caret, whitespace-separated from its neighbours.
+
+        `named` fills a name in too — a named lick is worth nothing if
+        naming it is a chore."""
         if not self.focus_id:
             return
         # The editor bar edits a section or a riff, so take the instrument
@@ -592,6 +626,8 @@ class SongNotationApp(tk.Tk):
                                           ["G", "D", "A", "E"])
         body = " | ".join(st + " " + " ".join(["-"] * max(1, slots))
                           for st in strings)
+        if named:
+            body = f"{self._next_lick_name()} = {body}"
         text = "{" + body + "}"
 
         entry = self.editor_entry
@@ -960,10 +996,12 @@ class SongNotationApp(tk.Tk):
 
     # ── add / delete section ────────────────────────────────────────────
 
-    def _add_section(self, focus=False, after_id=None):
+    def _add_section(self, focus=False, after_id=None, name=None,
+                      section_type=None):
         sid = self._new_id("section", "sec")
         n = len(self.doc["sections"]) + 1
-        sec = model.new_section(sid, f"Section {n}",
+        sec = model.new_section(sid, name or f"Section {n}",
+                                 section_type=section_type or "Verse",
                                  instrument=self.default_instrument.get())
         if after_id is not None:
             idx = self._section_index(after_id)
@@ -1418,6 +1456,151 @@ class SongNotationApp(tk.Tk):
     #  rewrites a stored token (design v0.16 section 5 / v0.15 bug fix #5).
     # ==========================================================================
 
+    def _chords_dialog(self):
+        """Chord shapes — the voicings you had to work out.
+
+        A chart says which chords are played; it doesn't say how to hold
+        one, and for most of a set it doesn't need to. But there is always
+        the shape the song wants rather than the barre your hands default
+        to, and writing that on the back of the sheet is what this is:
+        printed once, at one end of the chart, rather than beside every
+        chord symbol.
+        """
+        t = THEMES[self.current_theme]
+        dlg = tk.Toplevel(self)
+        dlg.title("Chord shapes")
+        dlg.configure(bg=t["bg"])
+        dlg.geometry("620x520")
+        dlg.transient(self)
+        dlg.grab_set()
+
+        self.doc.setdefault("chords", [])
+
+        tk.Label(dlg, text="A fret per string, lowest string first — x32010 is C, "
+                 "320003 is G.\nFrets past the ninth need spaces: x 0 12 12 12 x. "
+                 "Use x for a string you don't sound.",
+                 bg=t["bg"], fg=t["fg"], font=FONT_TINY, justify="left"
+                 ).pack(anchor="w", padx=16, pady=(12, 6))
+
+        rows_frame = tk.Frame(dlg, bg=t["bg"])
+        rows_frame.pack(fill="both", expand=True, padx=16)
+
+        preview = tk.Text(dlg, height=9, wrap="none", bg=t["input_bg"],
+                           fg=t["fg"], font=FONT_MONO, relief="flat",
+                           padx=8, pady=6)
+        row_widgets = []
+
+        def _refresh_preview():
+            preview.configure(state="normal")
+            preview.delete("1.0", "end")
+            preview.insert("1.0", "\n".join(songchords.sheet_lines(self.doc, 76)))
+            preview.configure(state="disabled")
+            self.dirty = True
+            self._refresh_page_indicator()
+
+        def _read_row(chord, name_var, instr_var, shape_var, note_var, err_lbl):
+            chord["name"] = name_var.get().strip()
+            chord["instrument"] = instr_var.get()
+            chord["note"] = note_var.get().strip()
+            chord["shape_text"] = shape_var.get().strip()
+            if not chord["shape_text"]:
+                chord["frets"] = []
+                err_lbl.configure(text="")
+                _refresh_preview()
+                return
+            try:
+                chord["frets"] = songchords.shape_from_text(
+                    chord["shape_text"], chord["instrument"])
+                err_lbl.configure(text="")
+            except songchords.ChordError as exc:
+                chord["frets"] = []
+                err_lbl.configure(text=str(exc))
+            _refresh_preview()
+
+        def _rebuild_rows():
+            for w in rows_frame.winfo_children():
+                w.destroy()
+            row_widgets.clear()
+            for chord in self.doc["chords"]:
+                row = tk.Frame(rows_frame, bg=t["bg"])
+                row.pack(fill="x", pady=1)
+                name_var = tk.StringVar(value=chord.get("name", ""))
+                instr_var = tk.StringVar(
+                    value=chord.get("instrument") or songchords.DEFAULT_INSTRUMENT)
+                shape_var = tk.StringVar(value=chord.get("shape_text", ""))
+                note_var = tk.StringVar(value=chord.get("note", ""))
+                err_lbl = tk.Label(rows_frame, text="", bg=t["bg"], fg=t["accent"],
+                                    font=FONT_TINY, anchor="w")
+
+                tk.Entry(row, textvariable=name_var, width=8, relief="flat",
+                          font=FONT_MAIN).pack(side="left", padx=(0, 4))
+                ttk.Combobox(row, textvariable=instr_var,
+                              values=list(INSTRUMENT_STRINGS.keys()), width=20,
+                              state="readonly", font=FONT_TINY).pack(side="left",
+                                                                      padx=(0, 4))
+                tk.Entry(row, textvariable=shape_var, width=16, relief="flat",
+                          font=FONT_MONO).pack(side="left", padx=(0, 4))
+                tk.Entry(row, textvariable=note_var, width=14, relief="flat",
+                          font=FONT_TINY).pack(side="left", padx=(0, 4))
+
+                def on_change(*_a, c=chord, n=name_var, i=instr_var,
+                               sh=shape_var, no=note_var, e=err_lbl):
+                    _read_row(c, n, i, sh, no, e)
+                for var in (name_var, instr_var, shape_var, note_var):
+                    var.trace_add("write", on_change)
+
+                def _remove(c=chord):
+                    self.doc["chords"].remove(c)
+                    _rebuild_rows()
+                    _refresh_preview()
+                ttk.Button(row, text="🗑", width=3, style="Normal.TButton",
+                            command=_remove).pack(side="left")
+                err_lbl.pack(fill="x", padx=(4, 0))
+                row_widgets.append(row)
+
+            if not self.doc["chords"]:
+                tk.Label(rows_frame, text="No shapes yet — \"+ Chord\" adds one.",
+                         bg=t["bg"], fg=t["fg"], font=FONT_TINY).pack(anchor="w")
+
+        def _add_chord():
+            self.doc["chords"].append(
+                {"name": "", "instrument": self.default_instrument.get(),
+                 "frets": [], "shape_text": "", "note": ""})
+            # Adding a shape is the whole reason to print one; asking again
+            # in a radio button is a step with no decision in it.
+            if self.doc.get("chord_sheet", "none") == "none":
+                self.doc["chord_sheet"] = "end"
+                where_var.set("end")
+            _rebuild_rows()
+
+        btnrow = tk.Frame(dlg, bg=t["bg"])
+        btnrow.pack(fill="x", padx=16, pady=(6, 2))
+        ttk.Button(btnrow, text="+ Chord", command=_add_chord,
+                    style="Normal.TButton").pack(side="left")
+
+        where_var = tk.StringVar(value=self.doc.get("chord_sheet", "none"))
+
+        def _on_where():
+            self.doc["chord_sheet"] = where_var.get()
+            self.dirty = True
+            self._refresh_page_indicator()
+
+        tk.Label(btnrow, text="Print:", bg=t["bg"], fg=t["accent"],
+                 font=FONT_TINY).pack(side="left", padx=(14, 0))
+        for val, lbl in (("none", "not at all"), ("start", "first"),
+                          ("end", "at the end")):
+            tk.Radiobutton(btnrow, text=lbl, variable=where_var, value=val,
+                           command=_on_where, bg=t["bg"], fg=t["fg"],
+                           selectcolor=t["input_bg"], activebackground=t["bg"],
+                           font=FONT_TINY).pack(side="left", padx=(6, 0))
+
+        preview.pack(fill="x", padx=16, pady=(4, 4))
+        _rebuild_rows()
+        _refresh_preview()
+
+        ttk.Button(dlg, text="Done", command=dlg.destroy,
+                    style="Accent.TButton").pack(side="right", padx=16, pady=(0, 14))
+
     def _transpose_dialog(self):
         self._commit_editor_line(force=True)
         t = THEMES[self.current_theme]
@@ -1521,6 +1704,10 @@ class SongNotationApp(tk.Tk):
                 print_var.set(bool(tgt.get("print_lyrics", False)))
             btn_split.configure(
                 state=("normal" if scope_var.get() == "song" else "disabled"))
+            btn_markers.configure(
+                state=("normal" if scope_var.get() == "song" else "disabled"))
+            _retag_markers()
+            _rebuild_marker_strip()
 
         tk.Radiobutton(top, text="Whole song", variable=scope_var, value="song",
                        bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
@@ -1542,6 +1729,61 @@ class SongNotationApp(tk.Tk):
         sb.pack(side="right", fill="y")
         txt.pack(side="left", fill="both", expand=True)
 
+        # Marker highlight: the sheet's own structure, drawn where it is
+        # typed. A Text widget can tag its lines, so unlike the browser
+        # this needs no second copy of the text underneath.
+        txt.tag_configure("marker", foreground=t["accent"],
+                           font=(FONT_TINY[0], FONT_TINY[1], "bold"))
+
+        def _retag_markers(_evt=None):
+            txt.tag_remove("marker", "1.0", "end")
+            for i, line in enumerate(txt.get("1.0", "end-1c").splitlines(), start=1):
+                if songlyrics.is_marker(line):
+                    txt.tag_add("marker", f"{i}.0", f"{i}.end")
+
+        txt.bind("<KeyRelease>", _retag_markers)
+        txt.bind("<<Paste>>", lambda e: txt.after(10, _retag_markers))
+
+        def _insert_marker(name):
+            """Drop a marker on a line of its own at the insert cursor. A
+            marker mid-line is a marker no parser can see."""
+            txt.insert("insert linestart", songlyrics.marker_line(name) + "\n")
+            _retag_markers()
+            txt.focus_set()
+
+        def _new_section_from_here():
+            name = simpledialog.askstring(
+                "New section", "Name for the new section (e.g. Verse 3):",
+                parent=dlg)
+            if not name or not name.strip():
+                return
+            name = name.strip()
+            if songlyrics.match_sections(self.doc, [{"name": name}])[0] is None:
+                stype = next((ty for ty in SECTION_TYPES
+                              if name.lower().startswith(ty.lower())), "Verse")
+                self._add_section(name=name, section_type=stype)
+                self.dirty = True
+            _insert_marker(name)
+            _rebuild_marker_strip()
+
+        marker_strip = tk.Frame(dlg, bg=t["bg"])
+        marker_strip.pack(fill="x", padx=16, pady=(0, 2))
+
+        def _rebuild_marker_strip():
+            for child in marker_strip.winfo_children():
+                child.destroy()
+            if scope_var.get() != "song":
+                return
+            tk.Label(marker_strip, text="Mark a section:", bg=t["bg"],
+                     fg=t["accent"], font=FONT_TINY).pack(side="left")
+            for sec in self.doc.get("sections", []):
+                nm = sec.get("name") or sec.get("id")
+                ttk.Button(marker_strip, text=nm, style="Normal.TButton",
+                            command=lambda n=nm: _insert_marker(n)
+                            ).pack(side="left", padx=2)
+            ttk.Button(marker_strip, text="+ Section…", style="Normal.TButton",
+                        command=_new_section_from_here).pack(side="left", padx=(8, 2))
+
         print_var = tk.BooleanVar(value=False)
 
         def _on_print_toggle():
@@ -1558,6 +1800,31 @@ class SongNotationApp(tk.Tk):
             bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
             activebackground=t["bg"], font=FONT_TINY)
         chk.pack(anchor="w")
+
+        # Where the words go on the page. Beside the chart is the default:
+        # it shows what the instrument does *during* those words without
+        # the verse pushing the next section off the sheet. Nothing is
+        # aligned chord-to-syllable either way.
+        layout_var = tk.StringVar(
+            value=self.doc.get("lyrics_layout", "beside"))
+
+        def _on_layout():
+            self.doc["lyrics_layout"] = layout_var.get()
+            self.dirty = True
+            self._rebuild_map()
+            self._refresh_page_indicator()
+
+        layout_row = tk.Frame(body_footer, bg=t["bg"])
+        layout_row.pack(anchor="w", pady=(2, 0))
+        tk.Label(layout_row, text="When printed:", bg=t["bg"], fg=t["accent"],
+                 font=FONT_TINY).pack(side="left")
+        for val, lbl in (("beside", "beside the chart"),
+                          ("below", "under the chart")):
+            tk.Radiobutton(layout_row, text=lbl, variable=layout_var, value=val,
+                           command=_on_layout, bg=t["bg"], fg=t["fg"],
+                           selectcolor=t["input_bg"], activebackground=t["bg"],
+                           font=FONT_TINY).pack(side="left", padx=(6, 0))
+
         body_footer.pack(fill="x", padx=16, pady=(0, 2))
 
         def _split_into_sections():
@@ -1679,6 +1946,37 @@ class SongNotationApp(tk.Tk):
             ttk.Button(br2, text="Assign", command=_assign,
                        style="Accent.TButton").pack(side="right")
 
+        def _apply_markers():
+            """Split the sheet on its own markers rather than on blank
+            lines — the sheet says where each section starts, so nothing
+            has to be guessed or corrected in a second dialog."""
+            sheet = txt.get("1.0", "end-1c")
+            if not songlyrics.has_markers(sheet):
+                messagebox.showinfo(
+                    "Split by markers",
+                    "No \"=== Section ===\" markers in this sheet yet — use the "
+                    "buttons above to drop one where each section's words start.")
+                return
+            self.doc["lyrics_text"] = sheet
+            missing = songlyrics.unmatched_names(self.doc, sheet)
+            if missing and messagebox.askyesno(
+                    "Split by markers",
+                    "The sheet names section(s) this song doesn't have yet:\n\n  "
+                    + "\n  ".join(missing) + "\n\nCreate them?"):
+                for nm in missing:
+                    stype = next((ty for ty in SECTION_TYPES
+                                  if nm.lower().startswith(ty.lower())), "Verse")
+                    self._add_section(name=nm, section_type=stype)
+            out = songlyrics.apply_marked(self.doc, sheet,
+                                           print_lyrics=print_var.get())
+            self.dirty = True
+            self._rebuild_map()
+            self._refresh_page_indicator()
+            dlg.destroy()
+            messagebox.showinfo(
+                "Split by markers",
+                f"Lyrics assigned to {out['assigned']} section(s).")
+
         def _import_file():
             path = filedialog.askopenfilename(
                 title="Import lyrics from text file",
@@ -1748,7 +2046,14 @@ class SongNotationApp(tk.Tk):
                    style="Normal.TButton").pack(side="left")
         ttk.Button(btnrow, text="Search lyrics online ↗", command=_search_online,
                    style="Normal.TButton").pack(side="left", padx=(6, 0))
-        btn_split = ttk.Button(btnrow, text="Split into sections…",
+        btn_markers = ttk.Button(btnrow, text="Split by markers",
+                                  command=_apply_markers, style="Normal.TButton")
+        btn_markers.pack(side="left", padx=(6, 0))
+        ToolTip(btn_markers,
+                "Hands each \"=== Section ===\" block to the section it names. "
+                "Sections the sheet says nothing about are left exactly as they "
+                "are. Markers never print.")
+        btn_split = ttk.Button(btnrow, text="Split on blank lines…",
                                 command=_split_into_sections, style="Normal.TButton")
         btn_split.pack(side="left", padx=(6, 0))
         ToolTip(btn_split, "Splits this text on blank lines and assigns one block per "
@@ -1982,8 +2287,16 @@ class SongNotationApp(tk.Tk):
         "-n round trip is always exact.\n\n"
         "Lyrics (📝) holds reference text alongside a section or the whole "
         "song — paste it, import a .txt file, or open a browser search for "
-        "it. It's never parsed, aligned, or exported; just there to work "
-        "against by eye.\n\n"
+        "it. Mark the sheet up with \"=== Verse 1 ===\" lines (the buttons "
+        "above the box write one for you) and \"Split by markers\" hands each "
+        "block to the section it names; the markers never print. Printed "
+        "words sit beside their section's chart, in a column of their own — "
+        "nothing is aligned chord to syllable.\n\n"
+        "Name a lick — {Riff1 = G 5 7 5 | D - - 3} — and {Riff1}x3 plays it "
+        "again anywhere in the song; edit it once and every place that plays "
+        "it follows.\n\n"
+        "Chords (🎸) keeps the voicings you had to work out (x32010 is C) and "
+        "prints them as diagrams at the start or the end of the chart.\n\n"
         "A parse error in a chart line never clears what you typed — it "
         "shows inline, in place, and the last valid render stays on "
         "screen above it.\n\n"

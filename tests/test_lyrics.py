@@ -122,3 +122,77 @@ def test_the_split_endpoint_answers_with_blocks_and_a_proposal():
     assert payload["suggested"][0] is None
     assert payload["current"] == [None, None, None]
     assert hasattr(webserver, "lyrics_mod")
+
+
+# ---------------------------------------------------------------------------
+#  Section markers — the sheet carries its own structure
+# ---------------------------------------------------------------------------
+
+MARKED = """\
+scribbled note to self
+
+=== Intro ===
+
+=== Verse 1 ===
+I woke up in the third state
+nothing moved but the light
+
+=== Chorus 1 ===
+hold on
+"""
+
+
+def test_split_marked_keeps_the_preamble_as_an_unnamed_segment():
+    segs = lyrics.split_marked(MARKED)
+    assert segs[0] == {"name": "", "text": "scribbled note to self"}
+    assert [s["name"] for s in segs[1:]] == ["Intro", "Verse 1", "Chorus 1"]
+
+
+def test_split_marked_keeps_an_empty_marked_section():
+    """An instrumental intro is marked and has no words — the marker is
+    still structure and must survive, or the sections after it shift."""
+    segs = lyrics.split_marked(MARKED)
+    assert segs[1] == {"name": "Intro", "text": ""}
+
+
+def test_markers_never_print():
+    assert "===" not in lyrics.strip_markers(MARKED)
+    assert lyrics.strip_markers("=== Verse 1 ===\nsing") == "sing"
+
+
+def test_strip_markers_does_not_leave_a_hole():
+    text = "one\n\n=== Chorus ===\n\ntwo"
+    assert lyrics.strip_markers(text) == "one\n\ntwo"
+
+
+def test_marker_names_match_sections_loosely():
+    doc = {"sections": [{"id": "s1", "name": "Chorus 1"}]}
+    segs = [{"name": "chorus_1", "text": "hold on"}]
+    assert lyrics.match_sections(doc, segs) == ["s1"]
+
+
+def test_apply_marked_writes_only_the_sections_the_sheet_names():
+    doc = {"sections": [
+        {"id": "v1", "name": "Verse 1", "lyrics_text": ""},
+        {"id": "c1", "name": "Chorus 1", "lyrics_text": ""},
+        {"id": "b1", "name": "Bridge", "lyrics_text": "left alone"},
+    ]}
+    out = lyrics.apply_marked(doc, MARKED, print_lyrics=True)
+    assert out["assigned"] == 2
+    assert out["unmatched"] == ["Intro"]
+    assert doc["sections"][0]["lyrics_text"].startswith("I woke up")
+    assert doc["sections"][1]["lyrics_text"] == "hold on"
+    # A section the sheet says nothing about keeps what it had.
+    assert doc["sections"][2]["lyrics_text"] == "left alone"
+    assert doc["print_lyrics"] is False
+
+
+def test_apply_marked_joins_a_section_marked_twice():
+    doc = {"sections": [{"id": "c1", "name": "Chorus", "lyrics_text": ""}]}
+    lyrics.apply_marked(doc, "=== Chorus ===\nfirst\n\n=== Chorus ===\nsecond")
+    assert doc["sections"][0]["lyrics_text"] == "first\n\nsecond"
+
+
+def test_unmatched_names_are_reported_for_creation():
+    doc = {"sections": [{"id": "v1", "name": "Verse 1"}]}
+    assert lyrics.unmatched_names(doc, MARKED) == ["Intro", "Chorus 1"]

@@ -10,7 +10,7 @@ from __future__ import annotations
 FORMAT_VERSION = 2
 
 ITEM_KINDS = ("token", "group", "block_ref", "section_ref", "measure", "mark",
-              "lick")
+              "lick", "lick_ref")
 
 MARK_NAMES = (
     "repeat_open", "repeat_close", "ending_1", "ending_2",
@@ -28,6 +28,16 @@ RENDER_MODES = ("chart", "tab", "both", "free")
 #   "gutter" — a left-hand column beside the section's first line,
 #              which fits far more of a song on one page
 SECTION_LAYOUTS = ("banner", "gutter")
+
+# How a section's lyrics sit against its chart in the export:
+#   "beside" — chart in a narrow left column, words to the right of it,
+#              so the page says what the instrument does *during* those
+#              words without pretending to align chord to syllable
+#   "below"  — the words under the chart, the way v0.21 printed them
+LYRICS_LAYOUTS = ("beside", "below")
+
+# Where the chord-shape sheet prints, if the song has one:
+CHORD_SHEET_POSITIONS = ("none", "start", "end")
 
 # How many text columns the PDF puts on a page:
 #   "auto" — two when they let the chart print bigger, one otherwise
@@ -65,7 +75,7 @@ def make_measure(beats, strings):
     return {"kind": "measure", "beats": beats, "strings": dict(strings)}
 
 
-def make_lick(lines):
+def make_lick(lines, name="", repeat=1):
     """
     A short tab figure sitting inline in a chart line — the lick you want
     to remember, written where it's played rather than banished to a
@@ -76,12 +86,32 @@ def make_lick(lines):
     index 2 is played with whatever sits at index 2 on the D string; "-"
     means that string isn't played at that position. The order is as typed,
     top line first, which is how tab reads.
+
+    A lick can carry a `name`. Named, it prints with that name over it and
+    can be recalled anywhere else in the song as `{name}` — the same trick
+    sections and riffs already do, and the one the handwritten charts use
+    when they say "RIFF 1 (x3)" rather than writing the notes out again.
     """
     out = []
     for ln in lines or []:
         out.append({"string": str(ln.get("string", "")),
                     "frets": [str(f) for f in ln.get("frets", [])]})
-    return {"kind": "lick", "lines": out}
+    d = {"kind": "lick", "lines": out}
+    if name:
+        d["name"] = str(name)
+    if repeat and repeat != 1:
+        d["repeat"] = int(repeat)
+    return d
+
+
+def make_lick_ref(name, repeat=1):
+    """A pointer to a lick defined (and named) somewhere else in the song.
+
+    Stored as a pointer for the same reason a section reference is: edit
+    the lick once and every place that plays it follows. It resolves to
+    the lick itself at render time, so the chart shows the notes.
+    """
+    return {"kind": "lick_ref", "lick": str(name), "repeat": int(repeat or 1)}
 
 
 def make_mark(mark, indent: int = 0):
@@ -107,6 +137,9 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "transpose": 0,
         "lyrics_text": "",
         "print_lyrics": False,
+        "lyrics_layout": "beside",
+        "chords": [],
+        "chord_sheet": "none",
         "section_layout": "banner",
         "color_mode": "color",
         "pdf_scale": "fit",
@@ -132,6 +165,20 @@ def new_section(section_id, name, section_type="Verse",
         "render": render, "annotation": "", "lyrics_text": "",
         "print_lyrics": False, "free_text": free_text, "items": [],
     }
+
+
+def make_chord(name, frets, instrument="Guitar (6-string)", note=""):
+    """One chord shape: a fret per string, in the instrument's own string
+    order (highest string first, the way INSTRUMENT_STRINGS lists them and
+    the way tab reads down the page).
+
+    A fret is a string: "0" for open, "x" for a string you don't sound,
+    or a fret number. Kept as text rather than int so "x" needs no special
+    case anywhere downstream.
+    """
+    return {"name": str(name), "instrument": instrument,
+            "frets": [str(f) for f in (frets or [])],
+            "note": str(note or "")}
 
 
 import re as _re

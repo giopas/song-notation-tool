@@ -32,6 +32,12 @@ const API = {
   splitLyrics: (doc, text) => fetchJSON("/api/lyrics/split", {
     method: "POST", body: JSON.stringify({ doc, text }),
   }),
+  markedLyrics: (doc, text) => fetchJSON("/api/lyrics/marked", {
+    method: "POST", body: JSON.stringify({ doc, text }),
+  }),
+  chordShape: (text, instrument) => fetchJSON("/api/chords/shape", {
+    method: "POST", body: JSON.stringify({ text, instrument }),
+  }),
   quit: () => fetchJSON("/api/quit", { method: "POST" }),
 };
 
@@ -95,6 +101,32 @@ function emptyLick(instrument, slots) {
     .join(" | ");
   return "{" + body + "}";
 }
+/**
+ * Every lick named anywhere in this song, in chart order.
+ *
+ * Derived rather than stored, exactly as the server derives it
+ * (songmap.lick_index): the name lives on the lick item itself, so
+ * renaming or deleting one needs no second list kept in step.
+ */
+function namedLicks() {
+  const out = [];
+  const walk = (items) => (items || []).forEach((it) => {
+    if (it.kind === "group") walk(it.items);
+    if (it.kind === "lick" && it.name && !out.includes(it.name)) out.push(it.name);
+  });
+  ((currentDoc && currentDoc.sections) || []).forEach((s) => walk(s.items));
+  return out;
+}
+
+/** A name for the next lick in this song: Riff1, Riff2, … */
+function nextLickName() {
+  const taken = new Set(namedLicks().map((n) => n.toLowerCase()));
+  for (let i = 1; i < 999; i += 1) {
+    if (!taken.has(`riff${i}`)) return `Riff${i}`;
+  }
+  return "Riff";
+}
+
 function newSectionId() {
   return "section_" + Date.now().toString(36) + Math.floor(Math.random() * 1000);
 }
@@ -181,6 +213,10 @@ function renderEditor() {
   document.getElementById("meta-color").value = currentDoc.color_mode || "color";
   document.getElementById("meta-scale").value = String(currentDoc.pdf_scale || "fit");
   document.getElementById("meta-columns").value = String(currentDoc.pdf_columns || "auto");
+  document.getElementById("meta-lyrics-layout").value =
+    currentDoc.lyrics_layout || "beside";
+  document.getElementById("meta-chord-sheet").value =
+    currentDoc.chord_sheet || "none";
 
   const list = document.getElementById("section-list");
   list.innerHTML = "";
@@ -348,9 +384,26 @@ function wireSectionEvents(node, sec, idx) {
   // Quick-insert palette. Inserting through the same input event the user
   // would have produced by typing means the existing debounced parse,
   // error display and preview refresh all run unchanged.
+  renderLickChips(node);
   node.querySelector(".sec-insert-strip").addEventListener("click", (e) => {
     const btn = e.target.closest(".ins-btn");
     if (!btn) return;
+    if (btn.dataset.insLickRef) {
+      insertAtCursor(node.querySelector(".sec-chart-line"),
+                      `{${btn.dataset.insLickRef}}`, 0);
+      return;
+    }
+    if (btn.dataset.insLickNamed) {
+      // A named lick is worth nothing if naming it is a chore, so the
+      // name is filled in for you — Riff1, Riff2 — and the caret lands
+      // on the first fret position, same as the unnamed button.
+      const body = emptyLick(byId().instrument,
+                              parseInt(btn.dataset.insLickNamed, 10) || 6);
+      const text = "{" + nextLickName() + " = " + body.slice(1);
+      insertAtCursor(node.querySelector(".sec-chart-line"), text,
+                      text.length - text.indexOf("-"));
+      return;
+    }
     // The lick button builds its insert from the section's own instrument
     // rather than dropping a fixed example: an empty grid with every
     // string already named and room for six positions is a thing to fill
@@ -368,6 +421,27 @@ function wireSectionEvents(node, sec, idx) {
   node.querySelector(".sec-down").addEventListener("click", () => moveSection(sec.id, 1));
   node.querySelector(".sec-dup").addEventListener("click", () => duplicateSection(sec.id));
   node.querySelector(".sec-del").addEventListener("click", () => deleteSection(sec.id));
+}
+
+/**
+ * The licks this song has already named, one button each, so recalling
+ * one is a click rather than remembering what you called it. The button
+ * inserts the *reference* — `{Riff1}` — not the notes: that is the whole
+ * point of having named it.
+ */
+function renderLickChips(node) {
+  const box = node.querySelector(".sec-lick-refs");
+  if (!box) return;
+  box.innerHTML = "";
+  namedLicks().forEach((name) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ins-btn lick-ref-btn";
+    b.dataset.insLickRef = name;
+    b.textContent = `{${name}}`;
+    b.title = `Play the lick named ${name} here. Add x3 after it to repeat it.`;
+    box.appendChild(b);
+  });
 }
 
 /**
@@ -1068,6 +1142,7 @@ function lyricsTarget() {
 function renderLyricsChips() {
   const box = document.getElementById("lyrics-chips");
   const scope = document.getElementById("lyrics-scope").value;
+  const marking = scope === "__song__";
   box.innerHTML = "";
   const chip = (value, label, hasLyrics) => {
     const b = document.createElement("button");
@@ -1078,11 +1153,28 @@ function renderLyricsChips() {
     dot.className = "chip-dot";
     b.appendChild(dot);
     b.appendChild(document.createTextNode(label));
-    b.title = hasLyrics ? "Has lyrics — click to edit" : "No lyrics yet — click to add";
-    b.addEventListener("click", () => {
-      document.getElementById("lyrics-scope").value = value;
-      loadLyricsForScope();
-    });
+    // On the whole-song sheet the chips mark the sheet up; on a single
+    // section's words there is nothing to mark, so they navigate as
+    // before.
+    if (marking && value !== "__song__") {
+      b.classList.add("draggable");
+      b.draggable = true;
+      b.title = `Drag into the sheet (or click) to mark where ${label}'s words start`;
+      // The browser inserts dropped plain text at the drop caret on its
+      // own; all this has to do is say what the text is.
+      b.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", markerFor(label) + "\n");
+        e.dataTransfer.effectAllowed = "copy";
+      });
+      b.addEventListener("click", () => insertMarkerAtCursor(label));
+    } else {
+      b.title = hasLyrics ? "Has lyrics — click to edit"
+        : "No lyrics yet — click to add";
+      b.addEventListener("click", () => {
+        document.getElementById("lyrics-scope").value = value;
+        loadLyricsForScope();
+      });
+    }
     box.appendChild(b);
   };
   chip("__song__", "Whole song", !!(currentDoc.lyrics_text || "").trim());
@@ -1091,12 +1183,183 @@ function renderLyricsChips() {
   });
 }
 
+// ---------------------------------------------------------------------------
+//  Section markers — the sheet carries its own structure
+//
+//  Splitting a sheet on blank lines and then picking "block 3" from a
+//  dropdown asks you to hold the shape of the song in your head while you
+//  read a list of first lines. Writing the shape into the sheet instead
+//  says the same thing where you can see it, survives re-editing the
+//  words, and leaves the sheet self-describing next time you open it.
+//
+//  The markers are structure, not words: they're drawn in colour by the
+//  overlay behind the textarea, and stripped before anything prints.
+// ---------------------------------------------------------------------------
+const MARKER_RE = /^[ \t]*={2,}[ \t]*(.+?)[ \t]*={2,}[ \t]*$/;
+
+function markerFor(name) {
+  return `=== ${String(name || "").trim()} ===`;
+}
+
+function lyricsBox() {
+  return document.getElementById("lyrics-textarea");
+}
+
+// Typing writes back to whatever the Scope box is pointing at. Debounced
+// because the chip rail re-renders from it, not because the assignment
+// costs anything.
+const writeLyricsBack = debounce(() => {
+  const t = lyricsTarget();
+  if (t) t.lyrics_text = lyricsBox().value;
+  renderLyricsChips();
+}, 200);
+
+/** Drop a marker on its own line at the caret, and keep the overlay in
+ *  step. A marker mid-line would be a marker no parser can see, so it
+ *  always lands at the start of a line of its own. */
+function insertMarkerAtCursor(name) {
+  const box = lyricsBox();
+  const value = box.value;
+  let at = box.selectionStart == null ? value.length : box.selectionStart;
+  // Snap to the start of the line the caret is on.
+  while (at > 0 && value[at - 1] !== "\n") at -= 1;
+  const before = value.slice(0, at);
+  const after = value.slice(at);
+  const text = markerFor(name) + "\n";
+  box.value = before + text + after;
+  const caret = before.length + text.length;
+  box.focus();
+  box.setSelectionRange(caret, caret);
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function hasMarkers(text) {
+  return (text || "").split("\n").some((ln) => MARKER_RE.test(ln));
+}
+
+/** Paint the sheet into the overlay behind the textarea, markers in
+ *  colour. A textarea can't style its own content and a contenteditable
+ *  breaks paste, undo and drag-and-drop — which are the three things this
+ *  box is for — so the text is drawn twice and the top copy is
+ *  transparent. */
+function refreshLyricsOverlay() {
+  const overlay = document.getElementById("lyrics-overlay");
+  const box = lyricsBox();
+  if (!overlay || !box) return;
+  overlay.innerHTML = (box.value || "").split("\n").map((ln) => {
+    const esc = escapeHtml(ln) || "&nbsp;";
+    return MARKER_RE.test(ln) ? `<span class="lyric-marker">${esc}</span>` : esc;
+  }).join("\n");
+  overlay.scrollTop = box.scrollTop;
+  overlay.scrollLeft = box.scrollLeft;
+}
+
+/** Hand every marked block to the section it names. Sections the sheet
+ *  says nothing about are left exactly as they are — silence about a
+ *  section is not the same as saying it has no words. */
+async function applyLyricMarkers() {
+  const text = lyricsBox().value;
+  if (!hasMarkers(text)) {
+    toast("No === Section === markers in the sheet yet — drag a section in.");
+    return;
+  }
+  currentDoc.lyrics_text = text;
+  let info;
+  try {
+    info = await API.markedLyrics(currentDoc, text);
+  } catch (err) { toast(String(err)); return; }
+
+  const unmatched = info.unmatched || [];
+  if (unmatched.length) {
+    const ok = confirm(
+      `The sheet names ${unmatched.length} section(s) this song doesn't have `
+      + `yet:\n\n  ${unmatched.join("\n  ")}\n\nCreate them?`);
+    if (ok) unmatched.forEach((name) => {
+      currentDoc.sections.push(makeSection(name, guessSectionType(name)));
+    });
+  }
+
+  const print = document.getElementById("lyrics-print").checked;
+  const segments = (info.segments || []);
+  // Applied on the client so the document in the browser stays the one
+  // source of truth — the server only ever told us where the blocks go.
+  let assigned = 0;
+  const seen = new Set();
+  segments.forEach((seg) => {
+    const name = (seg.name || "").trim();
+    if (!name) return;
+    const sec = findSectionByName(name);
+    if (!sec) return;
+    const body = (seg.text || "").replace(/^\n+|\n+$/g, "");
+    if (seen.has(sec.id) && body.trim()) {
+      sec.lyrics_text = `${(sec.lyrics_text || "").replace(/\n+$/, "")}\n\n${body}`;
+    } else {
+      sec.lyrics_text = body;
+      seen.add(sec.id);
+    }
+    sec.print_lyrics = print;
+    if (body.trim()) assigned += 1;
+  });
+  // The sheet stays — it's the source these blocks came from, and the
+  // reason a section added next week can still be given one. It just
+  // stops printing, so the same words don't land on the chart twice.
+  if (assigned) currentDoc.print_lyrics = false;
+
+  renderEditor();
+  schedulePreviewUpdate();
+  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml(true);
+  document.getElementById("lyrics-scope").value = "__song__";
+  loadLyricsForScope();
+  toast(`Lyrics assigned to ${assigned} section(s) — remember to Save`);
+}
+
+/** The section a marker name refers to: case, spaces, dashes and
+ *  underscores all the same thing, matching lyrics.py's rule so the
+ *  browser and the server never disagree about where a block goes. */
+function findSectionByName(name) {
+  const key = (s) => String(s || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+  const k = key(name);
+  return currentDoc.sections.find((s) => key(s.name) === k || key(s.id) === k);
+}
+
+/** A type for a section created from a marker name, so "Chorus 2" lands
+ *  as a Chorus rather than as whatever the dropdown defaults to. */
+function guessSectionType(name) {
+  const n = String(name || "").toLowerCase();
+  const hit = (META.section_types || []).find(
+    (t) => n.startsWith(t.toLowerCase()));
+  return hit || (META.section_types[1] || "Verse");
+}
+
+/** Create a section from inside the Lyrics dialog and mark the sheet for
+ *  it in one go — the section appears in the editor behind the dialog. */
+function addSectionFromLyrics() {
+  const name = (prompt("Name for the new section (e.g. Verse 3)") || "").trim();
+  if (!name) return;
+  if (findSectionByName(name)) {
+    toast(`There's already a section called ${name}`);
+  } else {
+    currentDoc.sections.push(makeSection(name, guessSectionType(name)));
+    renderEditor();
+    schedulePreviewUpdate();
+  }
+  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml(true);
+  document.getElementById("lyrics-scope").value = "__song__";
+  loadLyricsForScope();
+  insertMarkerAtCursor(name);
+}
+
 function loadLyricsForScope() {
   const t = lyricsTarget();
   document.getElementById("lyrics-textarea").value = (t && t.lyrics_text) || "";
   document.getElementById("lyrics-print").checked = !!(t && t.print_lyrics);
   const isSongScope = document.getElementById("lyrics-scope").value === "__song__";
-  document.getElementById("lyrics-split").classList.toggle("hidden", !isSongScope);
+  ["lyrics-split", "lyrics-apply-markers", "lyrics-add-section"].forEach((id) => {
+    document.getElementById(id).classList.toggle("hidden", !isSongScope);
+  });
+  document.getElementById("lyrics-marker-hint")
+    .classList.toggle("hidden", !isSongScope);
+  refreshLyricsOverlay();
   renderLyricsChips();
 }
 function openLyricsModal() {
@@ -1108,6 +1371,164 @@ function openLyricsModal() {
 }
 function closeLyricsModal() {
   document.getElementById("lyrics-modal-backdrop").classList.add("hidden");
+}
+
+// ---------------------------------------------------------------------------
+//  Chord shapes
+//
+//  A chart says which chords are played; it doesn't say how to hold one,
+//  and for most of a set it doesn't need to. But there is always the
+//  voicing you had to work out, or the open shape the song wants rather
+//  than the barre your hands default to — and writing that on the back of
+//  the sheet is what this is. Printed once, at one end of the chart,
+//  rather than repeated beside every chord symbol.
+// ---------------------------------------------------------------------------
+function chordList() {
+  if (!currentDoc.chords) currentDoc.chords = [];
+  return currentDoc.chords;
+}
+
+function openChordsModal() {
+  if (!currentDoc) { toast("Open a song first"); return; }
+  document.getElementById("chords-where").value =
+    currentDoc.chord_sheet || "none";
+  renderChordRows();
+  document.getElementById("chords-modal-backdrop").classList.remove("hidden");
+}
+
+function closeChordsModal() {
+  document.getElementById("chords-modal-backdrop").classList.add("hidden");
+  schedulePreviewUpdate();
+}
+
+function renderChordRows() {
+  const box = document.getElementById("chords-rows");
+  box.innerHTML = "";
+  const chords = chordList();
+  if (!chords.length) {
+    const empty = document.createElement("p");
+    empty.className = "modal-hint";
+    empty.textContent = "No shapes yet — \u201c+ Chord\u201d adds one.";
+    box.appendChild(empty);
+  }
+  chords.forEach((chord, i) => box.appendChild(chordRow(chord, i)));
+  renderChordPreview();
+}
+
+function chordRow(chord, index) {
+  const row = document.createElement("div");
+  row.className = "chord-row";
+
+  const name = document.createElement("input");
+  name.type = "text";
+  name.className = "chord-name";
+  name.placeholder = "C";
+  name.value = chord.name || "";
+  name.title = "What you call this chord on the chart line";
+  name.addEventListener("input", () => {
+    chord.name = name.value;
+    renderChordPreview();
+  });
+
+  const instrument = document.createElement("select");
+  instrument.className = "chord-instrument";
+  Object.keys(META.instruments || {}).forEach((key) => {
+    const opt = document.createElement("option");
+    opt.value = key; opt.textContent = key;
+    instrument.appendChild(opt);
+  });
+  instrument.value = chord.instrument || defaultInstrument();
+  instrument.title = "How many strings the shape has";
+
+  const shape = document.createElement("input");
+  shape.type = "text";
+  shape.className = "chord-shape";
+  shape.placeholder = "x32010";
+  shape.value = chord.shape_text || "";
+  shape.title = "One fret per string, lowest string first. x means don't sound it.";
+
+  const err = document.createElement("span");
+  err.className = "chord-error";
+
+  const readShape = async () => {
+    chord.instrument = instrument.value;
+    chord.shape_text = shape.value;
+    if (!shape.value.trim()) { chord.frets = []; err.textContent = ""; renderChordPreview(); return; }
+    let res;
+    try {
+      res = await API.chordShape(shape.value, instrument.value);
+    } catch (e) { err.textContent = String(e); return; }
+    if (!res.ok) {
+      err.textContent = res.error;
+      chord.frets = [];
+    } else {
+      err.textContent = "";
+      chord.frets = res.frets;
+    }
+    renderChordPreview();
+  };
+  shape.addEventListener("input", debounce(readShape, 250));
+  instrument.addEventListener("change", readShape);
+
+  const note = document.createElement("input");
+  note.type = "text";
+  note.className = "chord-note";
+  note.placeholder = "note (optional)";
+  note.value = chord.note || "";
+  note.title = "A word printed under the diagram — \u201cbarre\u201d, \u201cthumb\u201d, whatever you need to remember";
+  note.addEventListener("input", () => { chord.note = note.value; renderChordPreview(); });
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "btn icon-btn";
+  del.textContent = "\u{1F5D1}";
+  del.title = "Remove this shape";
+  del.addEventListener("click", () => {
+    chordList().splice(index, 1);
+    renderChordRows();
+  });
+
+  [name, instrument, shape, note, del, err].forEach((el) => row.appendChild(el));
+  return row;
+}
+
+/** The shapes as they will print, drawn from the same diagram code the
+ *  export uses — asking the server to render it is how the dialog and the
+ *  paper stay the same thing. */
+function renderChordPreview() {
+  const box = document.getElementById("chords-preview");
+  const chords = chordList().filter((c) => (c.name || "").trim() && (c.frets || []).length);
+  if (!chords.length) { box.textContent = ""; return; }
+  API.render({ meta: { title: "" }, sections: [], chords,
+                chord_sheet: "end", format: 2 })
+    .then((res) => {
+      const lines = res.lines || [];
+      const start = lines.findIndex((ln) => ln.trim() === "CHORDS");
+      if (start < 0) { box.textContent = ""; return; }
+      const body = [];
+      for (let i = start + 2; i < lines.length; i += 1) {
+        if (lines[i].startsWith("=")) break;
+        body.push(lines[i]);
+      }
+      box.textContent = body.join("\n").replace(/^\n+|\n+$/g, "");
+    })
+    .catch(() => { box.textContent = ""; });
+}
+
+function addChord() {
+  chordList().push({ name: "", instrument: defaultInstrument(), frets: [],
+                      shape_text: "", note: "" });
+  if ((currentDoc.chord_sheet || "none") === "none") {
+    // Adding a shape is the whole reason to print one; asking for it a
+    // second time in a dropdown is a step with no decision in it.
+    currentDoc.chord_sheet = "end";
+    document.getElementById("chords-where").value = "end";
+    const sel = document.getElementById("meta-chord-sheet");
+    if (sel) sel.value = "end";
+  }
+  renderChordRows();
+  const rows = document.querySelectorAll("#chords-rows .chord-name");
+  if (rows.length) rows[rows.length - 1].focus();
 }
 
 // Split the whole-song lyric sheet across the sections.
@@ -1306,6 +1727,8 @@ async function init() {
    ["meta-color", "color_mode", META.color_modes, "color"],
    ["meta-scale", "pdf_scale", META.pdf_scales, "fit"],
    ["meta-columns", "pdf_columns", META.pdf_columns, "auto"],
+   ["meta-lyrics-layout", "lyrics_layout", META.lyrics_layouts, "beside"],
+   ["meta-chord-sheet", "chord_sheet", META.chord_sheets, "none"],
   ].forEach(([id, key, labels, fallback]) => {
     const sel = document.getElementById(id);
     Object.entries(labels || {}).forEach(([value, label]) => {
@@ -1371,12 +1794,33 @@ async function init() {
   document.getElementById("transpose-apply").addEventListener("click", applyTranspose);
 
   document.getElementById("btn-lyrics").addEventListener("click", openLyricsModal);
+  document.getElementById("btn-chords").addEventListener("click", openChordsModal);
+  document.getElementById("chords-add").addEventListener("click", addChord);
+  document.getElementById("chords-close").addEventListener("click", closeChordsModal);
+  document.getElementById("chords-where").addEventListener("change", (e) => {
+    if (!currentDoc) return;
+    currentDoc.chord_sheet = e.target.value;
+    const sel = document.getElementById("meta-chord-sheet");
+    if (sel) sel.value = e.target.value;
+    schedulePreviewUpdate();
+  });
+  Object.entries(META.chord_sheets || {}).forEach(([value, label]) => {
+    const opt = document.createElement("option");
+    opt.value = value; opt.textContent = label;
+    document.getElementById("chords-where").appendChild(opt);
+  });
   document.getElementById("lyrics-scope").addEventListener("change", loadLyricsForScope);
-  document.getElementById("lyrics-textarea").addEventListener("input", debounce(() => {
-    const t = lyricsTarget();
-    if (t) t.lyrics_text = document.getElementById("lyrics-textarea").value;
-    renderLyricsChips();
-  }, 200));
+  document.getElementById("lyrics-textarea").addEventListener("input", () => {
+    refreshLyricsOverlay();
+    writeLyricsBack();
+  });
+  // A drop lands as an input event on some browsers and not others; the
+  // overlay has to follow either way or the markers paint in the wrong
+  // place until the next keystroke.
+  ["drop", "scroll", "keyup", "click"].forEach((ev) => {
+    document.getElementById("lyrics-textarea")
+      .addEventListener(ev, () => setTimeout(refreshLyricsOverlay, 0));
+  });
   document.getElementById("lyrics-print").addEventListener("change", (e) => {
     const t = lyricsTarget();
     if (t) t.print_lyrics = e.target.checked;
@@ -1384,6 +1828,10 @@ async function init() {
   });
   document.getElementById("lyrics-split").addEventListener("click",
     () => splitLyricsIntoSections().catch((e) => toast(String(e))));
+  document.getElementById("lyrics-apply-markers").addEventListener("click",
+    () => applyLyricMarkers().catch((e) => toast(String(e))));
+  document.getElementById("lyrics-add-section").addEventListener("click",
+    addSectionFromLyrics);
   document.getElementById("lyrics-split-cancel").addEventListener("click", closeSplitModal);
   document.getElementById("lyrics-split-apply").addEventListener("click", applyLyricsSplit);
   document.getElementById("lyrics-import").addEventListener("click", () =>

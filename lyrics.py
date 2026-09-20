@@ -175,3 +175,176 @@ def apply_assignment(doc: dict, blocks, assignment, print_lyrics=None) -> int:
     if assigned:
         doc["print_lyrics"] = False
     return assigned
+
+
+# ==============================================================================
+#  Section markers — structure written into the sheet itself
+#
+#  Splitting a sheet on blank lines and then choosing "block 3" from a
+#  dropdown asks you to hold the song's shape in your head while you read
+#  a list of first lines. Writing the shape into the sheet instead —
+#
+#      === Intro ===
+#      === Verse 1 ===
+#      I'm the one…
+#
+#  — says the same thing where you can see it, survives re-editing the
+#  words, and leaves the sheet self-describing for next time. The markers
+#  are structure, not lyrics: they show in the editor and never print.
+# ==============================================================================
+
+MARKER_RE = re.compile(r'^[ \t]*={2,}[ \t]*(.+?)[ \t]*={2,}[ \t]*$')
+
+
+def marker_line(name: str) -> str:
+    """The marker for `name`, the way the editor writes it."""
+    return f"=== {(name or '').strip()} ==="
+
+
+def is_marker(line: str) -> bool:
+    return bool(MARKER_RE.match(line or ""))
+
+
+def marker_name(line: str) -> str:
+    """The name inside a marker line, or "" if it isn't one."""
+    m = MARKER_RE.match(line or "")
+    return m.group(1).strip() if m else ""
+
+
+def has_markers(text: str) -> bool:
+    return any(is_marker(ln) for ln in (text or "").splitlines())
+
+
+def strip_markers(text: str) -> str:
+    """`text` with its marker lines removed — what actually prints.
+
+    A marker sits *above* the words it labels, so removing it usually
+    leaves a blank line where the separation used to be; those are
+    collapsed at the edges so a section's lyrics don't start with an empty
+    line on paper.
+    """
+    out, prev_blank = [], False
+    for ln in (text or "").splitlines():
+        if is_marker(ln):
+            continue
+        blank = not ln.strip()
+        # Taking a marker out leaves the blank line that sat above it as
+        # well as the one below; one blank line between verses is the
+        # separation, two is a hole in the page.
+        if blank and prev_blank:
+            continue
+        out.append(ln)
+        prev_blank = blank
+    while out and not out[0].strip():
+        out.pop(0)
+    while out and not out[-1].strip():
+        out.pop()
+    return "\n".join(out)
+
+
+def split_marked(text: str) -> list:
+    """The sheet as its marked segments: [{"name", "text"}, …].
+
+    Anything before the first marker is a segment with an empty name — a
+    title line, a note to self, the half of the sheet you haven't got to
+    yet. It is kept rather than dropped so nothing is lost by marking up
+    only part of a sheet.
+    """
+    segments, name, body = [], "", []
+
+    def flush():
+        joined = "\n".join(body).strip("\n")
+        if name or joined.strip():
+            segments.append({"name": name, "text": joined})
+
+    for ln in (text or "").splitlines():
+        if is_marker(ln):
+            flush()
+            name, body = marker_name(ln), []
+        else:
+            body.append(ln)
+    flush()
+    return segments
+
+
+def _key(name: str) -> str:
+    """Matching key for a marker name against a section: case-folded, and
+    spaces, dashes and underscores all the same thing — so a marker typed
+    "=== Chorus_1 ===" finds the section called "Chorus 1"."""
+    return re.sub(r'[\s_\-]+', "", (name or "").strip().lower())
+
+
+def match_sections(doc: dict, segments) -> list:
+    """The section id each segment belongs to, or None where no section
+    of that name exists — one entry per segment, in order.
+
+    A segment with no name (the preamble) never matches. A name that
+    matches nothing is what the front end offers to create a section for.
+    """
+    sections = doc.get("sections", []) or []
+    by_key = {}
+    for sec in sections:
+        by_key.setdefault(_key(sec.get("name", "")), sec.get("id"))
+        by_key.setdefault(_key(sec.get("id", "")), sec.get("id"))
+    return [by_key.get(_key(seg.get("name", ""))) if seg.get("name") else None
+            for seg in (segments or [])]
+
+
+def unmatched_names(doc: dict, text: str) -> list:
+    """The marker names in `text` with no section to go to, in order and
+    without duplicates — the list the dialog turns into "create these?"."""
+    segs = split_marked(text)
+    ids = match_sections(doc, segs)
+    out = []
+    for seg, sid in zip(segs, ids):
+        name = (seg.get("name") or "").strip()
+        if name and sid is None and name not in out:
+            out.append(name)
+    return out
+
+
+def apply_marked(doc: dict, text: str, print_lyrics=None) -> dict:
+    """Write a marked-up sheet into the document's sections.
+
+    Every section named by a marker gets the words under it; a section the
+    sheet never names is left exactly as it is, because the sheet saying
+    nothing about a section is not the same as the sheet saying it has no
+    words. Segments whose names match nothing are reported back rather
+    than dropped silently.
+
+    Returns {"assigned": n, "unmatched": [name, …]}.
+    """
+    segments = split_marked(text)
+    ids = match_sections(doc, segments)
+    by_id = {sec.get("id"): sec for sec in doc.get("sections", []) or []}
+
+    assigned, unmatched, seen = 0, [], {}
+    for seg, sid in zip(segments, ids):
+        name = (seg.get("name") or "").strip()
+        if not name:
+            continue
+        if sid is None:
+            if name not in unmatched:
+                unmatched.append(name)
+            continue
+        sec = by_id.get(sid)
+        if sec is None:
+            continue
+        body = (seg.get("text") or "").strip("\n")
+        # The same section marked twice (a chorus written out where it is
+        # sung) keeps both halves rather than the last one winning.
+        if sid in seen and body.strip():
+            sec["lyrics_text"] = (sec["lyrics_text"].rstrip("\n") + "\n\n" + body)
+        else:
+            sec["lyrics_text"] = body
+            seen[sid] = True
+        if print_lyrics is not None:
+            sec["print_lyrics"] = bool(print_lyrics)
+        if body.strip():
+            assigned += 1
+
+    if assigned:
+        # Same rule as the block split: the sheet stays as the source, and
+        # stops printing so the words don't land on the chart twice.
+        doc["print_lyrics"] = False
+    return {"assigned": assigned, "unmatched": unmatched}

@@ -4,6 +4,92 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.23.0] — 2026-09-20
+
+The sheet marks itself up, the words move out of the chart's way, a lick
+you've played once gets a name, and the chord shapes you had to work out
+print on the sheet instead of in your head.
+
+### Added
+- **Section markers in the lyric sheet.** Write `=== Verse 1 ===` above
+  the words that belong to it — or drag the section's chip into the sheet
+  from the Lyrics dialog, which drops the marker for you — and **Split by
+  markers** hands each block to the section it names. Marker names match
+  loosely (`Chorus_1` finds "Chorus 1"), a section the sheet never names
+  is left exactly as it was, and a section marked twice keeps both halves.
+  Names with no section behind them are offered as sections to create,
+  which is also what **+ Section…** in that dialog does from scratch.
+
+  The old blank-line split is still there as **Split on blank lines…**,
+  for a sheet pasted straight off a lyrics site. It asked you to hold the
+  shape of the song in your head while reading a list of first lines;
+  markers say the same thing where you can see it, survive re-editing the
+  words, and leave the sheet self-describing next time you open it.
+
+  Markers are structure, not words: they're drawn in colour in the editor
+  (a tag on the Text widget in the desktop app, an overlay behind the
+  textarea in the browser) and stripped from everything that prints.
+- **Named licks.** `{Riff1 = G 5 7 5 | D - - 3}` names a lick; `{Riff1}`
+  recalls it anywhere else in the song, with a repeat if you want one:
+  `{Riff1}x3`. It resolves at render time to the notes themselves, with
+  the name printed over them — which is how the handwritten charts say it
+  ("RIFF 1 (x3)"), and it means editing the lick once updates every place
+  that plays it, exactly as a section reference does.
+
+  There is no separate lick library to keep in step: a name lives on the
+  lick where it was written, and `songmap.lick_index()` derives the index
+  by walking the song. Both front ends fill the name in for you — the
+  `{ name = tab }` button inserts `Riff1`, `Riff2`, … — and the browser's
+  palette offers every lick already named as a button that inserts the
+  reference.
+- **Chord shapes, printed once.** A new **Chords 🎸** dialog keeps a list
+  of voicings written the way a chord chart writes them (`x32010` is C,
+  `x 0 12 12 12 x` when the frets need two digits), and prints them as a
+  block of tab-style diagrams at the start or the end of the chart —
+  `chord_sheet` in the `.sng`, `"none"` by default and set to `"end"` the
+  first time you add a shape. Shapes are grouped by instrument, laid out
+  in as many diagrams per row as the page width takes, and each can carry
+  a word of its own ("barre", "thumb"). New module: `chords.py`.
+
+### Changed
+- **A section's words print beside its chart, not under it.** The chart
+  keeps a narrow left column and the words run down their own column to
+  the right of it, starting level with the chart's first line. Nothing is
+  aligned chord-to-syllable — that would be a claim about where the
+  changes fall that a chart like this can't honestly make. What it says
+  is *during these words, this is what you play*, which is the reason to
+  print them together at all.
+
+  The practical difference is vertical: a verse now costs the page the
+  taller of the two sides rather than the sum of them, so the section
+  after it doesn't get pushed off the sheet. `lyrics_layout` in the
+  `.sng` — `"beside"` by default, `"below"` for the old behaviour — is in
+  the browser's Print & export row and in the desktop Lyrics dialog. The
+  width bound the PDF fit works against and the never-split-a-section
+  height estimate both see the new layout, so the page still measures
+  itself correctly.
+
+### API
+- `lyrics.py`: `split_marked()`, `match_sections()`, `apply_marked()`,
+  `unmatched_names()`, `strip_markers()`, `marker_line()`, `is_marker()`,
+  `has_markers()`.
+- `render.py`: `printable_lyrics()`, `lyrics_beside()`,
+  `lyric_column_x()`, `compose_beside()`, `beside_line_count()`.
+- `chords.py`: `shape_from_text()`, `shape_to_text()`, `diagram_lines()`,
+  `sheet_lines()`, `sheet_position()`, `strings_for()`.
+- `songmap.py`: `lick_index()`, `find_lick()`, `lick_names()`.
+- `model.py`: `make_lick(lines, name, repeat)`, `make_lick_ref()`,
+  `make_chord()`; new document keys `lyrics_layout`, `chords`,
+  `chord_sheet`; new item kind `lick_ref`.
+- `webserver.py`: `POST /api/lyrics/marked`, `POST /api/chords/shape`;
+  `/api/meta` gains `lyrics_layouts` and `chord_sheets`.
+
+### Notes
+- `{G}` used to be a parse error (a lick line needs frets as well as a
+  string name); it is now a reference to a lick named `G`. Nothing that
+  parsed before parses differently.
+- 283 tests pass (was 241), including a new `tests/test_chords.py`.
+
 ## [0.22.0] — 2026-09-20
 
 Two columns. A chart is mostly short lines — four chord symbols, a bar

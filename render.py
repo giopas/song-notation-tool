@@ -103,6 +103,19 @@ def _symbol_str(item: dict) -> str:
         if item.get("repeat", 1) != 1:
             s += f"(x{item['repeat']})"
         return s
+    if k == "lick":
+        # A named lick prints its name over its tab, so the same figure
+        # recalled later as "{Riff1}" is recognisable as the thing you
+        # already read. An unnamed one has nothing to say here.
+        s = item.get("name", "") or ""
+        if s and item.get("repeat", 1) != 1:
+            s += f" (x{item['repeat']})"
+        return s
+    if k == "lick_ref":
+        s = "{" + item.get("lick", "") + "}"
+        if item.get("repeat", 1) != 1:
+            s += f" (x{item['repeat']})"
+        return s
     if k == "mark":
         return _MARK_TO_TEXT.get(item["mark"], item["mark"])
     return ""
@@ -400,6 +413,24 @@ def resolve_references(items, doc: dict, _seen=None, _depth=0):
             out.extend(_expanded(body, it.get("repeat", 1), it.get("transpose", 0)))
             continue
 
+        if kind == "lick_ref":
+            name = it.get("lick", "")
+            target = songmap.find_lick(doc, name)
+            marker = ("lick", songmap._ident(name))
+            if target is None or marker in _seen or _depth >= MAX_REF_DEPTH:
+                out.append(it)
+                continue
+            # A lick resolves to the notes themselves, carrying its name
+            # and this reference's repeat count — "Riff1 (x3)" over the
+            # tab, which is how the handwritten charts say it.
+            new_it = dict(target)
+            if it.get("repeat", 1) != 1:
+                new_it["repeat"] = it["repeat"]
+            else:
+                new_it.pop("repeat", None)
+            out.append(new_it)
+            continue
+
         if kind == "block_ref":
             key = it.get("block", "")
             block = (doc.get("blocks") or {}).get(key)
@@ -475,6 +506,76 @@ def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT):
 
 
 # ==============================================================================
+#  Lyrics on the page
+#
+#  Words under the chart is the obvious layout and the wrong one: it puts
+#  the thing you glance at (what the bass is doing here) and the thing you
+#  read (the words) in the same column, so a verse pushes the next
+#  section's chart off the bottom of the sheet.
+#
+#  Beside it instead: the chart keeps a narrow left column, the words run
+#  down the right of it. Nothing is aligned chord-to-syllable — that isn't
+#  what this is for, and pretending otherwise would be a lie about where
+#  the changes fall. It says: *during these words, this is what you play*.
+# ==============================================================================
+
+LYRIC_GAP = 4          # blank columns between the chart and the words
+MIN_LYRIC_W = 24       # narrower than this and the words wrap to nothing
+
+
+def printable_lyrics(text: str) -> list:
+    """A lyric block's printable lines — its section markers removed,
+    because those are structure for the editor, not words to sing."""
+    import lyrics as lyrics_mod
+    text = lyrics_mod.strip_markers(text or "")
+    return text.splitlines() if text.strip() else []
+
+
+def lyrics_beside(doc: dict) -> bool:
+    """True when this document prints a section's words beside its chart
+    rather than under it."""
+    return (doc or {}).get("lyrics_layout", "beside") != "below"
+
+
+def lyric_column_x(chart_rows, indent: int = BODY_INDENT) -> int:
+    """The column the words start in: clear of the widest chart line, and
+    never so far right that there's no room left to read them."""
+    widest = max((len(r["text"] if isinstance(r, dict) else r)
+                  for r in (chart_rows or [])), default=0)
+    return max(widest + LYRIC_GAP, indent + LYRIC_GAP)
+
+
+def compose_beside(chart_lines, lyric_lines, col_x: int = None,
+                    indent: int = BODY_INDENT) -> list:
+    """`chart_lines` with `lyric_lines` laid out in a column to their
+    right, as plain text lines.
+
+    Whichever side is taller decides how many lines come back; the chart
+    is never truncated to fit the words, nor the other way round.
+    """
+    chart_lines = [ln for ln in (chart_lines or [])]
+    lyric_lines = [ln for ln in (lyric_lines or [])]
+    if not lyric_lines:
+        return chart_lines
+    if col_x is None:
+        col_x = lyric_column_x(chart_lines, indent)
+    out = []
+    for i in range(max(len(chart_lines), len(lyric_lines))):
+        left = chart_lines[i] if i < len(chart_lines) else ""
+        right = lyric_lines[i] if i < len(lyric_lines) else ""
+        if not right:
+            out.append(left.rstrip())
+            continue
+        out.append(f"{left:<{col_x}}" + right)
+    return out
+
+
+def beside_line_count(chart_lines, lyric_lines) -> int:
+    """How many lines the pair occupies side by side."""
+    return max(len(chart_lines or []), len(lyric_lines or []))
+
+
+# ==============================================================================
 #  Mark spans (section 6) — resolve ending_1/ending_2 into bracket spans.
 # ==============================================================================
 
@@ -533,10 +634,8 @@ def lyrics_block_line_count(text: str) -> int:
     per source line (no word-wrap accounting, same "rough estimate" spirit
     as the rest of this module), plus a trailing blank separator. 0 for
     blank/whitespace-only text."""
-    text = (text or "")
-    if not text.strip():
-        return 0
-    return len(text.splitlines()) + 1  # + trailing blank line
+    lines = printable_lyrics(text)
+    return len(lines) + 1 if lines else 0  # + trailing blank line
 
 
 def free_text_line_count(text: str) -> int:
@@ -561,6 +660,8 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
     items = section.get("items", [])
     annotation = section.get("annotation", "")
     lyrics = section.get("lyrics_text", "") if section.get("print_lyrics") else ""
+    beside = lyrics_beside(doc) if doc is not None else True
+    chart_lines_drawn = 0
     render_mode = section.get("render", "chart")
     free = section.get("free_text", "") if render_mode == "free" else ""
     if not items and not annotation and not lyrics.strip() and not free.strip():
@@ -577,7 +678,8 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
             chart_items = resolve_references(chart_items, doc)
         if chart_items:
             if doc is not None:
-                lines += len(chart_body_lines(chart_items, "", 0))
+                chart_lines_drawn = len(chart_body_lines(chart_items, "", 0))
+                lines += chart_lines_drawn
             else:
                 # one fret + symbol pair per block, plus however many string
                 # lines the tallest lick in each block needs
@@ -598,7 +700,12 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
     if annotation:
         lines += 1
 
-    lines += lyrics_block_line_count(lyrics)
+    if beside and chart_lines_drawn:
+        # The words share the chart's lines; only the overhang costs more.
+        lyric_lines = len(printable_lyrics(lyrics))
+        lines += max(0, lyric_lines - chart_lines_drawn) + (1 if lyric_lines else 0)
+    else:
+        lines += lyrics_block_line_count(lyrics)
 
     return lines + 1  # trailing blank line between sections
 

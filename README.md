@@ -56,10 +56,17 @@ whichever way you made it.
 - **Lyrics panel** — paste, type, import a `.txt` file, or open a
   browser search for lyrics, scoped to a section or the whole song;
   reference text, never parsed — off by default in the TXT/PDF export
-  and Preview pane, opt in per section with one checkbox. "Split into
-  sections…" divides a pasted-in whole song on blank lines and assigns
-  it across the existing sections (adding new ones for any leftover)
-  in one step
+  and Preview pane, opt in per section with one checkbox. Mark the sheet
+  up with `=== Verse 1 ===` lines (drag a section's chip in, or click it)
+  and **Split by markers** hands each block to the section it names;
+  **Split on blank lines…** is still there for a sheet pasted straight
+  off a lyrics site. Printed words sit **beside** their section's chart,
+  in a column of their own
+- **Named licks** — `{Riff1 = G 5 7 5 | D - - 3}` names a figure and
+  `{Riff1}x3` plays it again anywhere in the song; edit it once and every
+  place that plays it follows
+- **Chord shapes** — a list of voicings (`x32010`), printed as a block of
+  tab-style diagrams at the start or the end of the chart
 - **Marks** — barlines, 1st/2nd endings, segno, coda, D.C./D.S., `simile`,
   with a quick-insert palette beside every chart line so you never have to
   remember the spelling, and a Notation panel explaining what each one
@@ -285,6 +292,40 @@ It's a property of the song, saved in the `.sng`, so a chart prints the
 same way wherever it's opened, and it applies to TXT, PDF, Print and the
 Preview pane alike.
 
+### Where the words go
+
+A section's words print **beside** its chart: the chart keeps a narrow
+left column, the words run down their own to the right of it, starting
+level with the chart's first line. Nothing is aligned chord to syllable —
+that would be a claim about where the changes fall that a chart like this
+can't honestly make. What it says is *during these words, this is what
+you play*.
+
+The practical gain is vertical. A verse costs the page the taller of the
+two sides rather than the sum of them, so the section after it isn't
+pushed off the sheet. `Lyrics → Under the chart` in Print & export puts
+them back below if you prefer.
+
+### Chord shapes
+
+The **Chords 🎸** dialog keeps the voicings you had to work out, written
+the way a chord chart writes them — `x32010` is C, `320003` is G, and
+frets past the ninth need spaces: `x 0 12 12 12 x`. They print once, as a
+block of tab-style diagrams, at the start or the end of the chart:
+
+```
+  C         G
+  e|-0-|    e|-3-|
+  B|-1-|    B|-0-|
+  G|-0-|    G|-0-|
+  D|-2-|    D|-0-|
+  A|-3-|    A|-2-|
+  E|-x-|    E|-3-|
+```
+
+Each shape can carry a word of its own ("barre", "thumb"), and shapes for
+different instruments are grouped rather than mixed into one row.
+
 ### Lyrics
 
 **Lyrics** holds the words as a reference layer — never parsed, never
@@ -296,8 +337,18 @@ The dialog lists the song's sections as chips under the Scope dropdown,
 each with a dot that fills once that section has words, so you can see at
 a glance what's still empty and click straight to it.
 
-**Split into sections…** takes the whole song's sheet, cuts it on its
-blank lines, and gives you one row per section with a dropdown of the
+**Split by markers** is the quick way in: write `=== Verse 1 ===` above
+the words that belong to it — or drag that section's chip into the sheet,
+which writes the marker for you — and every marked block goes to the
+section it names. Names match loosely, so `=== Chorus_1 ===` finds
+"Chorus 1". A section the sheet never mentions is left exactly as it was,
+and a name with no section behind it is offered as one to create. The
+markers are structure, not words: they show in the editor and never
+print.
+
+**Split on blank lines…** is the older route, for a sheet pasted straight
+off a lyrics site with no markers in it. It takes the whole song's sheet,
+cuts it on its blank lines, and gives you one row per section with a dropdown of the
 blocks. A block can go to as many sections as sing it, which is how a
 chorus written once reaches Chorus 1, 2 and 3. The suggestion it opens
 with reads the sheet the way a player would: a block written out twice is

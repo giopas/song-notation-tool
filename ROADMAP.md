@@ -35,6 +35,7 @@ serves that, not by difficulty.
 
 | **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.23.0** | **Lyrics that carry their own structure, named licks, chord shapes** — `=== Section ===` markers in the lyric sheet (drag a section in, "Split by markers" hands each block out); a section's words print *beside* its chart rather than under it; `{Riff1 = …}` names a lick and `{Riff1}x3` recalls it; a Chords dialog prints chord-shape diagrams at either end of the chart. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.22.0** | **Two-column printing** — a Columns setting (auto / 1 / 2) that splits the page when it makes the chart bigger or saves a sheet, with a rule down the gutter; fit and column count are now decided together. See [CHANGELOG.md](CHANGELOG.md). |
 
 ---
@@ -54,8 +55,10 @@ worth building:
       across a run, on a chart line, a lick or a tab grid
 - [ ] **Parts — several instruments in one section**, each printable or
       hideable, so bass and guitar live in one file
-- [ ] **Lyrics under the chart** — the layout question the v0.19 Lyrics
-      panel deliberately left open
+- [x] **Lyrics under the chart** — answered in v0.23.0, and answered
+      *beside* rather than under: the chart keeps a narrow left column and
+      the words run down their own to the right of it, with no attempt to
+      align chord to syllable
 
 ---
 

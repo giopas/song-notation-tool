@@ -784,3 +784,83 @@ def test_a_fret_row_takes_less_than_a_full_line():
     doc["sections"] = [sec]
     assert FRET_LINE_RATIO < 1.0
     assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+# ---------------------------------------------------------------------------
+#  Lyrics beside the chart, and the chord-shape sheet
+# ---------------------------------------------------------------------------
+
+def _sung_doc(layout="beside"):
+    import grammar
+    doc = model.new_document(title="Third State", artist="20Minutes")
+    doc["lyrics_layout"] = layout
+    sec = model.new_section("v1", "Verse 1", "Verse")
+    sec["items"] = grammar.parse_items("5A 5D 8F 5C")
+    sec["lyrics_text"] = "=== Verse 1 ===\nI woke up in the third state\nnothing moved"
+    sec["print_lyrics"] = True
+    doc["sections"].append(sec)
+    return doc
+
+
+def test_lyrics_print_beside_the_chart():
+    """The words share the chart's lines rather than queueing up under
+    it: the first lyric line sits level with the top of the block, and
+    every line of the column starts in the same place."""
+    lines = export.build_song_lines(_sung_doc())
+    first = next(ln for ln in lines if "I woke up in the third state" in ln)
+    second = next(ln for ln in lines if "nothing moved" in ln)
+    assert first.index("I woke") == second.index("nothing")
+    assert second.strip().startswith("A ")   # the chart is on the same line
+
+
+def test_lyrics_below_is_still_available():
+    lines = export.build_song_lines(_sung_doc("below"))
+    chart = next(ln for ln in lines if ln.strip().startswith("A "))
+    assert "I woke up" not in chart
+    assert any(ln.strip() == "I woke up in the third state" for ln in lines)
+
+
+def test_section_markers_never_reach_the_page():
+    for layout in ("beside", "below"):
+        assert not any("===" in ln and "Verse 1" in ln and ln.strip().startswith("===")
+                        for ln in export.build_song_lines(_sung_doc(layout)))
+
+
+def test_beside_lyrics_do_not_stretch_the_page_width():
+    """A verse beside a chart makes lines longer; the fit maths has to
+    see them, or the PDF scales to a width that doesn't exist."""
+    doc = _sung_doc()
+    longest = max(len(ln) for ln in export._body_lines_for_width(doc, None))
+    assert longest >= len("I woke up in the third state")
+
+
+def test_chord_sheet_prints_where_it_is_asked_for():
+    import chords
+    doc = _sung_doc()
+    doc["chords"] = [model.make_chord("C", chords.shape_from_text("x32010"))]
+
+    doc["chord_sheet"] = "none"
+    assert "CHORDS" not in "\n".join(export.build_song_lines(doc))
+
+    doc["chord_sheet"] = "start"
+    lines = export.build_song_lines(doc)
+    assert lines.index("  CHORDS") < next(
+        i for i, ln in enumerate(lines) if "Verse 1" in ln)
+
+    doc["chord_sheet"] = "end"
+    lines = export.build_song_lines(doc)
+    assert lines.index("  CHORDS") > next(
+        i for i, ln in enumerate(lines) if "Verse 1" in ln)
+    assert any("e|-0-|" in ln for ln in lines)
+
+
+def test_chord_sheet_reaches_the_pdf():
+    import chords
+    doc = _sung_doc()
+    doc["chords"] = [model.make_chord("C", chords.shape_from_text("x32010"))]
+    doc["chord_sheet"] = "end"
+    with_sheet = export.build_pdf(doc)
+    doc["chord_sheet"] = "none"
+    without = export.build_pdf(doc)
+    assert len(with_sheet) > len(without)
+    assert with_sheet.startswith(b"%PDF")

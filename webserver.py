@@ -68,6 +68,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, unquote
 
+import chords as chords_mod
 import export
 import grammar
 import userpaths
@@ -80,7 +81,7 @@ from examples import example_document
 from constants import (
     APP_VERSION, INSTRUMENT_STRINGS, SECTION_TYPES, RENDER_MODE_LABELS,
     SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
-    PDF_COLUMN_LABELS,
+    PDF_COLUMN_LABELS, LYRICS_LAYOUT_LABELS, CHORD_SHEET_LABELS,
     TAB_BEATS_DEFAULT, default_export_name,
 )
 
@@ -449,6 +450,8 @@ class Handler(BaseHTTPRequestHandler):
                     "export_dir": userpaths.last_export_dir(),
                     "config_path": userpaths.config_path(),
                     "section_layouts": SECTION_LAYOUT_LABELS,
+                    "lyrics_layouts": LYRICS_LAYOUT_LABELS,
+                    "chord_sheets": CHORD_SHEET_LABELS,
                     "color_modes": COLOR_MODE_LABELS,
                     "pdf_scales": PDF_SCALE_LABELS,
                     "pdf_columns": PDF_COLUMN_LABELS,
@@ -562,6 +565,39 @@ class Handler(BaseHTTPRequestHandler):
                     "suggested": lyrics_mod.suggest(
                         blocks, sections, lyrics_mod.repeated_blocks(sheet)),
                     "current": lyrics_mod.current_assignment(blocks, sections),
+                })
+
+            if path == "/api/lyrics/marked":
+                # The sheet marked up with "=== Section ===" lines: say
+                # which section each marked block belongs to, and which
+                # names have no section yet. The front end offers to
+                # create those; nothing is written here.
+                body = self._read_json_body()
+                doc = model.migrate_document(body.get("doc") or {})
+                sheet = body.get("text")
+                if sheet is None:
+                    sheet = doc.get("lyrics_text") or ""
+                segments = lyrics_mod.split_marked(sheet)
+                return self._send_json({
+                    "segments": segments,
+                    "matched": lyrics_mod.match_sections(doc, segments),
+                    "unmatched": lyrics_mod.unmatched_names(doc, sheet),
+                })
+
+            if path == "/api/chords/shape":
+                # Parse one chord shape ("x32010") into a fret per string.
+                # Parsing lives in chords.py so the browser, the desktop
+                # app and the CLI all read a shape the same way.
+                body = self._read_json_body()
+                instrument = body.get("instrument") or chords_mod.DEFAULT_INSTRUMENT
+                try:
+                    frets = chords_mod.shape_from_text(body.get("text", ""), instrument)
+                except chords_mod.ChordError as exc:
+                    return self._send_json({"ok": False, "error": str(exc)})
+                return self._send_json({
+                    "ok": True, "frets": frets,
+                    "strings": chords_mod.strings_for(instrument),
+                    "text": chords_mod.shape_to_text(frets, instrument),
                 })
 
             if path == "/api/export.txt" or path == "/api/export.pdf":

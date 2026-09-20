@@ -681,3 +681,96 @@ def test_a_lick_among_chords_still_sits_under_them():
     lines = render.chart_body_lines(items)
     sym = [i for i, ln in enumerate(lines) if "[C]" in ln][0]
     assert "|D|" in lines[sym + 1]
+
+
+# ---------------------------------------------------------------------------
+#  Named licks — recalled by name, rendered as the notes
+# ---------------------------------------------------------------------------
+
+import model      # noqa: E402
+import render     # noqa: E402
+
+
+def _doc_with_named_lick():
+    import grammar
+    doc = model.new_document(title="X")
+    sec = model.new_section("s1", "Intro")
+    sec["items"] = grammar.parse_items("{Riff1 = G 5 7 5 | D - - 3}")
+    doc["sections"].append(sec)
+    return doc
+
+
+def test_a_named_lick_prints_its_name_over_its_tab():
+    import grammar
+    rows = render.chart_body_lines(grammar.parse_items("{Riff1 = G 5 7}"))
+    assert "Riff1" in rows[0]
+    assert "|G|" in rows[1]
+
+
+def test_a_lick_reference_resolves_to_the_notes():
+    import grammar
+    doc = _doc_with_named_lick()
+    items = grammar.parse_items("A {Riff1}x3")
+    out = "\n".join(render.chart_body_lines(render.resolve_references(items, doc)))
+    assert "Riff1 (x3)" in out
+    assert "|G|-5-7-5-|" in out
+
+
+def test_an_unknown_lick_reference_stays_a_reference():
+    import grammar
+    items = grammar.parse_items("A {Nope}")
+    out = "\n".join(render.chart_body_lines(
+        render.resolve_references(items, model.new_document())))
+    assert "{Nope}" in out
+
+
+def test_a_lick_reference_matches_loosely_like_a_section_does():
+    import grammar
+    doc = _doc_with_named_lick()
+    items = grammar.parse_items("{riff1}")
+    out = "\n".join(render.chart_body_lines(render.resolve_references(items, doc)))
+    assert "|G|-5-7-5-|" in out
+
+
+# ---------------------------------------------------------------------------
+#  Lyrics beside the chart
+# ---------------------------------------------------------------------------
+
+def test_compose_beside_puts_the_words_to_the_right():
+    out = render.compose_beside(["  A  C", "  |G|-5-|"], ["one", "two"])
+    assert out[0].startswith("  A  C")
+    assert out[0].rstrip().endswith("one")
+    assert out[1].rstrip().endswith("two")
+    # Both lines start their words in the same column.
+    assert out[0].index("one") == out[1].index("two")
+
+
+def test_compose_beside_carries_an_overhanging_lyric():
+    out = render.compose_beside(["  A"], ["one", "two", "three"])
+    assert len(out) == 3
+    assert out[2].strip() == "three"
+
+
+def test_compose_beside_with_no_words_changes_nothing():
+    chart = ["  A  C"]
+    assert render.compose_beside(chart, []) == chart
+
+
+def test_printable_lyrics_drops_section_markers():
+    assert render.printable_lyrics("=== Verse 1 ===\nsing it") == ["sing it"]
+
+
+def test_beside_layout_costs_the_taller_side_only():
+    import grammar
+    doc = model.new_document(title="X")
+    sec = model.new_section("s1", "Verse 1")
+    sec["items"] = grammar.parse_items("5A 5D 8F 5C")
+    sec["lyrics_text"] = "one\ntwo"
+    sec["print_lyrics"] = True
+    doc["sections"].append(sec)
+
+    doc["lyrics_layout"] = "beside"
+    beside = render.estimate_section_lines(sec, None, doc)
+    doc["lyrics_layout"] = "below"
+    below = render.estimate_section_lines(sec, None, doc)
+    assert beside < below

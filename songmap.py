@@ -109,6 +109,62 @@ def find_section(doc: dict, key: str):
     return None
 
 
+# ==============================================================================
+#  Named licks — a lick written once and recalled by name
+#
+#  A named lick is not stored in a library of its own: it lives inline in
+#  the section it was written in, which is where it is played and where
+#  you want to see the notes. The "library" is therefore derived — walk
+#  the song, collect the names. That way renaming, deleting or re-typing a
+#  lick needs no second copy kept in step with the first.
+# ==============================================================================
+
+def lick_index(doc: dict) -> dict:
+    """{name: lick_item} for every named lick in the song, first one wins.
+
+    Sections are walked in order, then the riff library's blocks, so a
+    name defined twice resolves to the one nearer the top of the chart —
+    the same rule a reader scanning the page would apply.
+    """
+    out = {}
+    def collect(items):
+        for it in _walk_items(items or []):
+            if it.get("kind") == "lick" and it.get("name"):
+                out.setdefault(_ident(it["name"]), it)
+    for sec in doc.get("sections", []) or []:
+        collect(sec.get("items", []))
+    for block in (doc.get("blocks") or {}).values():
+        collect(block.get("items", []))
+    for name, lick in (doc.get("licks") or {}).items():
+        out.setdefault(_ident(name), lick)
+    return out
+
+
+def find_lick(doc: dict, name: str, index: dict = None):
+    """The lick a `{name}` reference points at, or None. Case- and
+    separator-insensitive, like a section reference."""
+    idx = lick_index(doc) if index is None else index
+    return idx.get(_ident(name))
+
+
+def lick_names(doc: dict) -> list:
+    """Every named lick in the song, in chart order, spelled as written —
+    what a palette of "licks you can recall" is built from."""
+    seen, out = set(), []
+    def collect(items):
+        for it in _walk_items(items or []):
+            if it.get("kind") == "lick" and it.get("name"):
+                key = _ident(it["name"])
+                if key not in seen:
+                    seen.add(key)
+                    out.append(it["name"])
+    for sec in doc.get("sections", []) or []:
+        collect(sec.get("items", []))
+    for block in (doc.get("blocks") or {}).values():
+        collect(block.get("items", []))
+    return out
+
+
 _REF_IDENT_RE = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
 
 

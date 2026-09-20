@@ -653,3 +653,76 @@ button {
 }
 /* Filled: this section already has words. */
 .lyrics-chip.has-lyrics .chip-dot { background: var(--amber); border-color: var(--amber); }
+
+/* ---------------------------------------------------------------------------
+   Lyrics: the sheet marks itself up
+   ------------------------------------------------------------------------ */
+
+/* A section chip you can drag into the sheet. The grab cursor is the only
+   affordance a chip has to say it is draggable, so it earns its keep. */
+.lyrics-chip.draggable { cursor: grab; border-style: dashed; }
+.lyrics-chip.draggable:active { cursor: grabbing; }
+
+.lyrics-marker-hint { margin: 2px 0 6px; }
+
+/* The sheet is drawn twice: a coloured copy underneath, and the real
+   textarea on top with a transparent background and transparent-ish text
+   painted over it. Metrics have to match to the pixel or the two copies
+   drift apart as you scroll — same font, size, line height, padding and
+   wrapping, set in one place for both. */
+.lyrics-editor { position: relative; }
+.lyrics-editor textarea,
+.lyrics-overlay {
+  font-family: var(--mono); font-size: 12px; line-height: 1.5;
+  padding: 8px; margin: 0; border: 1px solid var(--border); border-radius: 6px;
+  white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
+  box-sizing: border-box; width: 100%;
+}
+.lyrics-overlay {
+  position: absolute; inset: 0; overflow: hidden;
+  background: var(--input-bg); color: var(--fg);
+  pointer-events: none;
+}
+.lyrics-editor textarea {
+  position: relative; background: transparent; color: transparent;
+  caret-color: var(--fg); resize: vertical;
+}
+/* The overlay is what you read, so the selection has to be visible
+   through the transparent copy on top of it. */
+.lyrics-editor textarea::selection { background: rgba(137, 180, 250, 0.35); }
+.lyric-marker {
+  color: var(--mauve); font-weight: 700;
+  background: rgba(203, 166, 247, 0.12); border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   Chord shapes
+   ------------------------------------------------------------------------ */
+
+.chord-rows { max-height: 46vh; overflow-y: auto; margin: 4px 0 8px; }
+.chord-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 4px 6px; border-radius: 6px;
+}
+.chord-row:nth-child(odd) { background: rgba(255, 255, 255, 0.025); }
+.chord-row .chord-name { width: 74px; font-weight: 600; }
+.chord-row .chord-shape { width: 148px; font-family: var(--mono); }
+.chord-row .chord-note { flex: 1 1 120px; min-width: 90px; }
+.chord-row .chord-instrument { font-size: 12px; }
+.chord-error { color: var(--red); font-size: 11px; flex-basis: 100%; }
+.chord-where { font-size: 12px; color: var(--lbl-gray); margin-left: 8px; }
+
+/* What the shapes will look like on paper, drawn by the same code that
+   prints them — a dialog that shows something different from the export
+   is a dialog you stop trusting. */
+.chord-preview {
+  font-family: var(--mono); font-size: 11px; line-height: 1.35;
+  white-space: pre; overflow-x: auto; color: var(--fg);
+  background: var(--input-bg); border-radius: 6px;
+  padding: 8px; margin-top: 4px; min-height: 0;
+}
+.chord-preview:empty { display: none; }
+
+/* A lick already named in this song, offered back as a reference. Blue,
+   like the licks themselves print — same thing, said twice. */
+.ins-btn.lick-ref-btn { color: var(--blue); border-color: var(--blue); }

@@ -197,3 +197,23 @@ ordinary download and the browser's own settings decide where it lands.
   prints the Interlude's notes, not the pointer. See
   [[Chart Line Syntax]].
 - **Footers** carry the version, the date, and the project URL.
+- **Lyrics print beside their chart**, not under it (`lyrics_layout`,
+  `"beside"` by default; `"below"` for the old behaviour). The chart keeps
+  a narrow left column, the words run down their own to the right of it,
+  starting level with the chart's first line — `render.lyric_column_x()`
+  picks the column, `render.compose_beside()` lays the two out for TXT,
+  and the PDF draws them as two independent runs from the same starting
+  `y` so a rest or a fret row keeps its own line height. Nothing is
+  aligned chord to syllable: the claim is *during these words, this is
+  what you play*, and no more than that. A verse therefore costs the page
+  the taller of the two sides — which is what the section-height estimate
+  and the width bound both measure.
+- **Lyric section markers never print.** `=== Verse 1 ===` lines are
+  structure for the editor; `render.printable_lyrics()` strips them
+  everywhere words are drawn.
+- **Chord shapes print once**, as a block of tab-style diagrams at the
+  start or the end of the chart (`chord_sheet`: `"none"` / `"start"` /
+  `"end"`). `chords.sheet_lines()` lays them out in as many per row as
+  the column width takes, grouped by instrument — a row mixing a
+  four-string and a six-string shape reads as one wrong diagram rather
+  than two right ones.

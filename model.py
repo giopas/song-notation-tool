@@ -29,6 +29,11 @@ RENDER_MODES = ("chart", "tab", "both", "free")
 #              which fits far more of a song on one page
 SECTION_LAYOUTS = ("banner", "gutter")
 
+# How many text columns the PDF puts on a page:
+#   "auto" — two when they let the chart print bigger, one otherwise
+#   "1" / "2" — say so outright
+PDF_COLUMNS = ("auto", "1", "2")
+
 COLOR_MODES = ("color", "bw")
 
 
@@ -105,6 +110,7 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "section_layout": "banner",
         "color_mode": "color",
         "pdf_scale": "fit",
+        "pdf_columns": "auto",
         "blocks": {},
         "sections": [],
     }

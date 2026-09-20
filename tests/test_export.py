@@ -529,6 +529,9 @@ def test_fit_to_one_page_shrinks_until_the_chart_lands_on_one_page():
         s = model.new_section(f"s{i}", f"Verse_{i}", "Verse")
         s["items"] = grammar.parse_items("A(5) D(5) // F(8) D(5) E(7)")
         doc["sections"].append(s)
+    # About scaling, not columns: a second column would swallow this
+    # overflow on its own and there'd be nothing for "one page" to do.
+    doc["pdf_columns"] = "1"
 
     doc["pdf_scale"] = "fit"
     fit = export.resolve_scale(doc)
@@ -600,3 +603,109 @@ def test_black_and_white_printing_has_no_blue_in_it():
             pass
     assert (f"{LICK_RGB[0]:.3f} {LICK_RGB[1]:.3f} {LICK_RGB[2]:.3f} rg"
             not in streams.decode("latin-1"))
+
+
+# ==============================================================================
+#  Two-column printing
+# ==============================================================================
+
+def _short_line_doc(n=10):
+    """A chart of short lines — the case two columns exist for."""
+    import grammar
+    doc = model.new_document(title="Short lines", artist="Test")
+    doc["sections"] = []
+    for i in range(n):
+        sec = model.new_section(f"s{i}", f"Verse_{i}", "Verse")
+        sec["items"] = grammar.parse_items("A(5) D(5) F(8) D(5)")
+        doc["sections"].append(sec)
+    return doc
+
+
+def test_a_two_column_chart_is_a_valid_pdf():
+    doc = _short_line_doc()
+    doc["pdf_columns"] = "2"
+    assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+def test_the_column_setting_is_honoured_and_junk_falls_back_to_auto():
+    doc = _short_line_doc()
+    doc["pdf_columns"] = "1"
+    assert export.resolve_columns(doc) == 1
+    doc["pdf_columns"] = "2"
+    assert export.resolve_columns(doc) == 2
+    doc["pdf_columns"] = 2
+    assert export.resolve_columns(doc) == 2
+    doc["pdf_columns"] = "nonsense"
+    assert export.resolve_columns(doc) in (1, 2)          # fell back to auto
+
+
+def test_two_columns_print_a_short_lined_chart_bigger():
+    """The whole point of the split: the fit has half the height to fill,
+    so it can spend the rest on type size."""
+    doc = _short_line_doc()
+    one = export.resolve_scale(doc, None, "portrait", columns=1)
+    two = export.resolve_scale(doc, None, "portrait", columns=2)
+    assert two > one
+    assert export.resolve_columns(doc) == 2               # auto takes the win
+
+
+def test_auto_leaves_a_wide_chart_in_one_column():
+    """Half a page fits half a line — a chart of long lines comes out
+    smaller in two columns, so auto doesn't split it."""
+    doc = model.new_document(title="Wide")
+    wide = model.new_section("w", "Wide", "Verse", render="free")
+    wide["free_text"] = "|--|12-|  " * 10
+    doc["sections"] = [wide]
+    assert export.resolve_columns(doc) == 1
+
+
+def test_two_columns_keep_the_chart_inside_the_column():
+    """Scaled type must not run over the gutter into the other column."""
+    doc = _short_line_doc()
+    doc["pdf_columns"] = "2"
+    scale = export.resolve_scale(doc)
+    longest = max(len(ln) for ln in export._body_lines_for_width(doc, None))
+    assert longest * 4.6 * scale <= export.column_width("portrait", 2) + 0.5
+
+
+def test_two_columns_fit_the_same_song_on_fewer_pages():
+    doc = _short_line_doc(30)
+    doc["pdf_scale"] = "1.0"
+    one = export._build_pdf(doc, None, "portrait", 1.0, 1)[1]
+    two = export._build_pdf(doc, None, "portrait", 1.0, 2)[1]
+    assert two < one
+
+
+def test_a_column_rule_is_drawn_between_the_columns():
+    """The split has to be visible, or you lose your place halfway down."""
+    import zlib
+    doc = _short_line_doc()
+    doc["pdf_columns"] = "2"
+    raw = export.build_pdf(doc)
+    streams = b""
+    for chunk in raw.split(b"stream\n")[1:]:
+        try:
+            streams += zlib.decompress(chunk.split(b"\nendstream")[0])
+        except zlib.error:
+            pass
+    # The rule sits on the centre line of the gutter between the columns.
+    x = export.PAGE_MARGIN + export.column_width("portrait", 2) + 22 / 2
+    assert f"{x:.1f}".encode() in streams
+
+
+def test_columns_do_not_change_the_txt_export():
+    """Columns are a PDF concern; the TXT chart is plain text."""
+    doc = _short_line_doc()
+    a = export.build_song_lines(doc)
+    doc["pdf_columns"] = "2"
+    assert export.build_song_lines(doc) == a
+
+
+def test_a_tab_heavy_chart_is_not_squeezed_into_two_columns():
+    """A tab grid can wrap, but not below one measure per line — if that
+    measure won't fit half a page, auto leaves the page whole."""
+    doc = model.new_document(title="Tabs")
+    sec = model.new_section("t", "Riff", "Verse", render="tab")
+    sec["items"] = [model.make_measure(32, {"G": "-" * 32})]
+    doc["sections"] = [sec]
+    assert export.resolve_columns(doc) == 1

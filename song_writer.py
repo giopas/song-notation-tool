@@ -1781,6 +1781,16 @@ class SongNotationApp(tk.Tk):
                            bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
                            activebackground=t["bg"], font=FONT_TINY).pack(anchor="w", padx=28)
 
+        tk.Label(dlg, text="Columns:", bg=t["bg"], fg=t["accent"],
+                 font=FONT_TINY).pack(padx=16, pady=(10, 2), anchor="w")
+        cols_var = tk.StringVar(value=str(self.doc.get("pdf_columns", "auto")))
+        for val, lbl in [("auto", "Auto  (2 columns if they print bigger)"),
+                          ("1", "One column"),
+                          ("2", "Two columns")]:
+            tk.Radiobutton(dlg, text=lbl, variable=cols_var, value=val,
+                           bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
+                           activebackground=t["bg"], font=FONT_TINY).pack(anchor="w", padx=28)
+
         tk.Label(dlg, text="Include instruments:", bg=t["bg"], fg=t["accent"],
                  font=FONT_TINY).pack(padx=16, pady=(10, 2), anchor="w")
         all_instrs = sorted({s.get("instrument", "") for s in self.doc["sections"]})
@@ -1795,6 +1805,10 @@ class SongNotationApp(tk.Tk):
         def do_export():
             instrs = {i for i, v in instr_vars.items() if v.get()}
             orient = orient_var.get()
+            # Columns travel with the song, like layout and colour do —
+            # a chart that reads well in two columns reads well in two
+            # columns next time it's printed.
+            self.doc["pdf_columns"] = cols_var.get()
             dlg.destroy()
             artist = self.song_artist.get().strip()
             title  = self.song_title.get().strip()

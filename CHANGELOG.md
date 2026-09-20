@@ -4,6 +4,48 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.22.0] — 2026-09-20
+
+Two columns. A chart is mostly short lines — four chord symbols, a bar
+of tab — so one column down an A4 page leaves half the sheet white, and
+**Fit to page** can only grow the type until that single column is full.
+Splitting the page halves the height the chart needs, and the fit spends
+that height on type size instead: the same song, printed bigger, and
+often on one sheet instead of two.
+
+### Added
+- **Columns — a new Print & export setting.** *Auto* (the default), *One
+  column* or *Two columns*, stored in the `.sng` as `pdf_columns`
+  alongside `section_layout`, `color_mode` and `pdf_scale`, so a chart
+  prints the same way wherever it's opened. It's in the meta panel in the
+  browser and in the Export PDF dialog in the desktop app.
+
+  A two-column page is filled top to bottom down the left column and then
+  down the right, with a grey rule drawn down the gutter — a page split
+  you can't see is two charts you have to guess the edges of, which is
+  the opposite of useful on a stand mid-song.
+- **`export.resolve_columns()` and `export.column_width()`.** The column
+  count is resolved from the document the way the scale already was, and
+  every measurement that used to ask for a page width — the width bound
+  the fit works against, the tab grid's measures-per-line — now asks for
+  a *column* width, so one column and two run through the same code.
+  `export.build_pdf()` is unchanged for callers: the CLI, the web server
+  and the desktop app all pick the layout up for free.
+
+### Changed
+- **Fit and columns are decided together.** Half a page's width fits a
+  different size of type than a whole one, so `resolve_scale()` takes the
+  column count (defaulting to whatever the document asks for), and *Auto*
+  builds both layouts and compares them on what matters at a music
+  stand — in this order: how many sheets you have to turn, then how big
+  the type is. A page saved beats a point of type size; reaching for the
+  next sheet mid-song costs more than a slightly smaller chord symbol.
+- **Auto knows when not to split.** A chart of long lines comes out
+  *smaller* across two columns, not bigger, and a tab grid can wrap but
+  not below one measure per line. Either case leaves the page whole
+  rather than printing something that overflows its column.
+- Columns are a PDF concern: the TXT export is unchanged.
+
 ## [0.21.0] — 2026-09-20
 
 A lick is tab, so it now looks like tab. Three small changes that all

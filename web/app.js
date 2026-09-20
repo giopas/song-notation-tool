@@ -177,6 +177,7 @@ function renderEditor() {
   document.getElementById("meta-layout").value = currentDoc.section_layout || "banner";
   document.getElementById("meta-color").value = currentDoc.color_mode || "color";
   document.getElementById("meta-scale").value = String(currentDoc.pdf_scale || "fit");
+  document.getElementById("meta-columns").value = String(currentDoc.pdf_columns || "auto");
 
   const list = document.getElementById("section-list");
   list.innerHTML = "";
@@ -1175,6 +1176,7 @@ async function init() {
   [["meta-layout", "section_layout", META.section_layouts, "banner"],
    ["meta-color", "color_mode", META.color_modes, "color"],
    ["meta-scale", "pdf_scale", META.pdf_scales, "fit"],
+   ["meta-columns", "pdf_columns", META.pdf_columns, "auto"],
   ].forEach(([id, key, labels, fallback]) => {
     const sel = document.getElementById(id);
     Object.entries(labels || {}).forEach(([value, label]) => {

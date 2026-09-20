@@ -28,7 +28,8 @@ import render
 import songmap
 import transpose
 from constants import (APP_VERSION, APP_URL, INSTRUMENT_STRINGS, LICK_RGB, REST_RGB,
-                        TAB_BEATS_DEFAULT, section_color, heading_fill,
+                        TAB_BEATS_DEFAULT, MAX_PDF_COLUMNS, PDF_COLUMN_GAP,
+                        PDF_COLUMN_RULE_GRAY, section_color, heading_fill,
                         title_fill)
 
 DEFAULT_TXT_WIDTH = 100
@@ -76,6 +77,31 @@ def _mix(rgb, toward_grey: float):
     string labels) that should read as part of its section without
     competing with the notes themselves."""
     return tuple(c + (0.45 - c) * toward_grey for c in rgb)
+
+
+# ==============================================================================
+#  Page geometry
+#
+#  A page is margins, a footer, and one or more text columns between them.
+#  Everything that measures the chart — the width bound the fit works
+#  against, the tab grid's measures-per-line — asks for a *column* width
+#  rather than a page width, so the same code serves one column or two.
+# ==============================================================================
+
+PAGE_MARGIN = 28
+
+
+def page_size(orient: str):
+    """(width, height) of an A4 sheet in points, in the given orientation."""
+    return (842, 595) if orient == "landscape" else (595, 842)
+
+
+def column_width(orient: str, columns: int = 1) -> float:
+    """Width of a single text column: the page less its margins, less the
+    gutters between columns, divided by however many columns there are."""
+    n = max(1, min(MAX_PDF_COLUMNS, int(columns or 1)))
+    W = page_size(orient)[0]
+    return (W - 2 * PAGE_MARGIN - PDF_COLUMN_GAP * (n - 1)) / n
 
 
 # ==============================================================================
@@ -138,40 +164,61 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
     return out
 
 
-def _width_limited_scale(doc: dict, instruments, orient: str) -> float:
-    W = 842 if orient == "landscape" else 595
+def _width_limited_scale(doc: dict, instruments, orient: str,
+                          columns: int = 1) -> float:
+    usable = column_width(orient, columns)
     longest = max((len(ln) for ln in _body_lines_for_width(doc, instruments)), default=0)
     if longest <= 0:
         return MAX_FIT_SCALE
-    return (W - 2 * 28) / (longest * 4.6)
+    return usable / (longest * 4.6)
 
 
-def _fit_scale(doc: dict, instruments, orient: str) -> float:
+def _tab_block_units(doc: dict, instruments) -> float:
+    """The narrowest a tab block can be drawn, in points at 100%.
+
+    A tab grid wraps to the width it is given — but not below one measure
+    per line, so a wide measure sets a floor the column has to clear. The
+    numbers mirror the drawing code: SN_W for the string labels, then
+    TOKEN_W characters per beat plus the closing bar line.
+    """
+    beats = max(
+        (m.get("beats", TAB_BEATS_DEFAULT)
+         for sec in doc.get("sections", [])
+         if instruments is None or sec.get("instrument") in instruments
+         if sec.get("render", "chart") in ("tab", "both")
+         for m in songmap.measure_items(sec)),
+        default=0,
+    )
+    return 0.0 if not beats else 20 + (3 * beats + 1) * 4.6
+
+
+def _fit_scale(doc: dict, instruments, orient: str, columns: int = 1) -> float:
     """Largest scale that keeps the chart on the same number of pages it
     needed at 100%, and inside the horizontal margins."""
-    width_cap = _width_limited_scale(doc, instruments, orient)
+    width_cap = _width_limited_scale(doc, instruments, orient, columns)
     if width_cap < 1.0:
         # Too wide even at 100% — shrink to the width that fits.
         return max(MIN_FIT_SCALE, width_cap)
 
-    _, base_pages = _build_pdf(doc, instruments, orient, 1.0)
+    _, base_pages = _build_pdf(doc, instruments, orient, 1.0, columns)
     hi_cap = min(MAX_FIT_SCALE, width_cap)
     if hi_cap <= 1.0:
         return 1.0
 
     lo, hi = 1.0, hi_cap
-    if _build_pdf(doc, instruments, orient, hi)[1] <= base_pages:
+    if _build_pdf(doc, instruments, orient, hi, columns)[1] <= base_pages:
         return hi
     for _ in range(_FIT_ITERATIONS):
         mid = (lo + hi) / 2
-        if _build_pdf(doc, instruments, orient, mid)[1] <= base_pages:
+        if _build_pdf(doc, instruments, orient, mid, columns)[1] <= base_pages:
             lo = mid
         else:
             hi = mid
     return lo
 
 
-def _one_page_scale(doc: dict, instruments, orient: str) -> float:
+def _one_page_scale(doc: dict, instruments, orient: str,
+                     columns: int = 1) -> float:
     """Largest scale that gets the whole chart onto a single page.
 
     Unlike `_fit_scale`, which keeps the page count it already had and
@@ -181,47 +228,120 @@ def _one_page_scale(doc: dict, instruments, orient: str) -> float:
     is what comes back — the chart is as small as it is allowed to get,
     and the export says two pages rather than pretending otherwise.
     """
-    hi = min(MAX_FIT_SCALE, max(_width_limited_scale(doc, instruments, orient),
-                                MIN_ONE_PAGE_SCALE))
-    if _build_pdf(doc, instruments, orient, hi)[1] <= 1:
+    hi = min(MAX_FIT_SCALE,
+             max(_width_limited_scale(doc, instruments, orient, columns),
+                 MIN_ONE_PAGE_SCALE))
+    if _build_pdf(doc, instruments, orient, hi, columns)[1] <= 1:
         return hi
     lo = MIN_ONE_PAGE_SCALE
-    if _build_pdf(doc, instruments, orient, lo)[1] > 1:
+    if _build_pdf(doc, instruments, orient, lo, columns)[1] > 1:
         return lo
     for _ in range(_FIT_ITERATIONS):
         mid = (lo + hi) / 2
-        if _build_pdf(doc, instruments, orient, mid)[1] <= 1:
+        if _build_pdf(doc, instruments, orient, mid, columns)[1] <= 1:
             lo = mid
         else:
             hi = mid
     return lo
 
 
-def resolve_scale(doc: dict, instruments=None, orient: str = "portrait") -> float:
+def resolve_scale(doc: dict, instruments=None, orient: str = "portrait",
+                   columns=None) -> float:
     """The scale a document's `pdf_scale` setting asks for. Unknown or
-    missing values fall back to fit, which is never worse than 100%."""
+    missing values fall back to fit, which is never worse than 100%.
+
+    Scale and column count are decided together — half a page's width
+    fits a different size of type than a whole one — so `columns` is
+    resolved from the document unless the caller has already done it.
+    """
+    if columns is None:
+        columns = resolve_columns(doc, instruments, orient)
     raw = doc.get("pdf_scale", "fit")
     if isinstance(raw, (int, float)):
         return max(0.5, float(raw))
     raw = str(raw).strip().lower()
     if raw in ("", "fit", "auto"):
-        return _fit_scale(doc, instruments, orient)
+        return _fit_scale(doc, instruments, orient, columns)
     if raw in ("one", "one page", "onepage"):
-        return _one_page_scale(doc, instruments, orient)
+        return _one_page_scale(doc, instruments, orient, columns)
     if raw in ("normal", "100%"):
         return 1.0
     try:
         return max(0.5, float(raw.rstrip("%")) / (100 if raw.endswith("%") else 1))
     except ValueError:
-        return _fit_scale(doc, instruments, orient)
+        return _fit_scale(doc, instruments, orient, columns)
+
+
+# ==============================================================================
+#  Columns
+#
+#  A chart is mostly short lines — a handful of chord symbols, a bar of
+#  tab — so one column down an A4 page leaves half the sheet white and
+#  caps how big "fit to page" can set the type. Printing two columns
+#  halves the height the chart needs, which is height the fit can spend
+#  on type size instead. It only pays when the lines are short enough to
+#  live in half a page, which is what "auto" is for.
+# ==============================================================================
+
+# Two columns have to buy a visibly bigger chart to be worth the split.
+_AUTO_COLUMN_GAIN = 1.05
+
+
+def _auto_columns(doc: dict, instruments, orient: str) -> int:
+    """Two columns when they earn their keep, one when they don't.
+
+    Splitting the page is not free: each line has half the width to live
+    in, so a chart with long lines comes out *smaller* across two
+    columns, not bigger. So the two layouts are built and compared on
+    what actually matters at a music stand, in this order: how many
+    sheets you have to turn, then how big the type is. A page saved
+    beats a point of type size — reaching for the next sheet mid-song
+    costs more than a slightly smaller chord symbol.
+    """
+    if MAX_PDF_COLUMNS < 2 or not doc.get("sections"):
+        return 1
+    one = resolve_scale(doc, instruments, orient, columns=1)
+    two = resolve_scale(doc, instruments, orient, columns=2)
+
+    # A column narrower than the chart is not a layout, it's an overflow.
+    if two > _width_limited_scale(doc, instruments, orient, 2) + 1e-9:
+        return 1
+    if _tab_block_units(doc, instruments) * two > column_width(orient, 2):
+        return 1
+
+    pages_one = _build_pdf(doc, instruments, orient, one, 1)[1]
+    pages_two = _build_pdf(doc, instruments, orient, two, 2)[1]
+    if pages_two != pages_one:
+        return 2 if pages_two < pages_one else 1
+    return 2 if two >= one * _AUTO_COLUMN_GAIN else 1
+
+
+def resolve_columns(doc: dict, instruments=None, orient: str = "portrait") -> int:
+    """How many text columns a document's `pdf_columns` setting asks for.
+    Unknown or missing values fall back to auto."""
+    raw = doc.get("pdf_columns", "auto")
+    if isinstance(raw, (int, float)):
+        return max(1, min(MAX_PDF_COLUMNS, int(raw)))
+    raw = str(raw).strip().lower()
+    if raw in ("", "auto", "fit"):
+        return _auto_columns(doc, instruments, orient)
+    if raw in ("1", "one", "single"):
+        return 1
+    if raw in ("2", "two", "double"):
+        return min(2, MAX_PDF_COLUMNS)
+    try:
+        return max(1, min(MAX_PDF_COLUMNS, int(float(raw))))
+    except ValueError:
+        return _auto_columns(doc, instruments, orient)
 
 
 def build_pdf(doc: dict, instruments=None, orient: str = "portrait") -> bytes:
     """Render `doc` to PDF bytes at whatever scale its settings ask for."""
     if instruments is None:
         instruments = _all_instruments(doc)
-    scale = resolve_scale(doc, instruments, orient)
-    return _build_pdf(doc, instruments, orient, scale)[0]
+    columns = resolve_columns(doc, instruments, orient)
+    scale = resolve_scale(doc, instruments, orient, columns=columns)
+    return _build_pdf(doc, instruments, orient, scale, columns)[0]
 
 
 def _gutter_label(sec: dict) -> str:
@@ -364,20 +484,30 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
 #  libraries (keeps the project's "zero external dependencies" rule).
 # ==============================================================================
 
-def _build_pdf(doc: dict, instruments, orient: str, scale: float):
+def _build_pdf(doc: dict, instruments, orient: str, scale: float,
+                columns=None):
     """Render the chart at `scale` and return (pdf_bytes, page_count).
 
     Everything that sets the size of the type — line height, font sizes,
     the monospace character width the column maths depends on — is
     multiplied by `scale`. The margins and the footer stay put, so scaling
     up genuinely fills the page rather than just inflating the whole sheet.
+
+    `columns` splits the area between the margins into that many text
+    columns, filled top to bottom and then left to right; None asks the
+    document what it wants.
     """
     if instruments is None:
         instruments = _all_instruments(doc)
+    if columns is None:
+        columns = resolve_columns(doc, instruments, orient)
 
-    W, H = (842, 595) if orient == "landscape" else (595, 842)
+    W, H = page_size(orient)
     S = max(0.5, float(scale or 1.0))
-    MARGIN, FOOTER_H = 28, 18
+    MARGIN, FOOTER_H = PAGE_MARGIN, 18
+    NCOLS = max(1, min(MAX_PDF_COLUMNS, int(columns or 1)))
+    COL_GAP = PDF_COLUMN_GAP
+    COL_W_TEXT = column_width(orient, NCOLS)
     LINE_H = 12 * S
     MONO_SZ, HEAD_SZ, TITLE_SZ = 7.5 * S, 9 * S, 13 * S
     TOKEN_W, CHAR_W, SN_W = 3, 4.6 * S, 20 * S
@@ -467,8 +597,27 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
 
     pn_holder = [1]
     cy_holder = [0.0]
+    col_holder = [0]            # which column the writing head is in
+    top_holder = [H - MARGIN]   # y the current page's columns start at
+
+    def col_x0(i=None):
+        """Left edge of a column — the x every body line is measured from."""
+        i = col_holder[0] if i is None else i
+        return MARGIN + i * (COL_W_TEXT + COL_GAP)
+
+    def col_x1(i=None):
+        return col_x0(i) + COL_W_TEXT
+
+    def vline(x, y1, y2, width=0.4, gray=PDF_COLUMN_RULE_GRAY):
+        cur_ln.append(f"{gray:.2f} G {width} w {x:.1f} {y1:.1f} m {x:.1f} {y2:.1f} l S")
 
     def finish_page():
+        # A rule down each gutter. Two columns of chart with nothing
+        # between them is two charts you have to guess the edges of;
+        # the line says where one ends and the next begins, which is
+        # the whole point of reading off a stand mid-song.
+        for i in range(1, NCOLS):
+            vline(col_x0(i) - COL_GAP / 2, FOOTER_H + 8, top_holder[0] + LINE_H * 0.8)
         hline(MARGIN, FOOTER_H, W - MARGIN)
         color(0.4, 0.4, 0.4)
         txt(MARGIN, 5,
@@ -479,6 +628,19 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             pages.append(zlib.compress("\n".join(cur_ln).encode("latin-1")))
             cur_ln.clear()
 
+    def next_column():
+        """Move the writing head to the top of the next column, or to the
+        next page when the last column on this one is full. Returns the
+        y to carry on at."""
+        if col_holder[0] + 1 < NCOLS:
+            col_holder[0] += 1
+        else:
+            finish_page()
+            pn_holder[0] += 1
+            col_holder[0] = 0
+            top_holder[0] = H - MARGIN
+        return top_holder[0]
+
     sections = doc.get("sections", [])
     max_beats = max(
         (m.get("beats", TAB_BEATS_DEFAULT)
@@ -486,11 +648,11 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
          for m in songmap.measure_items(s)),
         default=TAB_BEATS_DEFAULT,
     )
-    COL_W = TOKEN_W * max_beats * CHAR_W + CHAR_W
+    MEAS_W = TOKEN_W * max_beats * CHAR_W + CHAR_W
 
     def mpl_for(n_measures):
-        usable = W - 2 * MARGIN - SN_W
-        return max(1, min(n_measures, int(usable / COL_W)))
+        usable = COL_W_TEXT - SN_W
+        return max(1, min(n_measures, int(usable / MEAS_W)))
 
     band_h = 46 * S
     band_rgb, band_text = title_fill(colors)
@@ -518,7 +680,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
         meta_line = "   |   ".join(meta_parts)
         txt(MARGIN, H - 41 * S, meta_line,
             sz=_fit_text_size(meta_line, W - 2 * MARGIN, 7.5 * S))
-    cy_holder[0] = H - 54 * S
+    # The banner spans the sheet, so both columns start below it.
+    top_holder[0] = H - 54 * S
+    cy_holder[0] = top_holder[0]
 
     if doc.get("print_lyrics") and (meta_lyrics := (doc.get("lyrics_text") or "")).strip():
         # Not bound by the "never split a section" rule below — this sits
@@ -526,13 +690,13 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
         # to run onto a second page if it's long.
         cy = cy_holder[0]
         color(0.16, 0.24, 0.42)
-        txt(MARGIN, cy, "LYRICS", sz=HEAD_SZ, bold=True)
+        txt(col_x0(), cy, "LYRICS", sz=HEAD_SZ, bold=True)
         cy -= LINE_H + 2 * S
         color(0.15, 0.15, 0.15)
         for ln in meta_lyrics.splitlines():
             if cy < FOOTER_H + LINE_H:
-                finish_page(); pn_holder[0] += 1; cy = H - MARGIN
-            txt(MARGIN, cy, ln, sz=MONO_SZ)
+                cy = next_column()
+            txt(col_x0(), cy, ln, sz=MONO_SZ)
             cy -= LINE_H
         cy -= LINE_H
         cy_holder[0] = cy
@@ -541,7 +705,10 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
     gutter_w = 0
     if gutter:
         gutter_w = max((len(_gutter_label(s)) for s in sections), default=0) + 2
-    BODY_X = MARGIN + gutter_w * CHAR_W
+    def body_x():
+        """Where a body line starts: the column's left edge, plus the
+        gutter the section names sit in when the layout asks for one."""
+        return col_x0() + gutter_w * CHAR_W
 
     for sec in sections:
         if sec.get("instrument") not in instruments:
@@ -578,7 +745,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
         needed_h = (render.estimate_section_lines(sec, strings or all_strings, doc)
                     * LINE_H + 34 * S)
         if cy - needed_h < FOOTER_H + LINE_H * 2:
-            finish_page(); pn_holder[0] += 1; cy = H - MARGIN
+            cy = next_column()
 
         rep = sec.get("repeat", 1)
         rep_str = f" (x{rep})" if rep and rep != 1 else ""
@@ -587,14 +754,14 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             # Name in a left column beside the section's first line rather
             # than a banner above it; body text shifts right to clear it.
             color(*rgb)
-            txt(MARGIN, cy, _gutter_label(sec), sz=MONO_SZ, bold=True)
+            txt(col_x0(), cy, _gutter_label(sec), sz=MONO_SZ, bold=True)
         else:
             instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
             sec_label = f"{sec['name']}{rep_str}{instr}"
             fill_rgb, label_rgb = heading_fill(sec.get("type", ""), colors)
-            rfill(MARGIN, cy - LINE_H, W - 2 * MARGIN, LINE_H + 2 * S, *fill_rgb)
+            rfill(col_x0(), cy - LINE_H, COL_W_TEXT, LINE_H + 2 * S, *fill_rgb)
             color(*label_rgb)
-            txt(MARGIN + 4 * S, cy - LINE_H + 3 * S, sec_label,
+            txt(col_x0() + 4 * S, cy - LINE_H + 3 * S, sec_label,
                 sz=HEAD_SZ, bold=True)
             cy -= LINE_H + 14 * S
 
@@ -604,27 +771,27 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             # makes them harder to read, which is the opposite of the point.
             color(0, 0, 0)
             for ln in sec["free_text"].splitlines():
-                txt(BODY_X, cy, ln, sz=MONO_SZ)
+                txt(body_x(), cy, ln, sz=MONO_SZ)
                 cy -= LINE_H
                 if cy < FOOTER_H + LINE_H:
-                    finish_page(); pn_holder[0] += 1; cy = H - MARGIN
+                    cy = next_column()
             cy -= 2 * S
 
         if chart_rows:
             for row in chart_rows:
-                draw_chart_row(BODY_X, cy, row)
+                draw_chart_row(body_x(), cy, row)
                 cy -= LINE_H
             cy -= 2 * S
 
         if sec.get("annotation"):
             color(0.3, 0.3, 0.3)
-            txt(BODY_X, cy, f'"{sec["annotation"]}"', sz=MONO_SZ)
+            txt(body_x(), cy, f'"{sec["annotation"]}"', sz=MONO_SZ)
             cy -= LINE_H
 
         if sec.get("print_lyrics") and (sec.get("lyrics_text") or "").strip():
             color(0.15, 0.15, 0.15)
             for ln in sec["lyrics_text"].splitlines():
-                txt(BODY_X, cy, ln, sz=MONO_SZ)
+                txt(body_x(), cy, ln, sz=MONO_SZ)
                 cy -= LINE_H
             cy -= 2 * S
 
@@ -632,7 +799,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             batch = list(range(bs, min(bs + mpl, len(measures))))
 
             def col_x(i, batch=batch):
-                return MARGIN + SN_W + sum(
+                return col_x0() + SN_W + sum(
                     TOKEN_W * measures[batch[j]].get("beats", TAB_BEATS_DEFAULT)
                     * CHAR_W + CHAR_W
                     for j in range(i))
@@ -644,7 +811,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
 
             for st in strings:
                 color(*_mix(rgb, 0.35))
-                txt(MARGIN, cy, f"{st}|", sz=MONO_SZ)
+                txt(col_x0(), cy, f"{st}|", sz=MONO_SZ)
                 for i, m_idx in enumerate(batch):
                     beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
                     raw = measures[m_idx].get("strings", {}).get(st, "")
@@ -657,9 +824,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
                     txt(col_x(i), cy, row_str, sz=MONO_SZ)
                 cy -= LINE_H
                 if cy < FOOTER_H + LINE_H:
-                    finish_page(); pn_holder[0] += 1; cy = H - MARGIN
+                    cy = next_column()
 
-            hline(MARGIN, cy, W - MARGIN, gray=0.82)
+            hline(col_x0(), cy, col_x1(), gray=0.82)
             cy -= 3 * S
 
         cy -= 18 * S

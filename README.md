@@ -79,7 +79,7 @@ whichever way you made it.
   current name on screen while the file stores a rename-safe id
 - **Print through the OS** — the real print panel, with a preview, not a
   silent job
-- **Colour, layout and page-fill choices** per song — see
+- **Colour, layout, columns and page-fill choices** per song — see
   [Printing and page layout](#printing-and-page-layout) below
 - **Stage View** (Ctrl/Cmd+P) — full-window, high-contrast, read-only
 - **Live page-count indicator**, and a PDF export that never splits a
@@ -235,10 +235,10 @@ size, scaling, page range — and a preview before anything reaches paper.
 It's deliberately not a silent print job. In a browser tab the same PDF
 opens in a new tab, where Cmd/Ctrl+P does the same thing.
 
-Three settings next to BPM shape the exported chart. All three are
+Four settings next to BPM shape the exported chart. All four are
 properties of the song, saved in the `.sng`, and apply to the PDF, Print
-and the Preview pane (TXT is plain text, so colour and size don't reach
-it).
+and the Preview pane (TXT is plain text, so colour, size and columns
+don't reach it).
 
 **Colour** gives each section heading a colour chosen by its type, so you
 can find your place on a stand at a glance and every Verse looks like
@@ -261,6 +261,17 @@ useful when the alternative is turning a page mid-song. If even the
 smallest readable size won't do it, the chart stays at that size and runs
 to two pages rather than becoming unreadable. The fixed percentages are
 there when you want a specific size regardless.
+
+**Columns** splits the page. Most chart lines are short — four chord
+symbols, a bar of tab — so one column down the page leaves half of it
+white, and Fit to page can only grow the type until that column is full.
+Two columns halve the height the chart needs and the fit spends it on
+type size instead: the same song, bigger, and often on one sheet instead
+of two. A grey rule runs down the gutter so you can see where one column
+ends; you read down the left, then down the right. **Auto** (the default)
+builds both and keeps the better one — fewer sheets first, then bigger
+type — and leaves the page whole when the lines are too long to live in
+half of it.
 
 **Layout** chooses where each section's name goes in the exported chart:
 

@@ -8,7 +8,7 @@ an instrument's string list or the default tab beat count.
 
 from __future__ import annotations
 
-APP_VERSION = "0.21.0"
+APP_VERSION = "0.22.0"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
 # Printed in the footer of every export, so a chart handed to someone else
@@ -80,6 +80,24 @@ PDF_SCALE_LABELS = {
     "1.5": "150%",
     "2.0": "200%",
 }
+
+# Two-column printing. Most chart lines are short — a few chord symbols,
+# a bar of tab — so one column down an A4 page leaves half the sheet
+# white and caps how far "fit to page" can grow the type. Two columns
+# halve the height the chart needs, and the fit spends that height on
+# type size instead: the same song, bigger and still on one sheet.
+# "Auto" splits only when it actually buys a bigger chart.
+PDF_COLUMN_LABELS = {
+    "auto": "Auto (2 columns if they help)",
+    "1": "One column",
+    "2": "Two columns",
+}
+MAX_PDF_COLUMNS = 2
+# Space between columns, in points, and the grey of the rule drawn down
+# the middle of it — the split has to be visible or you lose your place
+# halfway down the page.
+PDF_COLUMN_GAP = 22
+PDF_COLUMN_RULE_GRAY = 0.78
 
 
 # Black-and-white printing fills the heading bands with a light grey and

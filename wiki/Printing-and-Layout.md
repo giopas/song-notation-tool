@@ -3,11 +3,12 @@
 Everything about how a chart comes out on paper, and where the files
 go. Added in v0.20.
 
-The three settings below live in the **Print & export** group on the
+The four settings below live in the **Print & export** group on the
 second row of the meta panel, framed separately from Title/Artist/Key
 because none of them changes a single note. They're properties of the
 *song*, saved in the `.sng` (`section_layout`, `color_mode`,
-`pdf_scale`), so a chart prints the same way wherever it's opened.
+`pdf_scale`, `pdf_columns`), so a chart prints the same way wherever
+it's opened.
 
 ## Layout — where the section name goes
 
@@ -78,8 +79,49 @@ aren't covered by that monospace width bound — they cap their own size
 independently instead. A long title shrinks to fit rather than dragging
 the whole chart's scale down with it.
 
-Scale and colour are PDF concerns; the TXT export is plain text and
-ignores both.
+Scale, colour and columns are PDF concerns; the TXT export is plain text
+and ignores all three. Scale and column count are resolved *together* —
+half a page's width fits a different size of type than a whole one — so
+`resolve_scale()` takes the column count the document asks for.
+
+## Columns — splitting the page
+
+| Setting | Stored as | Effect |
+|---|---|---|
+| Auto | `"auto"` (default) | Two columns when they print the chart better, one when they don't |
+| One column | `"1"` | The full width of the page, always |
+| Two columns | `"2"` | Split, whatever it costs |
+
+A chart is mostly short lines, so one column down an A4 page leaves half
+the sheet white — and **Fit to page** can only grow the type until that
+one column is full. Two columns halve the height the chart needs, and
+the fit spends that height on type size instead.
+
+The page fills top to bottom down the left column and then down the
+right, with a grey rule drawn down the middle of the gutter
+(`constants.PDF_COLUMN_GAP`, `PDF_COLUMN_RULE_GRAY`). The rule is not
+decoration: two columns of chart with nothing between them is two charts
+whose edges you have to guess, which is exactly what you can't do
+mid-song. Sections are still never split — a section that won't fit in
+what's left of a column starts the next one.
+
+**Auto** (`export.resolve_columns`) doesn't guess. It resolves the scale
+for one column and for two, builds both, and compares them on what
+matters at a music stand, in this order:
+
+1. **Sheets to turn.** Fewer wins. Reaching for the next page mid-song
+   costs more than a slightly smaller chord symbol.
+2. **Type size.** On an equal page count, two columns have to print at
+   least 5% bigger (`export._AUTO_COLUMN_GAIN`) to be worth the split.
+
+It also refuses the split outright in the two cases where half a page
+simply isn't enough room: when the longest line would run over the
+gutter at the chosen scale, and when the narrowest a tab block can be
+drawn — the string labels plus a single measure, since a tab grid wraps
+but not below one measure per line — is wider than a column.
+
+Columns are a PDF concern. The TXT export is plain text and ignores
+them, and so does the Preview pane.
 
 ## Print
 

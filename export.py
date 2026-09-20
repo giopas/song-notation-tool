@@ -90,6 +90,21 @@ def _mix(rgb, toward_grey: float):
 
 PAGE_MARGIN = 28
 
+# The body is set in Courier, whose advance is exactly 0.6 em — and that
+# advance *is* the column arithmetic: every x offset in a chart row, the
+# tab grid's measure columns, the width bound the fit works against. Size
+# and character width therefore move together; change one without the
+# other and the text stops landing where the geometry says it does.
+#
+# 9pt is the size at 100%. Courier sets small for its point size, so the
+# old 7.5 read a good deal smaller than the headings next to it — and a
+# chart is read at arm's length, off a stand, which is the whole argument
+# for the largest type the page will take.
+MONO_SIZE = 9.0
+MONO_CHAR_W = MONO_SIZE * 0.6
+# Width of the string-label column beside a tab grid ("G|"), at 100%.
+STRING_LABEL_W = 20.0
+
 
 def page_size(orient: str):
     """(width, height) of an A4 sheet in points, in the given orientation."""
@@ -170,7 +185,7 @@ def _width_limited_scale(doc: dict, instruments, orient: str,
     longest = max((len(ln) for ln in _body_lines_for_width(doc, instruments)), default=0)
     if longest <= 0:
         return MAX_FIT_SCALE
-    return usable / (longest * 4.6)
+    return usable / (longest * MONO_CHAR_W)
 
 
 def _tab_block_units(doc: dict, instruments) -> float:
@@ -189,7 +204,7 @@ def _tab_block_units(doc: dict, instruments) -> float:
          for m in songmap.measure_items(sec)),
         default=0,
     )
-    return 0.0 if not beats else 20 + (3 * beats + 1) * 4.6
+    return 0.0 if not beats else STRING_LABEL_W + (3 * beats + 1) * MONO_CHAR_W
 
 
 def _fit_scale(doc: dict, instruments, orient: str, columns: int = 1) -> float:
@@ -509,8 +524,8 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     COL_GAP = PDF_COLUMN_GAP
     COL_W_TEXT = column_width(orient, NCOLS)
     LINE_H = 12 * S
-    MONO_SZ, HEAD_SZ, TITLE_SZ = 7.5 * S, 9 * S, 13 * S
-    TOKEN_W, CHAR_W, SN_W = 3, 4.6 * S, 20 * S
+    MONO_SZ, HEAD_SZ, TITLE_SZ = MONO_SIZE * S, 10.5 * S, 14 * S
+    TOKEN_W, CHAR_W, SN_W = 3, MONO_CHAR_W * S, STRING_LABEL_W * S
 
     colors = doc.get("color_mode", "color")
     def sec_rgb(sec):

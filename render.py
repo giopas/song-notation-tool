@@ -282,7 +282,16 @@ def _render_one_row(items, label: str, indent: int):
     sym_line = sym_line.rstrip()
     rows = ([_row(fret_line, ROLE_FRET)] if fret_line else [])
     rows.append(_row(sym_line, ROLE_SYM, sym_spans))
-    return rows + [_row(r, ROLE_LICK) for r in lick_rows if r.strip()]
+    rows += [_row(r, ROLE_LICK) for r in lick_rows if r.strip()]
+    # A lick with nothing beside it is a tab block standing on its own,
+    # and the blank symbol row above is what sets it apart from the chart
+    # line before it. Close it on the other side too: without that, the
+    # next line of chords butts straight up against the tab and reads as
+    # part of it — the space has to be the same either side or it stops
+    # saying "this bit is tab".
+    if lick_rows and not sym_line.strip():
+        rows.append(_row("", ROLE_SYM))
+    return rows
 
 
 # ==============================================================================
@@ -458,6 +467,10 @@ def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT):
             lines[-1]["text"] += f"  (x{it['repeat']})"
 
     flush()
+    # A tab block closes with a blank line, but not when it ends the
+    # section — the gap before the next section is already there.
+    while lines and not lines[-1]["text"].strip():
+        lines.pop()
     return lines
 
 

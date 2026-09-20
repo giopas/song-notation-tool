@@ -44,7 +44,23 @@ often on one sheet instead of two.
   *smaller* across two columns, not bigger, and a tab grid can wrap but
   not below one measure per line. Either case leaves the page whole
   rather than printing something that overflows its column.
-- Columns are a PDF concern: the TXT export is unchanged.
+- **Bigger notes.** The printed body goes from 7.5pt Courier to 9pt (and
+  the section headings from 9 to 10.5), a fifth larger at the same fit.
+  Courier sets small for its point size, and a chart is read at arm's
+  length off a stand — the old body read noticeably smaller than the
+  headings beside it. Size and character width move together
+  (`export.MONO_SIZE`, `export.MONO_CHAR_W`: Courier's advance is exactly
+  0.6 em, and that advance *is* the column arithmetic), so nothing drifts
+  out of its column; the line height is unchanged, so this costs no page
+  count.
+- **A tab block is spaced the same on both sides.** A lick with no chord
+  symbols beside it already had a blank line above it; the chart line
+  after it butted straight up against the tab, so the block read as
+  open-ended. It now closes with the same blank line — except at the end
+  of a section, where the gap is already there.
+- Columns are a PDF concern: the TXT export is unchanged. The tab spacing
+  above is a rendering fix, so it shows in TXT, the Preview pane and
+  Stage View too.
 
 ## [0.21.0] — 2026-09-20
 

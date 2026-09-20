@@ -651,3 +651,33 @@ def test_a_licks_columns_line_up_across_its_strings():
     licks = [r["text"].strip() for r in rows if r["role"] == "lick"]
     assert len({len(t) for t in licks}) == 1        # same width, so they align
     assert licks[0].startswith("|G|") and licks[1].startswith("|D|")
+
+
+def test_a_standalone_tab_block_is_spaced_the_same_on_both_sides():
+    """A lick with no chords beside it is set off above and below — a
+    blank line on one side only makes the next chart line read as tab."""
+    import grammar, render
+    items = grammar.parse_items("[C] [F] // {D - - - 3 | A - 4 - - 4} // A(5)")
+    lines = render.chart_body_lines(items)
+    tab = [i for i, ln in enumerate(lines) if ln.strip().startswith("|D|")][0]
+    assert not lines[tab - 1].strip()                   # space before
+    assert not lines[tab + 2].strip()                   # and after the block
+    assert lines[tab + 3].strip().startswith("A(5)")
+
+
+def test_a_section_does_not_end_on_the_tab_block_s_blank_line():
+    """The gap before the next section is already there."""
+    import grammar, render
+    items = grammar.parse_items("[C] [F] // {D - - - 3 | A - 4 - - 4}")
+    lines = render.chart_body_lines(items)
+    assert lines[-1].strip()
+
+
+def test_a_lick_among_chords_still_sits_under_them():
+    """The other case is untouched: written in among chords, a lick reads
+    where it's played rather than in a block of its own."""
+    import grammar, render
+    items = grammar.parse_items("[C] {D - - - 3} [F]")
+    lines = render.chart_body_lines(items)
+    sym = [i for i, ln in enumerate(lines) if "[C]" in ln][0]
+    assert "|D|" in lines[sym + 1]

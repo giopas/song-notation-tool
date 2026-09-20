@@ -165,6 +165,16 @@ ordinary download and the browser's own settings decide where it lands.
 
 ## What the printed chart shows
 
+- **The body is 9pt Courier at 100%** (`export.MONO_SIZE`), headings
+  10.5pt Helvetica-Bold. Size and character width are locked together:
+  Courier's advance is exactly 0.6 em and that advance is the column
+  arithmetic every chart row, tab grid and width bound is measured in, so
+  `MONO_CHAR_W` follows `MONO_SIZE` and neither moves alone.
+- **A tab block standing on its own** — a lick with no chord symbols
+  beside it — is set off by a blank line above *and* below, so the chart
+  line after it doesn't read as part of the tab. A lick written in among
+  chords still sits directly under them, which is the point of writing it
+  there.
 - **Section names** print plain — no square brackets.
 - **One instrument for the whole song** is stated once in the header,
   beside the key and tempo, rather than repeated on every section. A

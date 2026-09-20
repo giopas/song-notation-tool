@@ -318,7 +318,7 @@ def test_fit_respects_the_page_width():
     longest = max(len(ln) for ln in export._body_lines_for_width(doc, None))
     assert scale < 1.0                                    # shrank to fit
     assert scale >= export.MIN_FIT_SCALE
-    assert longest * 4.6 * scale <= (595 - 2 * 28) + 0.5
+    assert longest * export.MONO_CHAR_W * scale <= (595 - 2 * 28) + 0.5
 
 
 def test_explicit_scales_are_honoured_and_junk_falls_back_to_fit():
@@ -665,7 +665,7 @@ def test_two_columns_keep_the_chart_inside_the_column():
     doc["pdf_columns"] = "2"
     scale = export.resolve_scale(doc)
     longest = max(len(ln) for ln in export._body_lines_for_width(doc, None))
-    assert longest * 4.6 * scale <= export.column_width("portrait", 2) + 0.5
+    assert longest * export.MONO_CHAR_W * scale <= export.column_width("portrait", 2) + 0.5
 
 
 def test_two_columns_fit_the_same_song_on_fewer_pages():
@@ -709,3 +709,10 @@ def test_a_tab_heavy_chart_is_not_squeezed_into_two_columns():
     sec["items"] = [model.make_measure(32, {"G": "-" * 32})]
     doc["sections"] = [sec]
     assert export.resolve_columns(doc) == 1
+
+
+def test_the_body_type_and_its_character_width_stay_locked_together():
+    """Courier's advance is 0.6 em, and that advance is the column
+    arithmetic — if the two drift apart the text stops landing where the
+    geometry says it does."""
+    assert abs(export.MONO_CHAR_W - export.MONO_SIZE * 0.6) < 1e-9

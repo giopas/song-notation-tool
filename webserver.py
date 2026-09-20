@@ -328,7 +328,7 @@ def _with_chart_lines(doc: dict) -> dict:
     return out
 
 
-def _parse_chart_line(line: str, doc: dict = None):
+def _parse_chart_line(line: str, doc: dict = None, items=None):
     """Parse one chart line and render it the way the export will.
 
     `doc` is optional context: with it, a `=section` / riff reference on the
@@ -336,7 +336,13 @@ def _parse_chart_line(line: str, doc: dict = None):
     preview shows what will actually be played rather than the pointer.
     Without it (a bare parse), references render as themselves."""
     try:
-        items, annotation = grammar.parse(line)
+        if items is None:
+            items, annotation = grammar.parse(line)
+        else:
+            # Rendering what's *stored* rather than what's typed: a card that
+            # references another section keeps the target's id, so it survives
+            # a rename that the typed "=Old_Name" no longer resolves.
+            items, annotation = list(items), None
         # Whatever the user typed — "=Interlude" or "=chorus1" — is stored
         # as the target's id, so the reference survives a later rename;
         # what comes back for display is spelled with the name again.
@@ -508,7 +514,8 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/parse":
                 body = self._read_json_body()
                 return self._send_json(
-                    _parse_chart_line(body.get("line", ""), body.get("doc")))
+                    _parse_chart_line(body.get("line", ""), body.get("doc"),
+                                      body.get("items")))
 
             if path == "/api/render":
                 # Live preview pane (Enhancement 1): render an in-progress,

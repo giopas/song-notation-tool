@@ -238,6 +238,19 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **A referencing section's card went stale when its target changed.**
+  A `=Chorus_1` card shows the target's content, but nothing in the page
+  recorded that dependency: adding a `//` to Chorus_1 re-rendered Chorus_1
+  and left Chorus_2 showing the old, unbroken row until the file was
+  reloaded. The exports were always right; only the on-screen card lagged.
+  Editing a section's line, free text, render mode or name now refreshes
+  every card that holds a reference.
+- **Renaming a target left the reference pointing at nothing on screen.**
+  The card re-parsed its typed `=Old_Name`, which after the rename matched
+  no section, so the preview fell back to printing the reference itself.
+  A referencing card is now rendered from its *stored* items — which hold
+  the target's id — via a new optional `items` field on `/api/parse`, so
+  the preview stays correct and the line respells itself with the new name.
 - **Curly quotes were a parse error.** macOS — and every word processor —
   substitutes a typed `"` with `"` or `"`, so an annotation typed
   anywhere but a plain terminal failed with `cannot parse item`, pointing

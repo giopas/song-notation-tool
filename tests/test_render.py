@@ -569,3 +569,20 @@ def test_a_plain_break_carries_no_indent_field():
     pushed = grammar.parse_items("C //> G")[1]
     assert "indent" not in plain
     assert pushed["indent"] == 1
+
+
+def test_section_ref_keeps_the_targets_line_breaks():
+    """A `//` added to the target must read on every section that
+    references it — the reference is the target's content, breaks and all."""
+    import model, grammar
+    from render import resolve_references, render_chart_row
+    doc = model.new_document(title="T")
+    target = model.new_section("chorus1", "Chorus_1", "Chorus")
+    target["items"] = grammar.parse_items("[C]x3 [F] // [F] [C] // A(5)")
+    src = model.new_section("s2", "Chorus_2", "Chorus")
+    src["items"] = [model.make_section_ref("chorus1")]
+    doc["sections"] = [target, src]
+
+    out = resolve_references(src["items"], doc)
+    assert [it["kind"] for it in out].count("mark") == 2
+    assert render_chart_row(out) == render_chart_row(target["items"])

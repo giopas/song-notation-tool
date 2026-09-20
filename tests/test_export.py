@@ -473,3 +473,21 @@ def test_a_lick_survives_both_exporters():
     text = "\n".join(export.build_song_lines(doc))
     assert "e 4 4 3 4" in text and "B - - 3 -" in text
     assert export.build_pdf(doc).startswith(b"%PDF-1.4")
+
+
+def test_api_parse_can_render_stored_items_instead_of_the_typed_line():
+    """A card's typed "=Old_Name" goes stale when the target is renamed;
+    the stored items hold the id, so rendering from those survives it."""
+    import model, grammar, webserver
+    doc = model.new_document(title="T")
+    target = model.new_section("chorus1", "Renamed", "Chorus")
+    target["items"] = grammar.parse_items("3A 12D")
+    src = model.new_section("s2", "Chorus (ref)", "Chorus")
+    src["items"] = [model.make_section_ref("chorus1")]
+    doc["sections"] = [target, src]
+
+    stale = webserver._parse_chart_line("=Old_Name", doc)
+    fresh = webserver._parse_chart_line("=Old_Name", doc, src["items"])
+    assert stale["unparsed"] == "=Old_Name"
+    assert fresh["unparsed"] == "=Renamed"
+    assert "A" in fresh["rendered"][-1] and "D" in fresh["rendered"][-1]

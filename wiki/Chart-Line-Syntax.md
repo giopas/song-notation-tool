@@ -115,6 +115,13 @@ to a **free-text** section prints that section's text. Anything that
 can't be resolved — a missing target, or a cycle — is left as a
 reference rather than silently dropping the section's content.
 
+Expansion is live in the editor too: changing a section — its chart
+line, its free text, its render mode, or its name — refreshes every
+section card that references it, so a `//` added to Chorus_1 shows up
+on Chorus_2 straight away. Those cards are rendered from the stored
+reference (an id) rather than from the text in the line field, so a
+rename can't leave a card showing a dangling `=Old_Name`.
+
 ## Transpose shift
 
 A `+N` or `-N` glued onto a block or section reference (or a group's

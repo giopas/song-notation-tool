@@ -21,8 +21,10 @@ const API = {
   deleteSong: (name) => fetchJSON(`/api/songs/${encodeURIComponent(name)}`, { method: "DELETE" }),
   // `doc` is optional context so the server can expand =section / riff
   // references into the items they point at for the preview row.
-  parseLine: (line, doc) => fetchJSON("/api/parse", {
-    method: "POST", body: JSON.stringify(doc ? { line, doc } : { line }),
+  parseLine: (line, doc, items) => fetchJSON("/api/parse", {
+    method: "POST",
+    body: JSON.stringify(
+      items ? { line, doc, items } : (doc ? { line, doc } : { line })),
   }),
   render: (doc, instruments) => fetchJSON("/api/render", {
     method: "POST", body: JSON.stringify({ doc, instruments }),
@@ -237,6 +239,7 @@ function wireSectionEvents(node, sec, idx) {
 
   node.querySelector(".sec-name").addEventListener("input", (e) => {
     byId().name = e.target.value;
+    refreshReferencingPreviews(sec.id);
     schedulePreviewUpdate();
   });
   node.querySelector(".sec-type").addEventListener("change", (e) => {
@@ -257,6 +260,7 @@ function wireSectionEvents(node, sec, idx) {
     const s = byId();
     s.render = e.target.value;
     updateTabGridVisibility(node, s);
+    refreshReferencingPreviews(sec.id);
     schedulePreviewUpdate();
   });
 
@@ -284,6 +288,7 @@ function wireSectionEvents(node, sec, idx) {
     if (!line.trim()) {
       setChartItems(s, []);
       updateSectionPreview(node, s, { items: [], rendered: [] });
+      refreshReferencingPreviews(s.id);
       schedulePreviewUpdate();
       return;
     }
@@ -299,6 +304,7 @@ function wireSectionEvents(node, sec, idx) {
           node.querySelector(".sec-annotation").value = result.annotation;
         }
         updateSectionPreview(node, s, result);
+        refreshReferencingPreviews(s.id);
       } else {
         updateSectionPreview(node, s, { error: result.error });
       }
@@ -319,6 +325,7 @@ function wireSectionEvents(node, sec, idx) {
   // recompute is throttled.
   node.querySelector(".sec-free-text").addEventListener("input", (e) => {
     byId().free_text = e.target.value;
+    refreshReferencingPreviews(sec.id);
     schedulePreviewUpdate();
   });
 
@@ -380,6 +387,47 @@ function setExtraPreviewRows(node, rows) {
     box.appendChild(div);
   });
 }
+
+/**
+ * A card whose line is a reference shows the *target's* content, so it goes
+ * stale the moment the target is edited — and nothing in the DOM records
+ * that dependency. After any edit that could change what a reference
+ * resolves to, re-parse every other card that holds one.
+ */
+function sectionHasRef(sec) {
+  const scan = (items) => (items || []).some(
+    (it) => it.kind === "section_ref" || it.kind === "block_ref" ||
+            (it.kind === "group" && scan(it.items)));
+  return scan(sec.items);
+}
+
+const refreshReferencingPreviews = debounce((excludeId) => {
+  if (!currentDoc) return;
+  currentDoc.sections.forEach((sec) => {
+    if (sec.id === excludeId || sec.render === "free" || !sectionHasRef(sec)) return;
+    const node = document.querySelector(`.section-card[data-id="${sec.id}"]`);
+    if (!node) return;
+    const line = node.querySelector(".sec-chart-line").value;
+    if (!line.trim()) return;
+    // Render from the stored items, not the typed line: the items hold the
+    // target's id, so a reference survives the target being renamed.
+    API.parseLine(line, currentDoc, sec.items || [])
+      .then((result) => {
+        if (!result.ok) return;
+        updateSectionPreview(node, sec, result);
+        // A reference is spelled with the target's *name*, so renaming the
+        // target also restyles the line that points at it. Never while the
+        // user is typing in that field.
+        const input = node.querySelector(".sec-chart-line");
+        if (result.unparsed && result.unparsed !== input.value &&
+            document.activeElement !== input) {
+          input.value = result.unparsed;
+          sec.chart_line = result.unparsed;
+        }
+      })
+      .catch(() => {});
+  });
+}, 200);
 
 function updateSectionPreview(node, sec, parseResult) {
   const fretRow = node.querySelector(".sec-preview-fret");

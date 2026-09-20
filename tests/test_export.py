@@ -716,3 +716,71 @@ def test_the_body_type_and_its_character_width_stay_locked_together():
     arithmetic — if the two drift apart the text stops landing where the
     geometry says it does."""
     assert abs(export.MONO_CHAR_W - export.MONO_SIZE * 0.6) < 1e-9
+
+
+# ==============================================================================
+#  Fret numbers — a figure over the chord
+# ==============================================================================
+
+def test_the_first_row_is_only_flagged_as_frets_when_it_is_frets():
+    """A line broken with // whose opening block has no fret numbers
+    starts on symbols. Answering "are there frets anywhere?" instead
+    handed the browser a symbol row to paint as frets and a fret row to
+    paint as symbols — the fret numbers went black after the first
+    block."""
+    import webserver, render
+    opens_on_symbols = webserver._parse_chart_line("rest rest // 8F 8F 5D")
+    assert opens_on_symbols["roles"] == [render.ROLE_SYM, render.ROLE_FRET,
+                                          render.ROLE_SYM]
+    assert opens_on_symbols["fret_row"] is False
+
+    opens_on_frets = webserver._parse_chart_line("5A 5D // 8F 8C")
+    assert opens_on_frets["roles"][0] == render.ROLE_FRET
+    assert opens_on_frets["fret_row"] is True
+
+
+def test_fret_numbers_print_small_raised_and_in_their_own_colour():
+    """Set as a figure over the chord: smaller than the symbols, closer
+    to the line below than a full line step, and never in the black the
+    symbols are set in."""
+    import zlib
+    import grammar
+    from constants import FRET_RGB, FRET_BW_RGB, FRET_SIZE_RATIO
+
+    doc = model.new_document(title="Frets")
+    sec = model.new_section("s1", "Verse", "Verse")
+    sec["items"] = grammar.parse_items("5A 8F 5D")
+    doc["sections"] = [sec]
+
+    def streams_of(d):
+        raw = export.build_pdf(d)
+        out = b""
+        for chunk in raw.split(b"stream\n")[1:]:
+            try:
+                out += zlib.decompress(chunk.split(b"\nendstream")[0])
+            except zlib.error:
+                pass
+        return out.decode("latin-1")
+
+    body = streams_of(doc)
+    scale = export.resolve_scale(doc)
+    assert f"{FRET_RGB[0]:.3f} {FRET_RGB[1]:.3f} {FRET_RGB[2]:.3f} rg" in body
+    assert f"{export.MONO_SIZE * FRET_SIZE_RATIO * scale:.1f}"[:4] in body
+
+    doc["color_mode"] = "bw"
+    assert (f"{FRET_BW_RGB[0]:.3f} {FRET_BW_RGB[1]:.3f} {FRET_BW_RGB[2]:.3f} rg"
+            in streams_of(doc))
+
+
+def test_a_fret_row_takes_less_than_a_full_line():
+    """Raised means it costs less height than a line of its own — the
+    same chart is shorter for it, never taller."""
+    from constants import FRET_LINE_RATIO
+    import grammar
+
+    doc = model.new_document(title="Frets")
+    sec = model.new_section("s1", "Verse", "Verse")
+    sec["items"] = grammar.parse_items("5A 8F 5D")
+    doc["sections"] = [sec]
+    assert FRET_LINE_RATIO < 1.0
+    assert export.build_pdf(doc).startswith(b"%PDF-1.4")

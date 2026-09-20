@@ -170,6 +170,18 @@ ordinary download and the browser's own settings decide where it lands.
   Courier's advance is exactly 0.6 em and that advance is the column
   arithmetic every chart row, tab grid and width bound is measured in, so
   `MONO_CHAR_W` follows `MONO_SIZE` and neither moves alone.
+- **Fret numbers are a figure over the chord**, not a line of notes:
+  smaller than the symbols, raised close to the line below, amber on
+  colour and a light grey in black & white
+  (`constants.FRET_SIZE_RATIO`, `FRET_LINE_RATIO`, `FRET_RGB`,
+  `FRET_BW_RGB`). The browser's section preview sets them the same way.
+- **Rows are drawn on their columns.** A chart is aligned by padding with
+  spaces and counting characters, but the page is set in a proportional
+  face where a space is nothing like a character wide. So each stretch of
+  ink is placed at the column it was rendered at rather than the row
+  being drawn as one string — the padding is measured, not drawn.
+  Expanded free text is the exception: prose, not column data, so it is
+  set as written.
 - **A tab block standing on its own** — a lick with no chord symbols
   beside it — is set off by a blank line above *and* below, so the chart
   line after it doesn't read as part of the tab. A lick written in among

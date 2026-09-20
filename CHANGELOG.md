@@ -58,9 +58,32 @@ often on one sheet instead of two.
   after it butted straight up against the tab, so the block read as
   open-ended. It now closes with the same blank line — except at the end
   of a section, where the gap is already there.
+- **Fret numbers are set as a figure over the chord.** Smaller than the
+  symbols (`constants.FRET_SIZE_RATIO`), raised close to the line they
+  belong to rather than taking a full line of their own
+  (`FRET_LINE_RATIO`), and in amber on colour or a light grey in black &
+  white (`FRET_RGB` / `FRET_BW_RGB`) — a fret is a hint about *where* to
+  play the chord under it, not a second line of notes. Same treatment in
+  the browser's section preview.
+- **The printed chart is drawn on its columns.** The renderer aligns a
+  chart by padding with spaces and counting characters; the page draws in
+  a proportional face, where a space is nothing like a character wide, so
+  a row drawn as one string landed near its columns and drifted further
+  along the line. Each stretch of ink is now placed at the column it was
+  rendered at — the padding is measured, not drawn. Most visible on the
+  thing that has to sit over its chord: the fret number.
 - Columns are a PDF concern: the TXT export is unchanged. The tab spacing
   above is a rendering fix, so it shows in TXT, the Preview pane and
   Stage View too.
+
+### Fixed
+- **A fret number went black after the first `//` block in the browser.**
+  The server told the front end "the first row is frets" by asking
+  whether there were fret numbers *anywhere* on the line. A line whose
+  opening block has none starts on symbols, so the browser painted a
+  symbol row as frets and the real fret row as symbols. It now reports
+  the first row's own role, and every fret row is styled by role wherever
+  it appears.
 
 ## [0.21.0] — 2026-09-20
 

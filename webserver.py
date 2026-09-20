@@ -354,10 +354,15 @@ def _parse_chart_line(line: str, doc: dict = None, items=None):
         rendered = [r["text"] for r in rows]
         # A chart row is 1..N lines: an optional fret row, the symbol row,
         # then one line per string for any lick. Only the server knows
-        # whether the first line is frets or symbols, so say so rather than
-        # making the front end guess from the count.
-        has_fret_row = any(it.get("kind") == "token" and it.get("fret") is not None
-                           for it in display)
+        # whether the *first* line is frets or symbols, so say so rather
+        # than making the front end guess from the count. It has to be the
+        # first row's own role, not "are there frets anywhere on the line":
+        # a line broken with // whose opening block has no fret numbers
+        # starts on symbols, and answering yes there handed the front end
+        # a symbol row to paint as frets and a fret row to paint as
+        # symbols — which is why a fret number went black after the first
+        # block.
+        has_fret_row = bool(rows) and rows[0]["role"] == render_mod.ROLE_FRET
         return {
             "ok": True,
             "items": items,

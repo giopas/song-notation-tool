@@ -370,12 +370,29 @@ button {
 .sec-preview:empty { margin-top: 0; }
 .sec-preview-fret, .sec-preview-sym, .sec-preview-more { white-space: pre; }
 /* Everything after the first fret/symbol pair: a lick's string lines, and
-   the continuation lines of a section broken with //. They're the same
-   colour as the symbol row — amber is reserved for the fret row, and a
-   continuation line is chords, not frets. */
+   the continuation lines of a section broken with //. Chords by default —
+   but a continuation block has fret numbers of its own, and those are
+   frets wherever they appear, so they take the fret styling by role. */
 .sec-preview-more { color: var(--fg); }
-.sec-preview-fret { color: var(--amber); }
 .sec-preview-sym { color: var(--fg); }
+
+/* A fret number is a hint about where to play the chord under it, not a
+   second line of notes — so it's set as a figure over the symbol row:
+   smaller, amber, and tucked close to the line it belongs to.
+
+   The rows are a character grid, so shrinking the type would walk the
+   frets leftwards away from their chords. `letter-spacing` puts back
+   exactly what the smaller size took out: at 0.76em each character is
+   0.24 of a full cell short, which is 0.24/0.76 = 0.3158 of a cell at
+   *this* size — and `ch` is that cell, measured in the element's own
+   font. Columns land where they did before. */
+.sec-preview-fret,
+.sec-preview-more.sec-row-fret {
+  color: var(--amber);
+  font-size: 0.76em;
+  letter-spacing: 0.3158ch;
+  line-height: 1.15;
+}
 
 .sec-annotation {
   width: 100%; box-sizing: border-box; margin-top: 6px;

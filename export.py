@@ -29,8 +29,9 @@ import songmap
 import transpose
 from constants import (APP_VERSION, APP_URL, INSTRUMENT_STRINGS, LICK_RGB, REST_RGB,
                         TAB_BEATS_DEFAULT, MAX_PDF_COLUMNS, PDF_COLUMN_GAP,
-                        PDF_COLUMN_RULE_GRAY, section_color, heading_fill,
-                        title_fill)
+                        PDF_COLUMN_RULE_GRAY, FRET_RGB, FRET_BW_RGB,
+                        FRET_SIZE_RATIO, FRET_LINE_RATIO,
+                        section_color, heading_fill, title_fill)
 
 DEFAULT_TXT_WIDTH = 100
 
@@ -90,16 +91,13 @@ def _mix(rgb, toward_grey: float):
 
 PAGE_MARGIN = 28
 
-# The body is set in Courier, whose advance is exactly 0.6 em — and that
-# advance *is* the column arithmetic: every x offset in a chart row, the
-# tab grid's measure columns, the width bound the fit works against. Size
-# and character width therefore move together; change one without the
-# other and the text stops landing where the geometry says it does.
-#
-# 9pt is the size at 100%. Courier sets small for its point size, so the
-# old 7.5 read a good deal smaller than the headings next to it — and a
-# chart is read at arm's length, off a stand, which is the whole argument
-# for the largest type the page will take.
+# The chart is laid out on a character grid — every x offset in a chart
+# row, the tab grid's measure columns, the width bound the fit works
+# against, are all counted in characters and multiplied by one number.
+# That number is 0.6 em, and it moves with the type size: change one
+# without the other and the text stops landing where the geometry says it
+# does. 9pt is the size at 100%; a chart is read at arm's length off a
+# stand, which is the argument for the largest type the page will take.
 MONO_SIZE = 9.0
 MONO_CHAR_W = MONO_SIZE * 0.6
 # Width of the string-label column beside a tab grid ("G|"), at 100%.
@@ -525,6 +523,11 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     COL_W_TEXT = column_width(orient, NCOLS)
     LINE_H = 12 * S
     MONO_SZ, HEAD_SZ, TITLE_SZ = MONO_SIZE * S, 10.5 * S, 14 * S
+    # The fret row is set as a figure over the chord it belongs to: a
+    # smaller size, and a shorter step down to the symbol row, so it
+    # reads as attached to that line rather than as a line of its own.
+    FRET_SZ = MONO_SZ * FRET_SIZE_RATIO
+    FRET_LINE_H = LINE_H * FRET_LINE_RATIO
     TOKEN_W, CHAR_W, SN_W = 3, MONO_CHAR_W * S, STRING_LABEL_W * S
 
     colors = doc.get("color_mode", "color")
@@ -576,33 +579,69 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             return REST_RGB
         return (0, 0, 0)
 
-    def draw_chart_row(x, y, row):
-        """One rendered chart row, in the colours its roles ask for.
+    def draw_fret_row(x, y, text):
+        """The fret numbers above a chart line, each over its own column.
 
-        The text is monospace, so a span's column index is an x offset:
-        the row is drawn as the runs between its spans rather than drawn
-        once and overpainted, which in PDF would leave both layers visible.
+        Set smaller than the symbols, they can't be drawn as one padded
+        string: the padding is spaces, and narrower spaces would walk the
+        whole row leftwards away from the chords it belongs to. So each
+        group of digits is placed at its own column instead — which is
+        where the grid says it goes, and is exact rather than nearly.
+        """
+        color(*(FRET_BW_RGB if colors == "bw" else FRET_RGB))
+        i, n = 0, len(text)
+        while i < n:
+            if text[i] == " ":
+                i += 1
+                continue
+            j = i
+            while j < n and text[j] != " ":
+                j += 1
+            txt(x + i * CHAR_W, y, text[i:j], sz=FRET_SZ)
+            i = j
+
+    def span_role(spans, i, base):
+        """The role of column `i` — a span's, if one covers it."""
+        for start, end, role in spans:
+            if start <= i < end:
+                return role
+        return base
+
+    def draw_chart_row(x, y, row):
+        """One rendered chart row, on the column grid it was rendered to.
+
+        The renderer aligns a chart by padding with spaces, counting in
+        characters; the page draws in a proportional face, where a space
+        is nothing like a character wide. Drawing the row as one string
+        therefore lands it *near* its columns and drifts further along
+        the line — which matters most for the one thing that has to sit
+        over its chord, the fret number. So each stretch of ink is placed
+        at the column it was rendered at: the padding is not drawn, it is
+        measured. Colour follows the same cut, since a span (a rest, so
+        far) is a column range — and drawing the row once and
+        overpainting it would leave both layers visible in PDF.
         """
         text, spans = row["text"], row.get("spans") or []
-        if not spans:
-            color(*role_rgb(row.get("role")))
+        base = row.get("role")
+        if base == render.ROLE_TEXT:
+            # Free text expanded from a reference: prose, not column
+            # data, so it is set as it was written.
+            color(*role_rgb(base))
             txt(x, y, text, sz=MONO_SZ)
             return
-        base = role_rgb(row.get("role"))
-        pos = 0
-        for start, end, role in sorted(spans):
-            start, end = max(start, pos), min(end, len(text))
-            if end <= start:
+        i, n = 0, len(text)
+        while i < n:
+            if text[i] == " ":
+                i += 1
                 continue
-            if start > pos:
-                color(*base)
-                txt(x + pos * CHAR_W, y, text[pos:start], sz=MONO_SZ)
+            role = span_role(spans, i, base)
+            j = i
+            while (j < n and text[j] != " "
+                   and span_role(spans, j, base) == role):
+                j += 1
             color(*role_rgb(role))
-            txt(x + start * CHAR_W, y, text[start:end], sz=MONO_SZ)
-            pos = end
-        if pos < len(text):
-            color(*base)
-            txt(x + pos * CHAR_W, y, text[pos:], sz=MONO_SZ)
+            txt(x + i * CHAR_W, y, text[i:j], sz=MONO_SZ)
+            i = j
 
     def hline(x1, y, x2, width=0.25, gray=0.72):
         cur_ln.append(f"{gray:.2f} G {width} w {x1:.1f} {y:.1f} m {x2:.1f} {y:.1f} l S")
@@ -794,8 +833,12 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
 
         if chart_rows:
             for row in chart_rows:
-                draw_chart_row(body_x(), cy, row)
-                cy -= LINE_H
+                if row.get("role") == render.ROLE_FRET:
+                    draw_fret_row(body_x(), cy, row["text"])
+                    cy -= FRET_LINE_H
+                else:
+                    draw_chart_row(body_x(), cy, row)
+                    cy -= LINE_H
             cy -= 2 * S
 
         if sec.get("annotation"):

@@ -65,7 +65,21 @@ COLOR_MODE_LABELS = {"color": "Colour", "bw": "Black & white"}
 LICK_RGB = (0.10, 0.35, 0.78)
 REST_RGB = (0.52, 0.52, 0.55)
 
-# The same two colours as CSS hex, for the browser front end.
+# A fret number is a hint about *where* to play the chord under it, not a
+# second line of notes — so it prints as a figure over the symbol: small,
+# raised, and a step back from the black the symbols are set in. Amber on
+# colour; on a mono printer a light grey, which says the same thing the
+# only way a photocopier can.
+FRET_RGB = (0.72, 0.47, 0.02)
+FRET_BW_RGB = (0.48, 0.48, 0.48)
+
+# How the fret row is set against the symbol row below it: a fraction of
+# the type size, and of the line height — small enough to read as a
+# figure over the chord, close enough to belong to it.
+FRET_SIZE_RATIO = 0.72
+FRET_LINE_RATIO = 0.74
+
+# The same colours as CSS hex, for the browser front end.
 LICK_HEX = "#1a59c7"
 REST_HEX = "#85858c"
 

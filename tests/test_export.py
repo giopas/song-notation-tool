@@ -491,3 +491,64 @@ def test_api_parse_can_render_stored_items_instead_of_the_typed_line():
     assert stale["unparsed"] == "=Old_Name"
     assert fresh["unparsed"] == "=Renamed"
     assert "A" in fresh["rendered"][-1] and "D" in fresh["rendered"][-1]
+
+
+def _doc_with_stray_measure():
+    import model, grammar
+    doc = model.new_document(title="T")
+    sec = model.new_section("s1", "Chorus_1", "Chorus")
+    sec["render"] = "chart"
+    sec["items"] = grammar.parse_items("[C]x3 [F]") + [
+        model.make_measure(8, {"D": "- - 3 - - - - -", "A": "4 4 - 4 - - - -"})]
+    doc["sections"] = [sec]
+    return doc
+
+
+def test_chart_mode_section_does_not_print_its_hidden_tab_grid():
+    """The editor hides the tab grid in Chart mode, so printing it put an
+    "M1" block on the page that the section card gave no sign of."""
+    import export
+    txt = "\n".join(export.build_song_lines(_doc_with_stray_measure()))
+    assert "[C](x3)" in txt
+    assert "M1" not in txt
+
+
+def test_both_mode_still_prints_the_tab_grid():
+    import export
+    doc = _doc_with_stray_measure()
+    doc["sections"][0]["render"] = "both"
+    txt = "\n".join(export.build_song_lines(doc))
+    assert "M1" in txt and "[C](x3)" in txt
+
+
+def test_fit_to_one_page_shrinks_until_the_chart_lands_on_one_page():
+    import model, grammar, export
+    doc = model.new_document(title="Long one")
+    doc["sections"] = []
+    for i in range(14):
+        s = model.new_section(f"s{i}", f"Verse_{i}", "Verse")
+        s["items"] = grammar.parse_items("A(5) D(5) // F(8) D(5) E(7)")
+        doc["sections"].append(s)
+
+    doc["pdf_scale"] = "fit"
+    fit = export.resolve_scale(doc)
+    assert export._build_pdf(doc, None, "portrait", fit)[1] > 1
+
+    doc["pdf_scale"] = "one"
+    one = export.resolve_scale(doc)
+    assert export._build_pdf(doc, None, "portrait", one)[1] == 1
+    assert one < fit
+
+
+def test_fit_to_one_page_never_shrinks_below_the_floor():
+    """A chart that can't be made to fit comes back at the floor rather
+    than at an unreadable size — the export then honestly runs long."""
+    import model, grammar, export
+    doc = model.new_document(title="Far too long")
+    doc["sections"] = []
+    for i in range(400):
+        s = model.new_section(f"s{i}", f"Verse_{i}", "Verse")
+        s["items"] = grammar.parse_items("A(5) D(5)")
+        doc["sections"].append(s)
+    doc["pdf_scale"] = "one"
+    assert export.resolve_scale(doc) == export.MIN_ONE_PAGE_SCALE

@@ -216,7 +216,11 @@ chart line (rests, repeat barlines, endings, groups, annotations — all
 dropped in at the cursor), and **free-text sections**. Tab-grid
 (measure) sections are editable in the browser too now — switch a
 section's render mode to Tab or Both, add measures, and type fret
-numbers straight into the cells. See [ROADMAP.md](ROADMAP.md) for
+numbers straight into the cells. The render mode is the whole story for
+what prints: a section in Chart mode prints its chart line, one in Tab
+mode prints its grid, Both prints both — so a tab grid you left behind
+when switching a section back to Chart stays out of the export, exactly
+as it stays out of the card. See [ROADMAP.md](ROADMAP.md) for
 what's still desktop-only (riff/block management, chiefly).
 
 The window is an app shell: the toolbar, the song list and the songs
@@ -251,8 +255,12 @@ in the header beside the key and tempo rather than on every section.
 the whole thing up until it fills the sheet without needing another page
 — the point being a chart you can read from a music stand or off the
 floor. It also shrinks a chart whose longest line would otherwise run off
-the edge. The fixed percentages are there when you want a specific size
-regardless.
+the edge. **Fit to one page** goes further in the other direction: it shrinks
+the type as far as it has to so the whole song lands on a single sheet —
+useful when the alternative is turning a page mid-song. If even the
+smallest readable size won't do it, the chart stays at that size and runs
+to two pages rather than becoming unreadable. The fixed percentages are
+there when you want a specific size regardless.
 
 **Layout** chooses where each section's name goes in the exported chart:
 

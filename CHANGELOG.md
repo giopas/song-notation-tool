@@ -17,6 +17,13 @@ gap to close later — a one-page stage chart is allowed to have a
 sentence on it.
 
 ### Added
+- **Fit to one page** — a new Size option beside Fit to page. Fit to page
+  keeps the page count the chart already had and grows the type into
+  whatever room is left; this one fixes the page count at one and shrinks
+  the type until the whole song lands on a single sheet, so there's no
+  page turn mid-song. It stops at a readability floor (30%) rather than
+  shrinking without limit: a chart that still needs two pages there is
+  printed at the floor and honestly runs long.
 - **Quick-insert palette** in the web UI — a compact column of buttons
   beside each section's chart line: `rest`, `%`, `|:`, `:|`, `|1.`,
   `|2.`, `x2`, `[ ]x2`, `""`, `segno`, `coda`, `dc`, `ds`. Each drops
@@ -238,6 +245,20 @@ sentence on it.
   resolves exactly as before.
 
 ### Fixed
+- **A section could still be split across a page break.** The rule that
+  keeps a section whole measured it with `estimate_section_lines()`, which
+  didn't expand references — so a section whose entire content is
+  `=Chorus_1` measured one line, was judged to fit in the space left at
+  the foot of the page, and then printed seven lines across the break.
+  The estimate now renders through references when it's given the
+  document, and allows for the heading band and the inter-section gap.
+- **A hidden tab grid printed anyway.** The editor shows the tab grid only
+  in Tab or Both mode, but the exporter drew any stored measures whatever
+  the mode — so a section switched back to Chart printed an `M1` tab block
+  that nothing on its card accounted for. Both exports now follow the
+  render mode: Chart prints the chart line, Tab prints the grid, Both
+  prints both. (Switch such a section to Both to see, and delete, the
+  measures it's still carrying.)
 - **A referencing section's card went stale when its target changed.**
   A `=Chorus_1` card shows the target's content, but nothing in the page
   recorded that dependency: adding a `//` to Chorus_1 re-rendered Chorus_1

@@ -586,3 +586,21 @@ def test_section_ref_keeps_the_targets_line_breaks():
     out = resolve_references(src["items"], doc)
     assert [it["kind"] for it in out].count("mark") == 2
     assert render_chart_row(out) == render_chart_row(target["items"])
+
+
+def test_estimate_section_lines_measures_a_reference_by_its_target():
+    """Without the document a `=Chorus_1` section is one item; with it,
+    it is however many lines Chorus_1 actually prints. The export's
+    keep-a-section-whole rule is only as good as this number."""
+    import model, grammar
+    from render import estimate_section_lines
+    doc = model.new_document(title="T")
+    target = model.new_section("chorus1", "Chorus_1", "Chorus")
+    target["items"] = grammar.parse_items("[C]x3 [F] // [F] [C] // A(5)")
+    src = model.new_section("s2", "Chorus_2", "Chorus")
+    src["items"] = [model.make_section_ref("chorus1")]
+    doc["sections"] = [target, src]
+
+    assert estimate_section_lines(src) < estimate_section_lines(src, doc=doc)
+    assert (estimate_section_lines(src, doc=doc)
+            == estimate_section_lines(target, doc=doc))

@@ -94,6 +94,11 @@ MAX_FIT_SCALE = 4.0
 # there. The floor stops it shrinking into illegibility — past that point
 # the honest answer is landscape, or fewer measures per line.
 MIN_FIT_SCALE = 0.6
+# "Fit to one page" is an explicit instruction to get the whole chart onto
+# one sheet, so it is allowed to shrink further than plain fit would — but
+# not without limit: below this the chart is unreadable, and the honest
+# answer is landscape or fewer sections.
+MIN_ONE_PAGE_SCALE = 0.3
 _FIT_ITERATIONS = 10
 
 
@@ -166,6 +171,32 @@ def _fit_scale(doc: dict, instruments, orient: str) -> float:
     return lo
 
 
+def _one_page_scale(doc: dict, instruments, orient: str) -> float:
+    """Largest scale that gets the whole chart onto a single page.
+
+    Unlike `_fit_scale`, which keeps the page count it already had and
+    grows into the space left over, this one is prepared to shrink: the
+    setting says "one page", so the page count is the constraint and the
+    type size is what gives. If even the floor needs two pages, the floor
+    is what comes back — the chart is as small as it is allowed to get,
+    and the export says two pages rather than pretending otherwise.
+    """
+    hi = min(MAX_FIT_SCALE, max(_width_limited_scale(doc, instruments, orient),
+                                MIN_ONE_PAGE_SCALE))
+    if _build_pdf(doc, instruments, orient, hi)[1] <= 1:
+        return hi
+    lo = MIN_ONE_PAGE_SCALE
+    if _build_pdf(doc, instruments, orient, lo)[1] > 1:
+        return lo
+    for _ in range(_FIT_ITERATIONS):
+        mid = (lo + hi) / 2
+        if _build_pdf(doc, instruments, orient, mid)[1] <= 1:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
 def resolve_scale(doc: dict, instruments=None, orient: str = "portrait") -> float:
     """The scale a document's `pdf_scale` setting asks for. Unknown or
     missing values fall back to fit, which is never worse than 100%."""
@@ -175,6 +206,8 @@ def resolve_scale(doc: dict, instruments=None, orient: str = "portrait") -> floa
     raw = str(raw).strip().lower()
     if raw in ("", "fit", "auto"):
         return _fit_scale(doc, instruments, orient)
+    if raw in ("one", "one page", "onepage"):
+        return _one_page_scale(doc, instruments, orient)
     if raw in ("normal", "100%"):
         return 1.0
     try:
@@ -268,7 +301,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         eff = transpose.effective_transpose(
             doc.get("transpose", 0), sec.get("transpose", 0))
         chart = render.resolve_references(songmap.chart_items(sec), doc)
-        if sec.get("render") != "free" and chart:
+        if sec.get("render", "chart") in ("chart", "both") and chart:
             resolved = render.resolve_display_items(chart, eff)
             lines += render.chart_body_lines(resolved, label, body_indent)
             lines.append("")
@@ -279,7 +312,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
             lines += [label, ""]
 
         measures = songmap.measure_items(sec)
-        if sec.get("render") != "free" and measures:
+        if sec.get("render", "chart") in ("tab", "both") and measures:
             all_strings = INSTRUMENT_STRINGS.get(
                 sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
             strings = render.active_strings(
@@ -475,12 +508,18 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
             sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
         eff = transpose.effective_transpose(
             doc.get("transpose", 0), sec.get("transpose", 0))
-        free_mode = sec.get("render") == "free"
+        # The section's render mode decides what gets printed, exactly as
+        # it decides what the editor shows. A section left in Chart mode
+        # can still hold tab measures from before the switch — the editor
+        # hides that grid, and printing it anyway put a tab block on the
+        # page that the card gave no sign of.
+        mode = sec.get("render", "chart")
+        free_mode = mode == "free"
         chart = render.resolve_references(songmap.chart_items(sec), doc)
         chart_rows = (render.chart_body_lines(
                           render.resolve_display_items(chart, eff), "", 0)
-                      if chart and not free_mode else [])
-        measures = [] if free_mode else songmap.measure_items(sec)
+                      if chart and mode in ("chart", "both") else [])
+        measures = songmap.measure_items(sec) if mode in ("tab", "both") else []
         strings = (render.active_strings(
                     [m.get("strings", {}) for m in measures], all_strings)
                    if measures else [])
@@ -488,7 +527,12 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float):
 
         # Acceptance criterion (design section 10): never split a section
         # across a page break.
-        needed_h = render.estimate_section_lines(sec, strings or all_strings) * LINE_H
+        # ... and the estimate has to see the same document the drawing
+        # does, or a section that is only "=Chorus_1" measures one line
+        # and splits across the break anyway. The pad covers the vertical
+        # space the heading band and the inter-section gap add.
+        needed_h = (render.estimate_section_lines(sec, strings or all_strings, doc)
+                    * LINE_H + 34 * S)
         if cy - needed_h < FOOTER_H + LINE_H * 2:
             finish_page(); pn_holder[0] += 1; cy = H - MARGIN
 

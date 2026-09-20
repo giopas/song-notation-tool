@@ -50,7 +50,16 @@ tends to fill in.
 | Setting | Stored as | Effect |
 |---|---|---|
 | Fit to page | `"fit"` (default) | Scale up until the chart fills the sheet without needing another page |
+| Fit to one page | `"one"` | Scale *down* as far as needed to get the whole song onto a single sheet |
 | 100% / 125% / 150% / 200% | `"1.0"` … `"2.0"` | A fixed scale regardless |
+
+**Fit to one page** inverts the constraint: for plain fit the page count
+is whatever it was at 100% and the type grows into the space left over;
+here the page count is fixed at one and the type is what gives. It
+bisects down to a floor (`export.MIN_ONE_PAGE_SCALE`, 0.3) and stops
+there — a chart that still needs two pages at the floor is printed at the
+floor, because a setting called "one page" is not a licence to render a
+chart too small to read from a stand.
 
 **Fit** is computed, not guessed (`export.resolve_scale`):
 

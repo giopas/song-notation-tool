@@ -61,6 +61,7 @@ COLOR_MODE_LABELS = {"color": "Colour", "bw": "Black & white"}
 # a music stand, or off the floor.
 PDF_SCALE_LABELS = {
     "fit": "Fit to page",
+    "one": "Fit to one page",
     "1.0": "100%",
     "1.25": "125%",
     "1.5": "150%",

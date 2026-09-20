@@ -476,8 +476,15 @@ def free_text_line_count(text: str) -> int:
     return len(text.splitlines()) + 1
 
 
-def estimate_section_lines(section: dict, strings=None) -> int:
-    """Rough line count `section` will occupy in the TXT/PDF export."""
+def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int:
+    """Line count `section` will occupy in the TXT/PDF export.
+
+    With `doc`, references are expanded and the chart is counted by
+    rendering it — the only way to be exact, and the export's
+    keep-a-section-whole rule is only as good as this number. A section
+    whose entire content is `=Chorus_1` counts as one item without the
+    document and as the seven lines Chorus_1 actually prints with it.
+    """
     items = section.get("items", [])
     annotation = section.get("annotation", "")
     lyrics = section.get("lyrics_text", "") if section.get("print_lyrics") else ""
@@ -493,13 +500,18 @@ def estimate_section_lines(section: dict, strings=None) -> int:
 
     if render_mode in ("chart", "both"):
         chart_items = [it for it in items if it.get("kind") != "measure"]
+        if doc is not None:
+            chart_items = resolve_references(chart_items, doc)
         if chart_items:
-            # one fret + symbol pair per block, plus however many string
-            # lines the tallest lick in each block needs
-            for _level, run in split_on_line_breaks(chart_items) or [(0, [])]:
-                lines += 2
-                lines += max((len(it.get("lines", [])) for it in run
-                              if it.get("kind") == "lick"), default=0)
+            if doc is not None:
+                lines += len(chart_body_lines(chart_items, "", 0))
+            else:
+                # one fret + symbol pair per block, plus however many string
+                # lines the tallest lick in each block needs
+                for _level, run in split_on_line_breaks(chart_items) or [(0, [])]:
+                    lines += 2
+                    lines += max((len(it.get("lines", [])) for it in run
+                                  if it.get("kind") == "lick"), default=0)
 
     if render_mode in ("tab", "both"):
         measures = [it for it in items if it.get("kind") == "measure"]
@@ -528,7 +540,7 @@ def estimate_page_count(doc: dict, instrument_strings: dict = None,
         strings = None
         if instrument_strings:
             strings = instrument_strings.get(sec.get("instrument"))
-        total += estimate_section_lines(sec, strings)
+        total += estimate_section_lines(sec, strings, doc)
     if total == 0:
         return 1
     return max(1, -(-total // lines_per_page))

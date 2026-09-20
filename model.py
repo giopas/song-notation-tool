@@ -15,6 +15,10 @@ ITEM_KINDS = ("token", "group", "block_ref", "section_ref", "measure", "mark",
 MARK_NAMES = (
     "repeat_open", "repeat_close", "ending_1", "ending_2",
     "segno", "coda", "dc", "ds", "simile", "rest",
+    # Where the chart should break to a new line. Purely a layout mark —
+    # it plays nothing — so that a long section can be grouped into
+    # phrases the way you'd actually write it out by hand.
+    "line_break",
 )
 
 RENDER_MODES = ("chart", "tab", "both", "free")

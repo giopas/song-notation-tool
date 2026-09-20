@@ -27,6 +27,20 @@ sentence on it.
   display, and live preview all run unchanged — the chart line stays
   typed text you can still edit by hand. The palette moves below the
   line on narrow windows rather than squeezing the input it serves.
+- **Break a section over several lines.** `//` anywhere on a chart line
+  starts a new line there, so a long section can be grouped into the
+  phrases you'd write out by hand instead of running as one wide row:
+
+  ```
+  A(5) D(5) // F(8) D(5) E(7) // A(5) A(5) F(8)
+  ```
+
+  Each line aligns its own columns — that's the point of breaking, rather
+  than one grid stretching across the whole section — and in the desktop
+  song map the continuation lines stack under the section name rather
+  than sliding back to the margin. Purely a layout mark: it plays
+  nothing, the chart line stays a single editable line, and the TXT, PDF,
+  Print and Preview all honour it. `//` is on the quick-insert palette.
 - **Licks — a bit of tab, in among the chords.** Some things aren't a
   chord. `{G 5 7 5 | D - - 3}` in a chart line writes a short tab figure
   at the point it's played: one `|`-separated line per string, its name

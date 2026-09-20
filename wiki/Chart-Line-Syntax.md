@@ -128,6 +128,36 @@ riff1+2
 [5A 7D]x2+3
 ```
 
+## Breaking a section over several lines
+
+A long section reads better grouped into the phrases you'd write out by
+hand. `//` anywhere on the chart line starts a new line at that point:
+
+```
+A(5) D(5) // F(8) D(5) E(7) // A(5) F(8) D(5) E(7) // A(5) A(5) F(8)
+```
+
+renders as
+
+```
+  A(5)  D(5)
+  F(8)  D(5)  E(7)
+  A(5)  F(8)  D(5)  E(7)
+  A(5)  A(5)  F(8)
+```
+
+Each block aligns its own columns — that's the point of breaking, rather
+than having one grid stretch across the whole section. In the desktop
+song map, where the section name sits in a left gutter, the continuation
+lines stack under the first one rather than sliding back to the margin.
+
+It's purely a layout mark: it plays nothing, it's stored as a
+`line_break` mark like any other, and the chart line itself stays a
+single line you can edit. `//` rather than a bare `/` because a slash
+already lives inside chord symbols (`C/G`) — as a whole word a single
+slash would be unambiguous, but doubling it keeps it obvious which is
+meant.
+
 ## Licks — a bit of tab, in among the chords
 
 Some things aren't a chord. When you want to remember the actual notes of
@@ -168,6 +198,7 @@ position you'd actually play.
 | `:\|` | repeat-close barline |
 | `\|1.` | 1st ending (opens a numbered bracket over the run that follows, until the next ending mark or end of line) |
 | `\|2.` | 2nd ending |
+| `//` | line break — start a new line here (layout only; plays nothing) |
 | `%` | `simile` — "play like the previous bar" |
 | `rest` | rest/tacet — "don't play this measure" |
 | `coda` | coda mark (renders a coda indicator; `render.has_coda()` checks for it) |

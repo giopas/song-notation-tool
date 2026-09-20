@@ -97,6 +97,10 @@ _LITERAL_MARKS = {
     "|:": "repeat_open",
     ":|": "repeat_close",
     "%": "simile",
+    # A line break. "//" rather than a bare "/" because a slash already
+    # lives inside chord symbols (C/G) — as a whole word it's unambiguous,
+    # but doubling it keeps it obvious at a glance which is meant.
+    "//": "line_break",
 }
 _WORD_MARKS = {
     "coda": "coda", "segno": "segno", "dc": "dc", "ds": "ds",

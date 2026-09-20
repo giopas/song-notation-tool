@@ -368,10 +368,12 @@ button {
   margin-top: 6px; color: var(--fg); font-size: 13px; line-height: 1.5;
 }
 .sec-preview:empty { margin-top: 0; }
-.sec-preview-fret, .sec-preview-sym, .sec-preview-lick { white-space: pre; }
-/* A lick's string lines sit under the chord row, in the amber the fret
-   numbers use — they're fret positions too. */
-.sec-preview-lick { color: var(--amber); }
+.sec-preview-fret, .sec-preview-sym, .sec-preview-more { white-space: pre; }
+/* Everything after the first fret/symbol pair: a lick's string lines, and
+   the continuation lines of a section broken with //. They're the same
+   colour as the symbol row — amber is reserved for the fret row, and a
+   continuation line is chords, not frets. */
+.sec-preview-more { color: var(--fg); }
 .sec-preview-fret { color: var(--amber); }
 .sec-preview-sym { color: var(--fg); }
 

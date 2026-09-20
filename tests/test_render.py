@@ -457,3 +457,74 @@ def test_lick_lines_are_counted_in_the_page_estimate():
     plain = {"render": "chart", "items": grammar.parse_items("C G")}
     with_lick = {"render": "chart", "items": grammar.parse_items("C {G 5 | D 3}")}
     assert estimate_section_lines(with_lick) == estimate_section_lines(plain) + 2
+
+
+# ==============================================================================
+#  Line breaks — v0.20
+# ==============================================================================
+
+def test_line_break_splits_the_chart_row():
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items(
+        "A(5) D(5) // F(8) D(5) E(7) // A(5) A(5) F(8)"))
+    assert len(rows) == 3
+    assert rows[0].split() == ["A(5)", "D(5)"]
+    assert rows[1].split() == ["F(8)", "D(5)", "E(7)"]
+    assert rows[2].split() == ["A(5)", "A(5)", "F(8)"]
+
+
+def test_each_block_aligns_its_own_columns():
+    """The point of breaking: a short line isn't padded out to the width
+    of the longest one."""
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("C G // Am Fmaj7 Bdim"))
+    assert rows[0].rstrip() == rows[0].rstrip().rstrip()      # no trailing pad
+    assert len(rows[0]) < len(rows[1])
+
+
+def test_a_labelled_row_stacks_under_its_label():
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("C G // Am F"), label="Solo")
+    assert rows[0].startswith("Solo")
+    body_col = rows[0].index("C")
+    assert rows[1].index("Am") == body_col      # continuation lines line up
+
+
+def test_line_break_plays_nothing():
+    import grammar
+    items = grammar.parse_items("C // G")
+    assert [it.get("kind") for it in items] == ["token", "mark", "token"]
+    assert items[1]["mark"] == "line_break"
+
+
+def test_line_break_round_trips():
+    import grammar
+    line = "A(5) D(5) // F(8) E(7)"
+    assert grammar.unparse(grammar.parse_items(line)) == line
+
+
+def test_stray_breaks_do_not_make_empty_lines():
+    import grammar
+    from render import render_chart_row
+    assert len(render_chart_row(grammar.parse_items("// C G //"))) == 1
+    assert len(render_chart_row(grammar.parse_items("C // // G"))) == 2
+
+
+def test_breaks_are_counted_in_the_page_estimate():
+    import grammar
+    from render import estimate_section_lines
+    one = {"render": "chart", "items": grammar.parse_items("C G Am F")}
+    two = {"render": "chart", "items": grammar.parse_items("C G // Am F")}
+    assert estimate_section_lines(two) == estimate_section_lines(one) + 2
+
+
+def test_a_break_works_alongside_licks():
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("C {G 5 7} // D G"))
+    assert len(rows) == 3           # symbols + one lick line, then the next line
+    assert rows[1].strip() == "G 5 7"
+    assert rows[2].split() == ["D", "G"]

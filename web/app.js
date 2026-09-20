@@ -366,13 +366,16 @@ function insertAtCursor(input, text, caretBack) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-/** Lick lines under the chart row — as many as the tallest lick needs. */
+/**
+ * The rows after the first fret/symbol pair: a lick's string lines, and
+ * the continuation lines of a section broken with //.
+ */
 function setExtraPreviewRows(node, rows) {
   const box = node.querySelector(".sec-preview");
-  [...box.querySelectorAll(".sec-preview-lick")].forEach((el) => el.remove());
+  [...box.querySelectorAll(".sec-preview-more")].forEach((el) => el.remove());
   rows.forEach((text) => {
     const div = document.createElement("div");
-    div.className = "sec-preview-lick";
+    div.className = "sec-preview-more";
     div.textContent = text;
     box.appendChild(div);
   });

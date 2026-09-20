@@ -122,11 +122,38 @@ def _lick_lines(item: dict):
     return out
 
 
+def _gutter_width(label: str, indent: int) -> int:
+    """Width of the left column: a label's own gutter, or the plain body
+    indent when there's no label. Matches render_chart_row exactly."""
+    return max(len(label) + 2, 4) if label else indent
+
+
+def split_on_line_breaks(items):
+    """`items` split into the runs between `line_break` marks, empties
+    dropped. One run per printed line."""
+    runs, current = [], []
+    for it in (items or []):
+        if it.get("kind") == "mark" and it.get("mark") == "line_break":
+            if current:
+                runs.append(current)
+            current = []
+        else:
+            current.append(it)
+    if current:
+        runs.append(current)
+    return runs
+
+
 def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
     """
-    Render one section's chart items as two column-aligned text lines:
-    fret numbers above, symbols below. Groups/refs/marks render in the
-    symbol row only (no fret line) — section 7.2.
+    Render one section's chart items as column-aligned text lines: fret
+    numbers above, symbols below, plus a line per string for any lick.
+
+    A `line_break` mark starts a new block, so a long section can be
+    grouped into the phrases you'd write out by hand. Each block aligns
+    its own columns — that's the point of breaking, rather than having one
+    grid stretch across the whole section — and only the first block
+    carries the label.
 
     With no `label`, the rows start at `indent` — the same column the
     export indents its section headers, annotations and free text to, so a
@@ -137,6 +164,27 @@ def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
     """
     if not items:
         return [label.rstrip()] if label else []
+
+    runs = split_on_line_breaks(items)
+    if len(runs) != 1:
+        # Continuation blocks indent to the label's gutter, so every line
+        # of the section stacks under the first one rather than sliding
+        # back to the left margin beneath the name.
+        cont_indent = _gutter_width(label, indent)
+        out = []
+        for i, run in enumerate(runs):
+            out.extend(_render_one_row(run, label, indent) if i == 0
+                       else _render_one_row(run, "", cont_indent))
+        return out or ([label.rstrip()] if label else [])
+    items = runs[0]
+
+    return _render_one_row(items, label, indent)
+
+
+def _render_one_row(items, label: str, indent: int):
+    """One block of a chart row — see render_chart_row."""
+    if not items:
+        return []
 
     frets = [_fret_str(it) for it in items]
     symbols = [_symbol_str(it) for it in items]
@@ -297,12 +345,6 @@ def resolve_references(items, doc: dict, _seen=None, _depth=0):
     return out
 
 
-def _gutter_width(label: str, indent: int) -> int:
-    """Width of the left column: a label's own gutter, or the plain body
-    indent when there's no label. Matches render_chart_row exactly."""
-    return max(len(label) + 2, 4) if label else indent
-
-
 def chart_body_lines(items, label: str = "", indent: int = BODY_INDENT):
     """
     Render a section's (already reference-resolved) items to output lines.
@@ -440,10 +482,12 @@ def estimate_section_lines(section: dict, strings=None) -> int:
     if render_mode in ("chart", "both"):
         chart_items = [it for it in items if it.get("kind") != "measure"]
         if chart_items:
-            lines += 2  # fret row + symbol row
-            # plus however many string lines the tallest lick needs
-            lines += max((len(it.get("lines", [])) for it in chart_items
-                          if it.get("kind") == "lick"), default=0)
+            # one fret + symbol pair per block, plus however many string
+            # lines the tallest lick in each block needs
+            for run in split_on_line_breaks(chart_items) or [[]]:
+                lines += 2
+                lines += max((len(it.get("lines", [])) for it in run
+                              if it.get("kind") == "lick"), default=0)
 
     if render_mode in ("tab", "both"):
         measures = [it for it in items if it.get("kind") == "measure"]

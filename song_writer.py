@@ -85,6 +85,7 @@ import transpose
 import songmap
 import export as songexport
 import examples as songexamples
+import lyrics as songlyrics
 from grammar import ParseError as ChartParseError
 from constants import (
     APP_VERSION as _CONST_APP_VERSION,
@@ -1560,40 +1561,123 @@ class SongNotationApp(tk.Tk):
         body_footer.pack(fill="x", padx=16, pady=(0, 2))
 
         def _split_into_sections():
-            blocks = [b.strip() for b in _re.split(r"\n\s*\n+", txt.get("1.0", "end-1c"))
-                      if b.strip()]
+            """Hand the sheet's blocks out to the sections, one row each.
+
+            Not block N to section N: a song that opens on an instrumental
+            intro had its first verse land on the intro and everything
+            after it one section out of place, and a chorus played three
+            times only ever reached the first of them. So this proposes a
+            mapping (lyrics.py — the same one the browser front end gets)
+            and lets it be corrected before anything is written.
+            """
+            sheet = txt.get("1.0", "end-1c")
+            blocks = songlyrics.split_blocks(sheet)
             if not blocks:
                 messagebox.showinfo("Split into sections",
                                      "Nothing to split — paste some lyrics first.")
                 return
-            existing = self.doc["sections"]
-            preview = ", ".join(
-                (existing[i]["name"] if i < len(existing) else f"(new section {i + 1})")
-                for i in range(len(blocks)))
-            extra = len(blocks) - len(existing)
-            warn = f", adding {extra} new section(s) for the rest" if extra > 0 else ""
-            if not messagebox.askyesno(
-                    "Split into sections",
-                    f"Assign {len(blocks)} lyric block(s) to: {preview}{warn}.\n\n"
-                    "Existing section lyrics will be overwritten where present, and "
-                    "the whole-song lyrics text will be cleared. Continue?"):
+            sections = self.doc["sections"]
+            if not sections:
+                messagebox.showinfo("Split into sections",
+                                     "Add a section to the song first.")
                 return
-            for i, block in enumerate(blocks):
-                if i < len(existing):
-                    existing[i]["lyrics_text"] = block
-                else:
-                    sid = self._new_id("section", "sec")
-                    sec = model.new_section(sid, f"Lyrics {i + 1}",
-                                             instrument=self.default_instrument.get())
-                    sec["lyrics_text"] = block
-                    self.doc["sections"].append(sec)
-            self.doc["lyrics_text"] = ""
-            self.doc["print_lyrics"] = False
-            self.dirty = True
-            self._rebuild_map()
-            messagebox.showinfo("Split into sections",
-                                 f"Assigned lyrics to {len(blocks)} section(s).")
-            dlg.destroy()
+
+            current = songlyrics.current_assignment(blocks, sections)
+            chosen = (current if any(c is not None for c in current)
+                      else songlyrics.suggest(
+                          blocks, sections, songlyrics.repeated_blocks(sheet)))
+
+            NONE_LBL, KEEP_LBL = "— no lyrics —", "— keep what's here —"
+
+            def block_label(i):
+                first = blocks[i].splitlines()[0].strip()
+                extra = len(blocks[i].splitlines()) - 1
+                tail = f"  (+{extra} line{'s' if extra > 1 else ''})" if extra else ""
+                return f"{i + 1} · {first[:44]}{'…' if len(first) > 44 else ''}{tail}"
+
+            win = tk.Toplevel(dlg)
+            win.title("Split lyrics into sections")
+            win.configure(bg=t["bg"])
+            win.grab_set()
+            tk.Label(win, text="One row per section, one block per row. The same "
+                                "block can go to as many sections as sing it.",
+                     bg=t["bg"], fg=t["fg"], font=FONT_TINY,
+                     wraplength=520, justify="left").pack(
+                         anchor="w", padx=16, pady=(12, 6))
+
+            # A long song has more sections than a dialog has height.
+            holder = tk.Frame(win, bg=t["bg"])
+            holder.pack(fill="both", expand=True, padx=16)
+            canvas = tk.Canvas(holder, bg=t["bg"], highlightthickness=0,
+                                height=min(360, 30 * len(sections) + 10))
+            bar = ttk.Scrollbar(holder, orient="vertical", command=canvas.yview)
+            rows = tk.Frame(canvas, bg=t["bg"])
+            rows.bind("<Configure>",
+                      lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+            canvas.create_window((0, 0), window=rows, anchor="nw")
+            canvas.configure(yscrollcommand=bar.set)
+            canvas.pack(side="left", fill="both", expand=True)
+            bar.pack(side="right", fill="y")
+
+            pickers = []
+            for sec, choice in zip(sections, chosen):
+                row = tk.Frame(rows, bg=t["bg"])
+                row.pack(fill="x", pady=1)
+                tk.Label(row, text=f"{sec.get('name', '')}  ({sec.get('type', '')})",
+                         bg=t["bg"], fg=t["fg"], font=FONT_TINY, width=26,
+                         anchor="w").pack(side="left")
+                held = (sec.get("lyrics_text") or "").strip()
+                keeps = bool(held) and held not in blocks
+                values = [NONE_LBL] + ([KEEP_LBL] if keeps else []) + \
+                         [block_label(i) for i in range(len(blocks))]
+                var = tk.StringVar(value=(block_label(choice) if choice is not None
+                                          else (KEEP_LBL if keeps else NONE_LBL)))
+                ttk.Combobox(row, textvariable=var, values=values,
+                             state="readonly", width=46).pack(
+                                 side="left", fill="x", expand=True)
+                pickers.append((var, values, keeps))
+
+            print_var2 = tk.BooleanVar(value=any(
+                s.get("print_lyrics") for s in sections) or bool(
+                    self.doc.get("print_lyrics")))
+            tk.Checkbutton(win, text="Print each section's lyrics on the chart",
+                           variable=print_var2, bg=t["bg"], fg=t["fg"],
+                           selectcolor=t["input_bg"], activebackground=t["bg"],
+                           font=FONT_TINY).pack(anchor="w", padx=16, pady=(8, 2))
+            tk.Label(win, text="The whole-song sheet is kept as it is — add a section "
+                                "later and its blocks are still here to give it one. It "
+                                "stops printing on its own, so the same words don't land "
+                                "on the chart twice.",
+                     bg=t["bg"], fg=t["accent"], font=FONT_TINY,
+                     wraplength=520, justify="left").pack(
+                         anchor="w", padx=16, pady=(0, 6))
+
+            def _assign():
+                assignment = []
+                for var, values, keeps in pickers:
+                    label = var.get()
+                    if label == NONE_LBL:
+                        assignment.append(None)
+                    elif keeps and label == KEEP_LBL:
+                        assignment.append("keep")
+                    else:
+                        assignment.append(values.index(label)
+                                          - (2 if keeps else 1))
+                n = songlyrics.apply_assignment(self.doc, blocks, assignment,
+                                                 print_lyrics=print_var2.get())
+                self.dirty = True
+                self._rebuild_map()
+                win.destroy()
+                dlg.destroy()
+                messagebox.showinfo("Split into sections",
+                                     f"Lyrics assigned to {n} section(s).")
+
+            br2 = tk.Frame(win, bg=t["bg"])
+            br2.pack(fill="x", padx=16, pady=(4, 14))
+            ttk.Button(br2, text="Cancel", command=win.destroy,
+                       style="Normal.TButton").pack(side="right", padx=4)
+            ttk.Button(br2, text="Assign", command=_assign,
+                       style="Accent.TButton").pack(side="right")
 
         def _import_file():
             path = filedialog.askopenfilename(

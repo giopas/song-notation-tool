@@ -76,6 +76,30 @@ often on one sheet instead of two.
   above is a rendering fix, so it shows in TXT, the Preview pane and
   Stage View too.
 
+- **Split a lyric sheet across the sections, and reuse the blocks.**
+  Paste (or import) the whole song's words once, then **Split into
+  sections…**: the sheet is cut on its blank lines and each section gets a
+  row with a dropdown of the blocks, so the same chorus goes to Chorus 1,
+  2 and 3 in one pass. The proposal is made by the new `lyrics.py` and
+  shared by both front ends — a repeated block is the chorus and goes to
+  every Chorus and Refrain section; instrumental sections (Intro, Solo,
+  Interlude, Breakdown, Outro) are stepped over rather than being handed
+  verse one.
+
+  The old split assigned block N to section N, which put the first verse
+  on the intro of any song that opens with one, knocked every later block
+  one section out of place, and reached only the first of three choruses.
+
+  The whole-song sheet is now kept rather than cleared, so a section added
+  next week can still be given one of its blocks — it just stops printing,
+  so the same words don't land on the chart twice. A section holding words
+  that came from somewhere else can be left alone ("keep what's here").
+- **The Lyrics dialog lists the song's sections.** A row of chips under
+  the Scope dropdown, one per section, each with a dot that's filled when
+  that section already has words — the gaps are visible without opening
+  every section in turn, and getting to one is a click. The dropdown
+  itself now names each section's type and marks the ones that have words.
+
 ### Fixed
 - **A fret number went black after the first `//` block in the browser.**
   The server told the front end "the first row is frets" by asking

@@ -51,3 +51,6 @@ songs/
 
 Old - do not commit/
 examples/
+
+# Sample exports delivered into this folder by the Claude desktop session.
+Claude outputs/

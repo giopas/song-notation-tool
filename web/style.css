@@ -600,3 +600,56 @@ button {
    same two colours the PDF uses, so the preview and the paper agree. */
 .sec-preview-more.sec-row-lick { color: var(--blue); }
 .tok-rest { color: var(--lbl-gray); }
+
+
+/* Split lyrics into sections — one row per section: the name on the left,
+   the block it gets on the right. Scrolls, because a long song has more
+   sections than a dialog has height. */
+.split-rows {
+  max-height: 46vh; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 6px; margin: 8px 0;
+}
+.split-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 6px; border-radius: 5px;
+}
+.split-row + .split-row { margin-top: 2px; }
+.split-row:nth-child(odd) { background: rgba(255, 255, 255, 0.025); }
+.split-row-name {
+  flex: 0 0 34%; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* The type reads as a quiet label beside the name, not as part of it. */
+.split-row-type {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--lbl-gray); margin-left: 6px;
+}
+.split-row select { flex: 1 1 auto; min-width: 0; font-size: 12px; }
+
+
+/* The Lyrics dialog's section strip. A dropdown tells you where you are;
+   this tells you where you have been — a filled dot is a section that has
+   words, so the gaps are visible without opening each one in turn. */
+.lyrics-chips {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  margin: 6px 0 2px;
+}
+.lyrics-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--lbl-gray); font-size: 11px; font-family: inherit;
+  cursor: pointer; white-space: nowrap;
+}
+.lyrics-chip:hover { color: var(--fg); border-color: var(--fg); }
+.lyrics-chip.active {
+  color: var(--fg); border-color: var(--accent);
+  background: rgba(233, 69, 96, 0.14);
+}
+.lyrics-chip .chip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  border: 1px solid var(--lbl-gray); background: transparent;
+}
+/* Filled: this section already has words. */
+.lyrics-chip.has-lyrics .chip-dot { background: var(--amber); border-color: var(--amber); }

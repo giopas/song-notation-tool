@@ -285,6 +285,25 @@ It's a property of the song, saved in the `.sng`, so a chart prints the
 same way wherever it's opened, and it applies to TXT, PDF, Print and the
 Preview pane alike.
 
+### Lyrics
+
+**Lyrics** holds the words as a reference layer — never parsed, never
+aligned to the chart automatically, and printed only if you ask. Paste
+them in, import a `.txt`, or use "Search online ↗", which opens a search
+in your browser and pastes nothing back.
+
+The dialog lists the song's sections as chips under the Scope dropdown,
+each with a dot that fills once that section has words, so you can see at
+a glance what's still empty and click straight to it.
+
+**Split into sections…** takes the whole song's sheet, cuts it on its
+blank lines, and gives you one row per section with a dropdown of the
+blocks. A block can go to as many sections as sing it, which is how a
+chorus written once reaches Chorus 1, 2 and 3. The suggestion it opens
+with reads the sheet the way a player would: a block written out twice is
+the chorus, and instrumental sections are stepped over. The sheet itself
+is kept, so a section you add later can still be given one of its blocks.
+
 ### Where your files are kept
 
 Songs live in **`~/Documents/Song Notation Tool`** — under your home

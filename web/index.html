@@ -212,6 +212,11 @@
       <label>Scope
         <select id="lyrics-scope"></select>
       </label>
+      <!-- The song's sections, one chip each: click to write that section's
+           words. The dropdown above still works; this is the same list laid
+           out so you can see at a glance which sections already have lyrics
+           and which are still empty. -->
+      <div id="lyrics-chips" class="lyrics-chips"></div>
       <textarea id="lyrics-textarea" rows="14"
                 placeholder="Paste or type lyrics here…"></textarea>
       <label class="modal-checkbox">
@@ -223,7 +228,7 @@
           <button id="lyrics-import" class="btn subtle">Import from file…</button>
           <button id="lyrics-search" class="btn subtle">Search online ↗</button>
           <button id="lyrics-split" class="btn subtle hidden"
-                  title="Split this text on blank lines and assign one block per section, in order — using existing sections first, then adding new ones for any leftover blocks.">Split into sections…</button>
+                  title="Split this sheet on blank lines and choose which section gets which block. The sheet is kept, so you can come back and give a block to a section you add later.">Split into sections…</button>
           <input id="lyrics-file-input" type="file" accept=".txt,text/plain" class="hidden">
         </div>
         <button id="lyrics-close" class="btn accent">Done</button>
@@ -235,6 +240,29 @@
     </div>
   </div>
 
+
+  <!-- Split lyrics into sections -->
+  <div id="lyrics-split-backdrop" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3>Split lyrics into sections</h3>
+      <p class="modal-hint" style="margin-top:0">
+        One row per section, one block per row. The same block can go to as many
+        sections as sing it — a chorus is written once and played three times.
+      </p>
+      <div id="lyrics-split-rows" class="split-rows"></div>
+      <label class="modal-checkbox">
+        <input id="lyrics-split-print" type="checkbox">
+        Print each section's lyrics on the chart
+      </label>
+      <div class="modal-actions">
+        <button id="lyrics-split-cancel" class="btn subtle">Cancel</button>
+        <button id="lyrics-split-apply" class="btn accent">Assign</button>
+      </div>
+      <p class="modal-hint">The whole-song sheet is kept exactly as it is — add a
+        section later and its blocks are still here to give it one. It stops printing
+        on its own, though, so the same words don't land on the chart twice.</p>
+    </div>
+  </div>
 
   <!-- Notation reference modal -->
   <div id="notation-ref-backdrop" class="modal-backdrop hidden">

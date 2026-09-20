@@ -71,6 +71,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 import export
 import grammar
 import userpaths
+import lyrics as lyrics_mod
 import model
 import songmap
 import transpose
@@ -542,6 +543,26 @@ class Handler(BaseHTTPRequestHandler):
                 lines = export.build_song_lines(
                     doc, instruments=set(instruments) if instruments else None)
                 return self._send_json({"lines": lines})
+
+            if path == "/api/lyrics/split":
+                # Split the whole-song lyric sheet into blocks and propose
+                # which section gets which — the front end shows the
+                # proposal as one row per section to correct, and writes
+                # the answer into the document itself. Shared with the
+                # desktop app's Lyrics dialog so both make the same guess.
+                body = self._read_json_body()
+                doc = model.migrate_document(body.get("doc") or {})
+                sheet = body.get("text")
+                if sheet is None:
+                    sheet = doc.get("lyrics_text") or ""
+                blocks = lyrics_mod.split_blocks(sheet)
+                sections = doc.get("sections", [])
+                return self._send_json({
+                    "blocks": blocks,
+                    "suggested": lyrics_mod.suggest(
+                        blocks, sections, lyrics_mod.repeated_blocks(sheet)),
+                    "current": lyrics_mod.current_assignment(blocks, sections),
+                })
 
             if path == "/api/export.txt" or path == "/api/export.pdf":
                 # Ad-hoc export of an unsaved doc straight from the editor.

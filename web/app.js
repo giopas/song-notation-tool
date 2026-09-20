@@ -29,6 +29,9 @@ const API = {
   render: (doc, instruments) => fetchJSON("/api/render", {
     method: "POST", body: JSON.stringify({ doc, instruments }),
   }),
+  splitLyrics: (doc, text) => fetchJSON("/api/lyrics/split", {
+    method: "POST", body: JSON.stringify({ doc, text }),
+  }),
   quit: () => fetchJSON("/api/quit", { method: "POST" }),
 };
 
@@ -1003,10 +1006,17 @@ function closeNewSongModal() {
 //  Transpose dialog. Non-destructive: sets doc.transpose / section.transpose,
 //  same fields the desktop app and render-time engine already use.
 // ---------------------------------------------------------------------------
-function scopeOptionsHtml() {
+function scopeOptionsHtml(marked) {
   const songOpt = `<option value="__song__">Whole song</option>`;
   const sectionOpts = currentDoc.sections
-    .map((s) => `<option value="${s.id}">${escapeHtml(s.name || s.id)}</option>`)
+    .map((s) => {
+      // In the Lyrics dialog the point of the list is *which sections still
+      // need words*, so each one says whether it has any. Transpose doesn't
+      // care, and asks for the plain names.
+      const dot = marked && (s.lyrics_text || "").trim() ? "• " : "";
+      const type = s.type ? `  (${s.type})` : "";
+      return `<option value="${s.id}">${dot}${escapeHtml(s.name || s.id)}${escapeHtml(type)}</option>`;
+    })
     .join("");
   return songOpt + sectionOpts;
 }
@@ -1050,16 +1060,48 @@ function lyricsTarget() {
   if (scope === "__song__") return currentDoc;
   return currentDoc.sections.find((s) => s.id === scope);
 }
+// The song's sections as a row of chips inside the Lyrics dialog. The Scope
+// dropdown can only show you where you are; this shows the whole song at
+// once, with a filled dot on every section that already has words — so the
+// gaps are visible without opening each section in turn, and getting to one
+// is a click rather than a hunt through a list.
+function renderLyricsChips() {
+  const box = document.getElementById("lyrics-chips");
+  const scope = document.getElementById("lyrics-scope").value;
+  box.innerHTML = "";
+  const chip = (value, label, hasLyrics) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "lyrics-chip" + (value === scope ? " active" : "")
+      + (hasLyrics ? " has-lyrics" : "");
+    const dot = document.createElement("span");
+    dot.className = "chip-dot";
+    b.appendChild(dot);
+    b.appendChild(document.createTextNode(label));
+    b.title = hasLyrics ? "Has lyrics — click to edit" : "No lyrics yet — click to add";
+    b.addEventListener("click", () => {
+      document.getElementById("lyrics-scope").value = value;
+      loadLyricsForScope();
+    });
+    box.appendChild(b);
+  };
+  chip("__song__", "Whole song", !!(currentDoc.lyrics_text || "").trim());
+  currentDoc.sections.forEach((sec) => {
+    chip(sec.id, sec.name || sec.id, !!(sec.lyrics_text || "").trim());
+  });
+}
+
 function loadLyricsForScope() {
   const t = lyricsTarget();
   document.getElementById("lyrics-textarea").value = (t && t.lyrics_text) || "";
   document.getElementById("lyrics-print").checked = !!(t && t.print_lyrics);
   const isSongScope = document.getElementById("lyrics-scope").value === "__song__";
   document.getElementById("lyrics-split").classList.toggle("hidden", !isSongScope);
+  renderLyricsChips();
 }
 function openLyricsModal() {
   if (!currentDoc) { toast("Open a song first"); return; }
-  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml();
+  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml(true);
   document.getElementById("lyrics-scope").value = "__song__";
   loadLyricsForScope();
   document.getElementById("lyrics-modal-backdrop").classList.remove("hidden");
@@ -1068,47 +1110,134 @@ function closeLyricsModal() {
   document.getElementById("lyrics-modal-backdrop").classList.add("hidden");
 }
 
-// Splits the whole-song lyrics text on blank lines and assigns one block
-// per section in order — the existing sections first, then a new section
-// per leftover block — so pasted-in lyrics (from a file or a web search)
-// can be lined up against the song's real structure in one step instead of
-// copying each verse/chorus in by hand via the Scope dropdown.
-function splitLyricsIntoSections() {
-  const textarea = document.getElementById("lyrics-textarea");
-  const blocks = textarea.value.split(/\n\s*\n+/).map((b) => b.trim()).filter(Boolean);
-  if (!blocks.length) { toast("Nothing to split — paste some lyrics first."); return; }
+// Split the whole-song lyric sheet across the sections.
+//
+// The old version of this assigned block N to section N and hoped: a song
+// that opens on an instrumental intro had its first verse land on the
+// intro and every block after it one section out of place, and a chorus
+// played three times only ever reached the first of them. So the split is
+// now a proposal you correct — one row per section, one block per row,
+// and the same block free to go to as many sections as sing it.
+//
+// The server does the splitting and the guessing (lyrics.py), so the
+// desktop app's dialog makes exactly the same proposal from the same text.
+let splitBlocks = [];
 
-  const existing = currentDoc.sections;
-  const preview = blocks.map((_, i) =>
-    i < existing.length ? (existing[i].name || existing[i].id) : `(new section ${i + 1})`
-  ).join(", ");
-  const extra = blocks.length - existing.length;
-  const warn = extra > 0 ? `, adding ${extra} new section(s) for the rest` : "";
-  if (!confirm(`Assign ${blocks.length} lyric block(s) to: ${preview}${warn}. ` +
-               `Existing section lyrics will be overwritten where present, and the ` +
-               `whole-song lyrics text will be cleared. Continue?`)) {
+const KEEP = "keep";   // a section holding words that came from elsewhere
+
+function blockLabel(block, i) {
+  const first = block.split("\n")[0].trim();
+  const rest = block.split("\n").length - 1;
+  const tail = rest ? ` … (+${rest} line${rest > 1 ? "s" : ""})` : "";
+  return `${i + 1} · ${first.slice(0, 46)}${first.length > 46 ? "…" : ""}${tail}`;
+}
+
+function splitRow(sec, choice) {
+  const row = document.createElement("div");
+  row.className = "split-row";
+
+  const name = document.createElement("div");
+  name.className = "split-row-name";
+  name.textContent = sec.name || sec.id;
+  const type = document.createElement("span");
+  type.className = "split-row-type";
+  type.textContent = sec.type || "";
+  name.appendChild(type);
+
+  const sel = document.createElement("select");
+  sel.dataset.sectionId = sec.id;
+  const opt = (value, label) => {
+    const o = document.createElement("option");
+    o.value = value; o.textContent = label;
+    sel.appendChild(o);
+  };
+  opt("", "— no lyrics —");
+  // Words this section already holds that aren't in the sheet came from
+  // somewhere else — a hand-typed line, an older split. Offer to leave
+  // them alone rather than quietly overwriting them.
+  const held = (sec.lyrics_text || "").trim();
+  const heldIsBlock = splitBlocks.some((b) => b.trim() === held);
+  if (held && !heldIsBlock) opt(KEEP, "— keep what's here —");
+  splitBlocks.forEach((b, i) => opt(String(i), blockLabel(b, i)));
+
+  sel.value = choice === null || choice === undefined ? "" : String(choice);
+  row.appendChild(name);
+  row.appendChild(sel);
+  return row;
+}
+
+async function splitLyricsIntoSections() {
+  const text = document.getElementById("lyrics-textarea").value;
+  if (!text.trim()) { toast("Nothing to split — paste some lyrics first."); return; }
+  if (!currentDoc.sections.length) { toast("Add a section first"); return; }
+  // Whatever is in the box is the sheet being split, typed or pasted a
+  // moment ago and not yet written back to the document.
+  currentDoc.lyrics_text = text;
+
+  let result;
+  try {
+    result = await API.splitLyrics(currentDoc, text);
+  } catch (err) {
+    toast(String(err));
     return;
   }
+  splitBlocks = result.blocks || [];
+  if (!splitBlocks.length) { toast("Nothing to split — paste some lyrics first."); return; }
 
-  blocks.forEach((block, i) => {
-    if (i < existing.length) {
-      existing[i].lyrics_text = block;
-    } else {
-      const sec = makeSection(`Lyrics ${i + 1}`, META.section_types[1] || "Verse");
-      sec.lyrics_text = block;
-      currentDoc.sections.push(sec);
+  // What a section already holds wins over a fresh guess: re-opening this
+  // shouldn't propose undoing the corrections made last time.
+  const current = result.current || [];
+  const suggested = result.suggested || [];
+  const anyCurrent = current.some((c) => c !== null && c !== undefined);
+  const rows = document.getElementById("lyrics-split-rows");
+  rows.innerHTML = "";
+  currentDoc.sections.forEach((sec, i) => {
+    let choice = anyCurrent ? current[i] : suggested[i];
+    if ((choice === null || choice === undefined) && (sec.lyrics_text || "").trim()
+        && !splitBlocks.some((b) => b.trim() === (sec.lyrics_text || "").trim())) {
+      choice = KEEP;
     }
+    rows.appendChild(splitRow(sec, choice));
   });
-  currentDoc.lyrics_text = "";
-  currentDoc.print_lyrics = false;
+  document.getElementById("lyrics-split-print").checked =
+    currentDoc.sections.some((s) => s.print_lyrics) || !!currentDoc.print_lyrics;
+  document.getElementById("lyrics-split-backdrop").classList.remove("hidden");
+}
 
+function closeSplitModal() {
+  document.getElementById("lyrics-split-backdrop").classList.add("hidden");
+}
+
+function applyLyricsSplit() {
+  const print = document.getElementById("lyrics-split-print").checked;
+  let assigned = 0;
+  [...document.querySelectorAll("#lyrics-split-rows select")].forEach((sel) => {
+    const sec = currentDoc.sections.find((s) => s.id === sel.dataset.sectionId);
+    if (!sec) return;
+    if (sel.value === KEEP) return;
+    if (sel.value === "") {
+      sec.lyrics_text = "";
+      sec.print_lyrics = false;
+      return;
+    }
+    sec.lyrics_text = splitBlocks[Number(sel.value)] || "";
+    sec.print_lyrics = print;
+    assigned += 1;
+  });
+  // The sheet stays — it's the source these blocks came from, and the
+  // reason a section added next week can still be given one. It just
+  // stops printing, so the same words don't land on the chart twice.
+  if (assigned) currentDoc.print_lyrics = false;
+
+  closeSplitModal();
   renderEditor();
   schedulePreviewUpdate();
-  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml();
-  document.getElementById("lyrics-scope").value = currentDoc.sections[0].id;
+  document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml(true);
+  document.getElementById("lyrics-scope").value = "__song__";
   loadLyricsForScope();
-  toast(`Assigned lyrics to ${blocks.length} section(s) — remember to Save`);
+  toast(`Lyrics assigned to ${assigned} section(s) — remember to Save`);
 }
+
 function openSearchLyricsModal() {
   const meta = (currentDoc && currentDoc.meta) || {};
   document.getElementById("lyrics-search-title").value = meta.title || "";
@@ -1246,13 +1375,17 @@ async function init() {
   document.getElementById("lyrics-textarea").addEventListener("input", debounce(() => {
     const t = lyricsTarget();
     if (t) t.lyrics_text = document.getElementById("lyrics-textarea").value;
+    renderLyricsChips();
   }, 200));
   document.getElementById("lyrics-print").addEventListener("change", (e) => {
     const t = lyricsTarget();
     if (t) t.print_lyrics = e.target.checked;
     schedulePreviewUpdate();
   });
-  document.getElementById("lyrics-split").addEventListener("click", splitLyricsIntoSections);
+  document.getElementById("lyrics-split").addEventListener("click",
+    () => splitLyricsIntoSections().catch((e) => toast(String(e))));
+  document.getElementById("lyrics-split-cancel").addEventListener("click", closeSplitModal);
+  document.getElementById("lyrics-split-apply").addEventListener("click", applyLyricsSplit);
   document.getElementById("lyrics-import").addEventListener("click", () =>
     document.getElementById("lyrics-file-input").click());
   document.getElementById("lyrics-file-input").addEventListener("change", (e) => {

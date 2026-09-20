@@ -128,19 +128,28 @@ def _gutter_width(label: str, indent: int) -> int:
     return max(len(label) + 2, 4) if label else indent
 
 
+# How far one ">" pushes a line in. Wide enough to read as deliberate at a
+# glance from a music stand, narrow enough that a couple of levels don't
+# eat the page.
+INDENT_STEP = 6
+
+
 def split_on_line_breaks(items):
-    """`items` split into the runs between `line_break` marks, empties
-    dropped. One run per printed line."""
-    runs, current = [], []
+    """
+    `items` split into the runs between `line_break` marks, empties
+    dropped. Returns (indent_level, run) pairs — one per printed line,
+    where the level is the count of ">" on the break that started it.
+    """
+    runs, current, level = [], [], 0
     for it in (items or []):
         if it.get("kind") == "mark" and it.get("mark") == "line_break":
             if current:
-                runs.append(current)
-            current = []
+                runs.append((level, current))
+            current, level = [], int(it.get("indent", 0))
         else:
             current.append(it)
     if current:
-        runs.append(current)
+        runs.append((level, current))
     return runs
 
 
@@ -172,11 +181,14 @@ def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
         # back to the left margin beneath the name.
         cont_indent = _gutter_width(label, indent)
         out = []
-        for i, run in enumerate(runs):
-            out.extend(_render_one_row(run, label, indent) if i == 0
-                       else _render_one_row(run, "", cont_indent))
+        for i, (level, run) in enumerate(runs):
+            step = level * INDENT_STEP
+            if i == 0:
+                out.extend(_render_one_row(run, label, indent + step))
+            else:
+                out.extend(_render_one_row(run, "", cont_indent + step))
         return out or ([label.rstrip()] if label else [])
-    items = runs[0]
+    _, items = runs[0]
 
     return _render_one_row(items, label, indent)
 
@@ -484,7 +496,7 @@ def estimate_section_lines(section: dict, strings=None) -> int:
         if chart_items:
             # one fret + symbol pair per block, plus however many string
             # lines the tallest lick in each block needs
-            for run in split_on_line_breaks(chart_items) or [[]]:
+            for _level, run in split_on_line_breaks(chart_items) or [(0, [])]:
                 lines += 2
                 lines += max((len(it.get("lines", [])) for it in run
                               if it.get("kind") == "lick"), default=0)

@@ -107,6 +107,9 @@ _WORD_MARKS = {
     "rest": "rest",
 }
 _ENDING_RE = re.compile(r'^\|(\d)\.$')
+# "//" breaks to a new line; each ">" after it pushes that line in one
+# step, so a phrase can sit visibly inside the one above it.
+_BREAK_RE = re.compile(r'^//(>*)$')
 
 
 def _match_mark(word: str):
@@ -320,6 +323,10 @@ def parse(text: str):
         if tok.startswith('{'):
             items.append(_parse_lick(tok))
             continue
+        brk = _BREAK_RE.match(tok)
+        if brk:
+            items.append(make_mark("line_break", indent=len(brk.group(1))))
+            continue
         mk = _match_mark(tok)
         if mk:
             items.append(make_mark(mk))
@@ -343,6 +350,8 @@ def _unparse_item(it: dict) -> str:
     if k == "lick":
         return _unparse_lick(it)
     if k == "mark":
+        if it["mark"] == "line_break":
+            return "//" + ">" * int(it.get("indent", 0))
         return _MARK_TO_TEXT[it["mark"]]
     if k == "group":
         inner = " ".join(_unparse_item(x) for x in it["items"])

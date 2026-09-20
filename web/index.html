@@ -54,7 +54,9 @@
         in the section header) to show an editable tablature grid. Add measures with the
         "+ Measure" button and type fret numbers into the cells.</li>
       <li><strong>Long sections</strong>: put <code>//</code> where you want the
-        chart to break to a new line, and each line aligns its own columns.</li>
+        chart to break to a new line, and each line aligns its own columns.
+        <code>//&gt;</code> breaks <em>and</em> indents, so a phrase can sit
+        inside the one above it.</li>
       <li><strong>Licks</strong>: write a short tab figure inline with
         <code>{G 5 7 5 | D - - 3}</code> — one line per string, printed in among
         the chords at the point it's played.</li>
@@ -247,6 +249,7 @@
             <tr><td>Standalone repeat</td><td><code>xN</code> right after any item</td><td><code>Am x3</code></td></tr>
             <tr><td>Annotation</td><td>Double-quoted text, or the Annotation field under the section</td><td><code>"keep it simple"</code></td></tr>
             <tr><td>Line break</td><td><code>//</code> anywhere on the line</td><td><code>A(5) D(5) // F(8) D(5)</code></td></tr>
+            <tr><td>Line break, indented</td><td><code>//&gt;</code> — one <code>&gt;</code> per step of indent</td><td><code>A(5) //&gt; F(8) //&gt;&gt; D(5)</code></td></tr>
             <tr><td>Lick (inline tab)</td><td><code>{ }</code> with one <code>|</code>-separated line per string: its name, then its frets</td><td><code>{G 5 7 5 | D - - 3}</code></td></tr>
             <tr><td>Riff reference</td><td>Bare identifier (not a chord name)</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
             <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
@@ -267,6 +270,13 @@
           rather than having one grid stretch across the whole section. It's
           purely a layout mark: it plays nothing, and the chart line itself
           stays a single line you can edit.</p>
+        <p>Add <code>&gt;</code> to push that line in — <code>//&gt;</code> for one
+          step, <code>//&gt;&gt;</code> for two — so a phrase can sit visibly
+          inside the one above it:</p>
+        <p><code>A(5) D(5) //&gt; F(8) D(5) E(7) // A(5) A(5) F(8)</code></p>
+        <pre>  A(5)  D(5)
+        F(8)  D(5)  E(7)
+  A(5)  A(5)  F(8)</pre>
 
         <h4>Licks — a bit of tab, in among the chords</h4>
         <p>Some things aren't a chord. When you want to remember the actual
@@ -305,6 +315,8 @@
                     instead, then carry on. The usual "two different last bars" case.</td></tr>
             <tr><td><code>//</code></td><td>Line break</td>
                 <td>Layout only — start a new line here. Plays nothing.</td></tr>
+            <tr><td><code>//&gt;</code></td><td>Line break, indented</td>
+                <td>As above, with the new line pushed in one step per <code>&gt;</code>.</td></tr>
             <tr><td><code>%</code></td><td>Simile</td>
                 <td>Play this bar exactly like the previous one. Saves rewriting a
                     groove that doesn't change.</td></tr>
@@ -384,6 +396,7 @@
              back from the end to leave the caret (e.g. inside [ ] or " "). -->
         <div class="sec-insert-strip" title="Insert notation at the cursor">
           <button type="button" class="ins-btn" data-ins="//" title="Line break — start a new line here in the export, print and preview">//</button>
+          <button type="button" class="ins-btn" data-ins="//&gt;" title="Line break, indented — start a new line pushed in one step. Add more &gt; for deeper.">//&gt;</button>
           <button type="button" class="ins-btn" data-ins="rest" title="Rest / tacet — a measure you don't play">rest</button>
           <button type="button" class="ins-btn" data-ins="%" title="Simile — play like the previous bar">%</button>
           <button type="button" class="ins-btn" data-ins="|:" title="Repeat-open barline">|:</button>

@@ -65,7 +65,8 @@ whichever way you made it.
   remember the spelling, and a Notation panel explaining what each one
   tells a player to do
 - **Line breaks** — `//` on a chart line breaks the section into the
-  phrases you'd write by hand, each line aligning its own columns
+  phrases you'd write by hand, each line aligning its own columns;
+  `//>` breaks *and* indents, so a phrase sits inside the one above it
 - **Licks** — `{G 5 7 5 | D - - 3}` writes a short tab figure inline, at
   the point it's played, printed as a small tab block in among the chords
   instead of in a separate grid; transposes with the section

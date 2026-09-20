@@ -79,10 +79,15 @@ def make_lick(lines):
     return {"kind": "lick", "lines": out}
 
 
-def make_mark(mark):
+def make_mark(mark, indent: int = 0):
+    """`indent` applies to `line_break` only: how many steps the line it
+    starts is pushed in by. Absent or 0 means flush with the others."""
     if mark not in MARK_NAMES:
         raise ValueError(f"unknown mark: {mark!r}")
-    return {"kind": "mark", "mark": mark}
+    out = {"kind": "mark", "mark": mark}
+    if mark == "line_break" and indent:
+        out["indent"] = int(indent)
+    return out
 
 
 # ==============================================================================

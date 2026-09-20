@@ -41,6 +41,24 @@ sentence on it.
   than sliding back to the margin. Purely a layout mark: it plays
   nothing, the chart line stays a single editable line, and the TXT, PDF,
   Print and Preview all honour it. `//` is on the quick-insert palette.
+
+  Adding `>` pushes that line in — `//>` for one step, `//>>` for two — so
+  a phrase can sit visibly inside the one above it:
+
+  ```
+  A(5) D(5) //> F(8) D(5) E(7) // A(5) A(5) F(8)
+  ```
+  ```
+    A(5)  D(5)
+          F(8)  D(5)  E(7)
+    A(5)  A(5)  F(8)
+  ```
+
+  The indent is relative to whatever the line would otherwise start at,
+  so it behaves the same in the export and in the desktop song map, where
+  lines already sit in the section-name gutter. Stored as an `indent`
+  count on the break mark, and left off entirely when it's zero, so
+  existing documents are byte-identical.
 - **Licks — a bit of tab, in among the chords.** Some things aren't a
   chord. `{G 5 7 5 | D - - 3}` in a chart line writes a short tab figure
   at the point it's played: one `|`-separated line per string, its name

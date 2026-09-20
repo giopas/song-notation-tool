@@ -528,3 +528,44 @@ def test_a_break_works_alongside_licks():
     assert len(rows) == 3           # symbols + one lick line, then the next line
     assert rows[1].strip() == "G 5 7"
     assert rows[2].split() == ["D", "G"]
+
+
+def test_indented_break_pushes_its_line_in():
+    import grammar
+    from render import render_chart_row, INDENT_STEP
+    rows = render_chart_row(grammar.parse_items(
+        "A(5) D(5) //> F(8) D(5) E(7) // A(5) A(5) F(8)"))
+    assert len(rows) == 3
+    flush = rows[0].index("A(5)")
+    assert rows[1].index("F(8)") == flush + INDENT_STEP
+    assert rows[2].index("A(5)") == flush        # back out again
+
+
+def test_indent_levels_stack():
+    import grammar
+    from render import render_chart_row, INDENT_STEP
+    rows = render_chart_row(grammar.parse_items("C //> G //>> Am"))
+    base = rows[0].index("C")
+    assert rows[1].index("G") == base + INDENT_STEP
+    assert rows[2].index("Am") == base + 2 * INDENT_STEP
+
+
+def test_indent_is_relative_to_a_label_gutter():
+    import grammar
+    from render import render_chart_row, INDENT_STEP
+    rows = render_chart_row(grammar.parse_items("C //> G"), label="Solo")
+    assert rows[1].index("G") == rows[0].index("C") + INDENT_STEP
+
+
+def test_indented_break_round_trips():
+    import grammar
+    for line in ("C //> G", "C //>> G", "C // G"):
+        assert grammar.unparse(grammar.parse_items(line)) == line
+
+
+def test_a_plain_break_carries_no_indent_field():
+    import grammar
+    plain = grammar.parse_items("C // G")[1]
+    pushed = grammar.parse_items("C //> G")[1]
+    assert "indent" not in plain
+    assert pushed["indent"] == 1

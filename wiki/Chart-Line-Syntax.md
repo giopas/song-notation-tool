@@ -151,6 +151,24 @@ than having one grid stretch across the whole section. In the desktop
 song map, where the section name sits in a left gutter, the continuation
 lines stack under the first one rather than sliding back to the margin.
 
+Adding `>` pushes that line in — `//>` for one step, `//>>` for two — so
+a phrase can sit visibly inside the one above it:
+
+```
+A(5) D(5) //> F(8) D(5) E(7) // A(5) A(5) F(8)
+```
+
+```
+  A(5)  D(5)
+        F(8)  D(5)  E(7)
+  A(5)  A(5)  F(8)
+```
+
+The indent is relative to wherever the line would otherwise start, so it
+reads the same in the export and in the desktop song map, where lines
+already sit in the section-name gutter. One step is
+`render.INDENT_STEP` characters.
+
 It's purely a layout mark: it plays nothing, it's stored as a
 `line_break` mark like any other, and the chart line itself stays a
 single line you can edit. `//` rather than a bare `/` because a slash
@@ -199,6 +217,7 @@ position you'd actually play.
 | `\|1.` | 1st ending (opens a numbered bracket over the run that follows, until the next ending mark or end of line) |
 | `\|2.` | 2nd ending |
 | `//` | line break — start a new line here (layout only; plays nothing) |
+| `//>` | line break, indented one step per `>` |
 | `%` | `simile` — "play like the previous bar" |
 | `rest` | rest/tacet — "don't play this measure" |
 | `coda` | coda mark (renders a coda indicator; `render.has_coda()` checks for it) |

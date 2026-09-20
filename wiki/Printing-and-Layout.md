@@ -64,6 +64,11 @@ the edge of the paper was never "fitted" by leaving it there. There's a
 legibility floor (`export.MIN_FIT_SCALE`) below which it stops — past
 that point the honest answer is landscape, or fewer measures per line.
 
+The song title and the meta line are set in a proportional face, so they
+aren't covered by that monospace width bound — they cap their own size
+independently instead. A long title shrinks to fit rather than dragging
+the whole chart's scale down with it.
+
 Scale and colour are PDF concerns; the TXT export is plain text and
 ignores both.
 

@@ -40,3 +40,11 @@ editor rather than a browser:
   each release was built against
 - [CONTRIBUTING.md](https://github.com/giopas/song-notation-tool/blob/main/CONTRIBUTING.md)
   — how to report bugs or suggest features
+
+---
+
+These pages are published from `wiki/` in the
+[main repository](https://github.com/giopas/song-notation-tool), so they
+travel with the code they describe. Edits made here in the wiki's own UI
+are overwritten the next time it publishes — send a pull request against
+`wiki/` instead.

@@ -312,6 +312,15 @@ See [ROADMAP.md](ROADMAP.md) for planned features, and
 
 ---
 
+## 📚 Documentation
+
+The [wiki](https://github.com/giopas/song-notation-tool/wiki) has the
+long-form pages — chart-line syntax, printing and page layout, CLI and
+web use, and the architecture. It's published from `wiki/` in this
+repository, so it can't drift from the code it documents.
+
+---
+
 ## 🛠️ Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for how sessions on this project are

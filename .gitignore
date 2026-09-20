@@ -30,6 +30,11 @@ song_writer_v.0.1[0-4].py
 # but keep the curated examples/ folder, which ships with the repo.
 *.sng
 
+# A local clone of the GitHub wiki repository. `wiki/` in this repo is the
+# source of truth and a workflow publishes it, so a hand clone here is only
+# ever a stale copy waiting to be confused for the real thing.
+song-notation-tool.wiki/
+
 # Legacy in-repo songs folder. Songs now live under
 # ~/Documents/Song Notation Tool and are moved out of here automatically
 # on first run; this stays ignored so an old checkout can't commit them.

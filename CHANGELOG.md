@@ -102,6 +102,15 @@ sentence on it.
   `SNT_DEBUG_LAUNCH=1` prints the full traceback.
 
 ### Changed
+- **The wiki is published from this repository.** `wiki/` is now the
+  source of truth and a workflow copies it to the GitHub wiki when a
+  change lands on `main` — so a documentation edit is reviewed in the
+  same commit as the code it describes, and one push updates both.
+  Previously the wiki was a separate clone with its own commits, which
+  meant it could sit at a different revision from the code indefinitely
+  (and did). The sync is one-way and total, so `wiki/` is the only place
+  to edit; the workflow can be re-run by hand from the Actions tab if the
+  wiki ever drifts.
 - **Every export carries the project link in its footer** — TXT and PDF
   alike. A chart handed to a bandmate is the only place its reader can
   look to find out what made it. The URL lives in `constants.APP_URL`,

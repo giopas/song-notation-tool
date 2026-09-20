@@ -50,6 +50,29 @@ display, which this environment often doesn't have.
 - Prefer fixing a shared root cause (e.g. one canonical `ENHARMONIC` table)
   over patching each symptom separately.
 
+## Documentation
+
+Three places, and a change usually touches more than one:
+
+- `README.md` — what the program does and how to run it. Features, not
+  fixes.
+- `CHANGELOG.md` — every change, with a short "why" paragraph at the top
+  of each version's entry. This is where fixes are recorded.
+- `wiki/` — the long-form pages (chart-line syntax, printing and layout,
+  CLI and web use, architecture).
+
+**`wiki/` in this repository is the wiki.** GitHub serves wikis from a
+separate git repository, so editing the wiki directly means a second
+commit in a second clone — easy to forget, and easy to leave behind the
+code it documents. Instead, edit `wiki/` alongside the change it
+describes and `.github/workflows/publish-wiki.yml` copies it to the wiki
+when it lands on `main`. One commit, one push, both updated.
+
+The sync is one-way and total: a page deleted from `wiki/` is deleted
+from the wiki, and a page created through the wiki's web UI is removed on
+the next run. If the wiki has drifted, fix `wiki/` and re-run the
+workflow from the Actions tab rather than editing the wiki by hand.
+
 ## Releasing
 
 1. Update `CHANGELOG.md` — a short "why" paragraph at the top of the

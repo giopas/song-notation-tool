@@ -1,0 +1,58 @@
+# Publish the wiki from this repository.
+#
+# GitHub wikis are a separate git repository (<repo>.wiki.git), which means
+# a wiki edit would otherwise be a second commit in a second clone, easy to
+# forget and easy to leave behind the code it documents. So `wiki/` in this
+# repository is the source of truth, reviewed in the same pull request as
+# the change it describes, and this workflow copies it to the wiki whenever
+# it lands on main. One commit, one push, both updated.
+#
+# The sync is one-way and total: a page deleted from `wiki/` is deleted from
+# the wiki, and a page created through the wiki's web UI is removed the next
+# time this runs. Edit `wiki/` — never the wiki directly.
+
+name: Publish wiki
+
+on:
+  push:
+    branches: [main]
+    paths: ['wiki/**']
+  workflow_dispatch:      # for a manual re-sync after editing the wiki by hand
+
+permissions:
+  contents: write         # pushing to the wiki repository needs this
+
+concurrency:
+  group: publish-wiki     # never let two runs race to push the same pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Clone the wiki
+        run: |
+          git clone --depth 1 \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" \
+            wiki-repo
+
+      - name: Copy the pages across
+        run: |
+          find wiki-repo -maxdepth 1 -name '*.md' -delete
+          cp wiki/*.md wiki-repo/
+
+      - name: Commit and push, if anything changed
+        working-directory: wiki-repo
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki already matches wiki/ — nothing to publish."
+            exit 0
+          fi
+          git commit -m "Publish wiki from ${GITHUB_SHA::7}"
+          git push

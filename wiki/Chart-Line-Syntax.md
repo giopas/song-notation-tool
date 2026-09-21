@@ -38,8 +38,21 @@ after the closing bracket (no space) to repeat it:
 ```
 
 plays that pair twice before continuing to whatever comes next on the
-line. A repeat also works standalone right after any item, block
-reference, or section reference — `xN` glued on with no space.
+line. A space before the `xN` is fine too.
+
+A repeat also works after a riff or a section reference — but there it
+**needs the space**: `riff1 x3`, `=verse1 x2`. Glued on, it becomes part
+of the name, so `riff1x3` looks for a riff *called* "riff1x3", and when
+there isn't one it prints the bare name instead of an error. A lick
+takes either form, `{Riff1}x3` or `{Riff1} x3`, since the brace ends
+its name. A single chord can't carry a repeat on its own — wrap it,
+`[Am]x3`.
+
+| After | Repeat | Transpose shift |
+|---|---|---|
+| a group `[…]` or a lick `{…}` | `[5A 7D]x2` or `[5A 7D] x2` | not allowed |
+| a riff or section reference | `riff1 x3`, `=verse1 x2` — **with** the space | `riff1 +2`, `=verse1 -1` |
+| a plain chord | not allowed — `[Am]x3` | not allowed |
 
 ## Annotations
 
@@ -124,16 +137,19 @@ rename can't leave a card showing a dangling `=Old_Name`.
 
 ## Transpose shift
 
-A `+N` or `-N` glued onto a block or section reference (or a group's
-closing bracket, alongside its repeat) shifts that reference's
-resolved chords by N semitones without touching the referenced
-riff/section itself:
+A `+N` or `-N`, as its own word after a riff or section reference,
+shifts that reference's resolved chords by N semitones without touching
+the referenced riff/section itself. With a repeat, the shift comes
+after it:
 
 ```
-riff1+2
-=verse1-1
-[5A 7D]x2+3
+riff1 +2
+=verse1 -1
+riff1 x2 +3
 ```
+
+A shift isn't valid after a group or a lick — to move a group, put it in
+a riff and shift the reference, or transpose the whole section.
 
 ## Breaking a section over several lines
 
@@ -141,16 +157,20 @@ A long section reads better grouped into the phrases you'd write out by
 hand. `//` anywhere on the chart line starts a new line at that point:
 
 ```
-A(5) D(5) // F(8) D(5) E(7) // A(5) F(8) D(5) E(7) // A(5) A(5) F(8)
+5A 5D // 8F 5D 7E // 5A 8F 5D 7E // 5A 5A 8F
 ```
 
 renders as
 
 ```
-  A(5)  D(5)
-  F(8)  D(5)  E(7)
-  A(5)  F(8)  D(5)  E(7)
-  A(5)  A(5)  F(8)
+  5  5
+  A  D
+  8  5  7
+  F  D  E
+  5  8  5  7
+  A  F  D  E
+  5  5  8
+  A  A  F
 ```
 
 Each block aligns its own columns — that's the point of breaking, rather
@@ -162,13 +182,16 @@ Adding `>` pushes that line in — `//>` for one step, `//>>` for two — so
 a phrase can sit visibly inside the one above it:
 
 ```
-A(5) D(5) //> F(8) D(5) E(7) // A(5) A(5) F(8)
+5A 5D //> 8F 5D 7E // 5A 5A 8F
 ```
 
 ```
-  A(5)  D(5)
-        F(8)  D(5)  E(7)
-  A(5)  A(5)  F(8)
+  5  5
+  A  D
+        8  5  7
+        F  D  E
+  5  5  8
+  A  A  F
 ```
 
 The indent is relative to wherever the line would otherwise start, so it

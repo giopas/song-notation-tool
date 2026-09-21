@@ -4,6 +4,48 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.26.2] — 2026-09-21
+
+### Fixed
+- **The Notation reference taught syntax that doesn't work.** Reviewing
+  the new screenshots turned up four rows whose examples the parser
+  rejects or silently misreads:
+  - Line breaks were shown as `A(5) D(5) // F(8) D(5)`. That parses — as
+    a chord literally named "A(5)" — so it printed "A(5)" instead of
+    fret 5 over A. Now `5A 5D // 8F 5D`, the form everything else uses.
+  - A standalone repeat was shown as `Am x3`, which is an error: a
+    repeat goes after a group, a lick, or a riff or section reference.
+    After a riff or section it **needs a space** — `riff1x3` means a riff
+    *named* "riff1x3", and prints that name instead of an error. Now
+    `riff1 x3`, `=verse1 x2`, `[Am]x3`.
+  - A transpose shift was shown glued on (`riff1+2`, `=verse1-1`) and on
+    a group (`[5A 7D]x2+3`); all three are errors. It's its own word,
+    after a riff or section reference only: `riff1 +2`, `=verse1 -1`,
+    `riff1 x2 +3`.
+  The worked line-break examples below the table now show the renderer's
+  real output. The wiki's Chart Line Syntax page had the same mistakes
+  (and advised gluing a repeat onto a reference, which is the silent
+  case); it's corrected, with a table of what goes where.
+- **The Notation reference now covers naming and recalling a lick**:
+  `{Riff1 = …}` and `{Riff1}` / `{Riff1}x3`, noting that `=` is for
+  sections.
+- **Examples in the reference no longer break mid-way** across lines —
+  `[C G]x4` split as `[C` / `G]x4` read as two things.
+- **The help strip had two "Lyrics" bullets**, one still saying lyrics
+  are never exported. Merged into one that's true.
+
+### Added
+- `tests/test_notation_panel.py` parses every example in the Notation
+  reference, so an example that doesn't work fails the test suite.
+
+### Changed
+- **Screenshots**: five new ones in `screenshots/` — `editor.png`,
+  `layout-panel.png`, `lyrics-dialog.png`, `notation-reference.png`,
+  `help-strip.png` — renamed from their timestamped names and halved to
+  1912 px wide (6.3 MB → 2.1 MB, still sharp on a Retina display). The
+  README shows all five with captions; its old image had been removed
+  and was showing as broken.
+
 ## [0.26.1] — 2026-09-21
 
 ### Fixed

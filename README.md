@@ -129,7 +129,30 @@ whichever way you made it.
 
 ## 📸 Screenshots
 
-![Song Notation Tool](screenshots/song_notation_screenshot.png)
+**The editor** — songs on the left, one card per section: type the chart
+line, and the rendered chart appears under it as you go. The buttons
+beside each line insert notation at the cursor.
+
+![The editor, with the example song open](screenshots/editor.png)
+
+**⚙ Layout** — every print setting in one panel at the bottom left: page
+size, columns, colour, section names, where the lyrics go, how recalled
+licks print, and chord shapes.
+
+![The Layout panel](screenshots/layout-panel.png)
+
+**Lyrics** — paste or import the words, drag a section's chip into the
+sheet to mark where its words begin, then **Split by markers**.
+
+![The Lyrics dialog](screenshots/lyrics-dialog.png)
+
+**Notation reference** and the **how this works** strip — everything you
+can type on a chart line, and the ideas behind it, without leaving the
+app.
+
+![The Notation reference](screenshots/notation-reference.png)
+
+![The help strip](screenshots/help-strip.png)
 
 ---
 

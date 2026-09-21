@@ -801,3 +801,9 @@ button {
 }
 .folder-summary { margin: 6px 0; }
 .folder-clashes { color: var(--amber); }
+
+/* An example is something to type, so it never breaks in the middle —
+   "[C G]x4" split across two lines reads as two things. The column still
+   wraps, between examples rather than inside one. */
+.notation-ref-table td:last-child code { white-space: nowrap; display: inline-block; margin: 1px 0; }
+.notation-ref-table td:last-child { min-width: 11em; }

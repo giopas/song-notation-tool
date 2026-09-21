@@ -267,6 +267,17 @@ def _render_one_row(items, label: str, indent: int):
     # string lines underneath the chord row — so it reads where it's
     # played, in among the chords, rather than in a separate grid.
     licks = [_lick_lines(it) if it.get("kind") == "lick" else [] for it in items]
+
+    # A named lick's name goes on the tab itself, in front of its first
+    # string line, rather than on the chord row above it: on a row of its
+    # own the name read as a separate line of the chart, one line away
+    # from the notes it names. The other string lines are indented by the
+    # same amount, so the tab stays a grid.
+    for i, (it, lk) in enumerate(zip(items, licks)):
+        if lk and symbols[i]:
+            head = symbols[i] + " "
+            licks[i] = [head + lk[0]] + [" " * len(head) + ln for ln in lk[1:]]
+            symbols[i] = ""
     n_lick_rows = max((len(l) for l in licks), default=0)
 
     label_w = max(len(label) + 2, 4) if label else indent

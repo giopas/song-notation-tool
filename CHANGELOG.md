@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.24.2] — 2026-09-21
+
+### Changed
+- **A named lick's name sits in front of its tab**, on the tab's first
+  string line — `Riff1 |D|-----3---|` — instead of on a line of its own
+  above it, where it read as a separate line of the chart. The other
+  string lines are indented to match so the tab stays a grid, and a
+  repeat count comes along: `Riff1 (x2) |D|…`. Applies to the lick where
+  it's defined and wherever `{Riff1}` recalls it as tab; "name only"
+  recalls still print on the chord row, since there's no tab to sit by.
+
 ## [0.24.1] — 2026-09-21
 
 ### Fixed

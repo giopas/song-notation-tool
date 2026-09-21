@@ -700,11 +700,16 @@ def _doc_with_named_lick():
     return doc
 
 
-def test_a_named_lick_prints_its_name_over_its_tab():
+def test_a_named_lick_prints_its_name_in_front_of_its_tab():
+    """On the tab's own first line — "Riff1 |G|-5-7-|" — not on a row of
+    its own above it; the other string lines are indented to match."""
     import grammar
-    rows = render.chart_body_lines(grammar.parse_items("{Riff1 = G 5 7}"))
-    assert "Riff1" in rows[0]
-    assert "|G|" in rows[1]
+    rows = render.chart_body_lines(grammar.parse_items("{Riff1 = G 5 7 | D - 3}"))
+    first = next(r for r in rows if "|G|" in r)
+    second = next(r for r in rows if "|D|" in r)
+    assert first.strip().startswith("Riff1 |G|")
+    assert first.index("|G|") == second.index("|D|")
+    assert not any(r.strip() == "Riff1" for r in rows)
 
 
 def test_a_lick_reference_resolves_to_the_notes():
@@ -796,13 +801,20 @@ def test_an_unknown_lick_keeps_its_braces_in_either_mode():
 
 
 def test_lick_names_carry_the_lick_colour():
+    """As tab, the name sits on the tab's own line, which is all lick
+    blue; by name only, it's a blue span on the chord row."""
     import grammar
     doc = _doc_with_named_lick()
-    for mode in ("tab", "name"):
-        doc["lick_refs"] = mode
-        rows = render.chart_body_rows(
-            render.resolve_references(grammar.parse_items("A {Riff1}"), doc))
-        sym = next(r for r in rows if "Riff1" in r["text"])
-        start = sym["text"].index("Riff1")
-        assert any(s <= start < e and role == render.ROLE_LICK
-                   for s, e, role in sym["spans"])
+    doc["lick_refs"] = "tab"
+    rows = render.chart_body_rows(
+        render.resolve_references(grammar.parse_items("A {Riff1}"), doc))
+    named = next(r for r in rows if "Riff1" in r["text"])
+    assert named["role"] == render.ROLE_LICK and "|G|" in named["text"]
+
+    doc["lick_refs"] = "name"
+    rows = render.chart_body_rows(
+        render.resolve_references(grammar.parse_items("A {Riff1}"), doc))
+    sym = next(r for r in rows if "Riff1" in r["text"])
+    start = sym["text"].index("Riff1")
+    assert any(s <= start < e and role == render.ROLE_LICK
+               for s, e, role in sym["spans"])

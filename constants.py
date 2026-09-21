@@ -8,7 +8,7 @@ an instrument's string list or the default tab beat count.
 
 from __future__ import annotations
 
-APP_VERSION = "0.24.1"
+APP_VERSION = "0.24.2"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
 # Printed in the footer of every export, so a chart handed to someone else

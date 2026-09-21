@@ -970,3 +970,26 @@ def test_chord_sheet_first_in_the_pdf_no_longer_crashes():
     doc["chords"] = [model.make_chord("C", chords.shape_from_text("x32010"))]
     doc["chord_sheet"] = "start"
     assert export.build_pdf(doc).startswith(b"%PDF")
+
+
+def test_beside_lyrics_share_one_column_across_sections():
+    """A narrow chorus and a wide verse used to put their words at two
+    different x positions; every section's words now start in one column,
+    clear of the widest chart with words beside it."""
+    import grammar
+    doc = model.new_document(title="Man Who Sold")
+    doc["lyrics_layout"] = "beside"
+    for sid, line, words in [("c1", "[C]x3 [F]", "Who knows? Not me"),
+                             ("v2", "rest 5A 5D 5A 8F 8C 5A 5D", "I laughed and shook his hand"),
+                             ("b1", "rest rest 5D 5D 8F 8F 5D 5D 5A 5D 8F 8C", "")]:
+        sec = model.new_section(sid, sid, "Verse", instrument="Bass (4-string)")
+        sec["items"] = grammar.parse_items(line)
+        sec["lyrics_text"] = words
+        doc["sections"].append(sec)
+    lines = export.build_song_lines(doc)
+    a = next(ln for ln in lines if "Who knows" in ln).index("Who knows")
+    b = next(ln for ln in lines if "I laughed" in ln).index("I laughed")
+    assert a == b
+    # the wide instrumental section has no words, so it doesn't push them out
+    bridge = max(len(ln) for ln in lines if "5  5  8  8  5  5  5  5  8  8" in ln)
+    assert a < bridge

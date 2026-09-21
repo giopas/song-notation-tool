@@ -174,9 +174,9 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
         # width; only words printed with a section's chart can.
         lyric_lines = render.section_lyric_lines(doc, sec)
         if render.lyrics_beside(doc) and lyric_lines and chart_lines:
-            # Beside the chart, a lyric line's width is its own plus the
-            # column the section's chart occupies to its left.
-            col = render.lyric_column_x(chart_lines, 0) + len(pad)
+            # Beside the chart, a lyric line starts at the song's shared
+            # lyric column, so that's the width the fit has to allow for.
+            col = render.shared_lyric_column(doc, instruments) + len(pad)
             out += [" " * col + ln for ln in lyric_lines]
         else:
             out += [pad + ln for ln in lyric_lines]
@@ -428,6 +428,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         body_w = W - side_w - SIDE_GAP
     sdiv = lambda c="-": c * body_w
     body = []
+    lyric_col = render.shared_lyric_column(doc, instruments)
     # "gutter" puts each section's name in a left-hand column beside its
     # first line instead of a full-width banner above it — three lines
     # saved per section, which is the difference between a one-page chart
@@ -476,8 +477,11 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
             resolved = render.resolve_display_items(chart, eff)
             chart_lines = render.chart_body_lines(resolved, label, body_indent)
             if beside and lyric_lines:
-                body += render.compose_beside(chart_lines, lyric_lines,
-                                                indent=body_indent)
+                # One column for the whole song, so the words line up
+                # down the page instead of following each chart's width.
+                body += render.compose_beside(
+                    chart_lines, lyric_lines, indent=body_indent,
+                    col_x=body_indent + lyric_col)
                 lyric_lines = []
             else:
                 body += chart_lines
@@ -927,6 +931,8 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     if chords_mod.sheet_position(doc) == "start":
         cy_holder[0] = draw_chord_sheet(cy_holder[0])
 
+    lyric_col = render.shared_lyric_column(doc, instruments)
+
     gutter = doc.get("section_layout") == "gutter"
     gutter_w = 0
     if gutter:
@@ -1010,7 +1016,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             # In the "beside" layout the words run down their own column to
             # the right of the chart, starting level with its first line —
             # so a verse costs the page the taller of the two, not both.
-            lyric_x = body_x() + render.lyric_column_x(chart_rows, 0) * CHAR_W
+            # The song's one lyric column, not this chart's own width — so
+            # every section's words start at the same x and read as a column.
+            lyric_x = body_x() + lyric_col * CHAR_W
             lyric_cy = cy
             for row in chart_rows:
                 if row.get("role") == render.ROLE_FRET:

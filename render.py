@@ -666,6 +666,39 @@ def lyric_column_x(chart_rows, indent: int = BODY_INDENT) -> int:
     return max(widest + LYRIC_GAP, indent + LYRIC_GAP)
 
 
+def shared_lyric_column(doc: dict, instruments=None) -> int:
+    """The one column every section's words start in, in the "beside"
+    layout — measured from the start of the chart, not the page edge.
+
+    Each section placing its words just past its *own* chart put a narrow
+    chorus's words in one column and a wide verse's in another, so down
+    the page they zigzagged. One column for the whole song, clear of the
+    widest chart that has words next to it, lines them all up — a column
+    you can read down, which is what makes it a column.
+
+    Sections without words don't count: a long instrumental line has
+    nothing beside it to push along.
+    """
+    import songmap
+    import transpose
+    widest = 0
+    for sec in (doc or {}).get("sections", []) or []:
+        if instruments is not None and sec.get("instrument") not in instruments:
+            continue
+        if not section_lyric_lines(doc, sec):
+            continue
+        if sec.get("render", "chart") not in ("chart", "both"):
+            continue
+        eff = transpose.effective_transpose(doc.get("transpose", 0),
+                                            sec.get("transpose", 0))
+        chart = resolve_references(songmap.chart_items(sec), doc)
+        if not chart:
+            continue
+        rows = chart_body_lines(resolve_display_items(chart, eff), "", 0)
+        widest = max(widest, max((len(r) for r in rows), default=0))
+    return widest + LYRIC_GAP
+
+
 def compose_beside(chart_lines, lyric_lines, col_x: int = None,
                     indent: int = BODY_INDENT) -> list:
     """`chart_lines` with `lyric_lines` laid out in a column to their

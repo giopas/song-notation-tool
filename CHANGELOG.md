@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.24.1] — 2026-09-21
+
+### Fixed
+- **Lyrics beside the chart now line up down the page.** Each section used
+  to start its words just past its *own* chart, so a narrow chorus put them
+  in one column and a wide verse in another, and down the page they
+  zigzagged. Every section's words now start in one column for the whole
+  song, clear of the widest chart that has words beside it; a wide
+  instrumental section with no words doesn't push them out.
+  `render.shared_lyric_column()`, used by the TXT, the PDF and the width fit.
+
 ## [0.24.0] — 2026-09-21
 
 Where the words go is now one choice for the whole song, made on the main

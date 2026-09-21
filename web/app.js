@@ -963,8 +963,14 @@ function wireMetaForm() {
 // ---------------------------------------------------------------------------
 async function saveCurrent() {
   if (!currentDoc || !currentFilename) return;
-  await API.saveSong(currentFilename, currentDoc);
-  toast(`Saved ${currentFilename}`);
+  // The server saves under the song's own name — "Artist - Title.sng" —
+  // and renames the file when the title or artist has changed, so the
+  // name to use from here on is the one it answers with.
+  const res = await API.saveSong(currentFilename, currentDoc);
+  const saved = (res && res.filename) || currentFilename;
+  const renamed = saved !== currentFilename;
+  currentFilename = saved;
+  toast(renamed ? `Saved — the file is now "${saved}"` : `Saved ${saved}`);
   refreshSongList();
 }
 

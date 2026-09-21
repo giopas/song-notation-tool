@@ -83,7 +83,7 @@ from constants import (
     SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
     PDF_COLUMN_LABELS, LYRICS_LAYOUT_LABELS, CHORD_SHEET_LABELS,
     LICK_REF_LABELS,
-    TAB_BEATS_DEFAULT, default_export_name,
+    TAB_BEATS_DEFAULT, default_export_name, song_file_stem, song_file_name,
 )
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
@@ -256,7 +256,11 @@ def _shutdown():
     else:
         os._exit(0)
 
-_SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9 _.-]")
+# Letters (accented ones too), digits, spaces and the punctuation song
+# titles actually use — "(MTV Unplugged)", "Don't", "Guns N' Roses",
+# "Più bella cosa". Anything that could step outside the folder (a slash,
+# a colon, a leading dot) is still removed.
+_SAFE_NAME_RE = re.compile(r"[^\w .,()'&!+-]")
 
 
 def _safe_filename(name: str) -> str:
@@ -264,10 +268,20 @@ def _safe_filename(name: str) -> str:
     same rule the desktop app uses when it slugs a default export name
     (constants.default_export_name), plus a path-traversal guard."""
     name = os.path.basename((name or "").strip()) or "untitled"
-    name = _SAFE_NAME_RE.sub("", name).strip() or "untitled"
+    name = _SAFE_NAME_RE.sub("", name).strip().lstrip(".").strip() or "untitled"
     if not name.lower().endswith(".sng"):
         name += ".sng"
     return name
+
+
+def _is_pristine_example(doc: dict, fresh: dict) -> bool:
+    """True if `doc` is the example exactly as shipped — nothing edited.
+    Compared on what the user can change (meta and sections), ignoring
+    the version stamp every save adds."""
+    def core(d):
+        return json.dumps({"meta": d.get("meta"), "sections": d.get("sections")},
+                          sort_keys=True)
+    return core(model.migrate_document(dict(doc))) == core(model.migrate_document(dict(fresh)))
 
 
 class SongStore:
@@ -308,13 +322,72 @@ class SongStore:
         return model.migrate_document(raw)
 
     def save(self, filename: str, doc: dict) -> str:
+        """Write `doc` to `filename`, atomically: into a temporary file
+        beside it, then swapped into place. A crash or a full disk mid-
+        write leaves the previous version intact instead of half a song."""
         filename = _safe_filename(filename)
         doc = dict(doc)
         doc["app_version"] = APP_VERSION
         path = self._path(filename)
-        with open(path, "w", encoding="utf-8") as f:
+        tmp = path + ".saving"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(doc, f, indent=2)
+        os.replace(tmp, path)
         return filename
+
+    # ── Naming a song file after the song ─────────────────────────────
+    # A file used to keep the name it was created with forever, so a song
+    # started from "Open example" and turned into Nutshell was still
+    # "Example Song.sng" in Finder. Now the file follows the song: named
+    # "Artist - Title.sng", and renamed on Save when either changes.
+
+    def _same_file(self, a: str, b: str) -> bool:
+        """True if two names are one file — which on macOS's
+        case-insensitive disk includes names differing only in case."""
+        pa, pb = self._path(a), self._path(b)
+        try:
+            return os.path.exists(pa) and os.path.exists(pb) and os.path.samefile(pa, pb)
+        except OSError:
+            return False
+
+    def free_name(self, desired: str, current: str = None) -> str:
+        """`desired`, or `desired (2)`, `(3)`… — the first name that isn't
+        another song. The song's own current file doesn't count as taken,
+        so re-saving never bumps a song to "(2)" of itself."""
+        desired = _safe_filename(desired)
+        stem = desired[:-4]
+        n = 1
+        name = desired
+        while self.exists(name) and not (current and self._same_file(name, current)):
+            n += 1
+            name = _safe_filename(f"{stem} ({n})")
+        return name
+
+    def save_song(self, current: str, doc: dict) -> str:
+        """Save `doc`, which was loaded from `current`, under the name the
+        song should have now — renaming the file if the title or artist
+        changed. Returns the name it was saved as.
+
+        The new file is written before the old one is removed, so a
+        failure part-way can leave both, never neither. A song with no
+        title keeps the name it has.
+        """
+        current = _safe_filename(current)
+        stem = song_file_stem(doc)
+        if not stem:
+            return self.save(current, doc)
+        target = self.free_name(stem + ".sng", current)
+        if target == current:
+            return self.save(current, doc)
+        if self._same_file(target, current):
+            # Only the case differs ("nutshell" → "Nutshell"): same file on
+            # a case-insensitive disk, so rename it rather than delete it.
+            os.rename(self._path(current), self._path(target))
+            return self.save(target, doc)
+        saved = self.save(target, doc)
+        if self.exists(current):
+            os.remove(self._path(current))
+        return saved
 
     def delete(self, filename: str):
         path = self._path(filename)
@@ -527,14 +600,15 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/songs":
                 # New song: {name, title, artist, key, time, bpm}
                 body = self._read_json_body()
-                filename = _safe_filename(body.get("name") or body.get("title") or "untitled")
-                if self.store.exists(filename):
-                    return self._send_error_json(HTTPStatus.CONFLICT,
-                                                   f"{filename} already exists")
                 doc = model.new_document(
                     title=body.get("title", ""), artist=body.get("artist", ""),
                     key=body.get("key", ""), time=body.get("time", "4/4"),
                     bpm=body.get("bpm", ""))
+                # Named after the song from the start; a second song with
+                # the same title and artist becomes "… (2)" rather than an
+                # error, so creating one can't fail over a name.
+                filename = self.store.free_name(
+                    body.get("name") or song_file_name(doc))
                 self.store.save(filename, doc)
                 return self._send_json({"filename": filename, "doc": _with_chart_lines(doc)})
 
@@ -542,12 +616,23 @@ class Handler(BaseHTTPRequestHandler):
                 # "Open example" — the built-in sample from Enhancement 1's
                 # first-launch panel, so a new/returning user immediately
                 # sees a real layout instead of an empty grid.
-                filename = _safe_filename("Example Song")
-                if self.store.exists(filename):
-                    doc = self.store.load(filename)
-                else:
-                    doc = example_document()
-                    self.store.save(filename, doc)
+                # Always the example as shipped. An example you've already
+                # turned into a real song is yours now — it's never handed
+                # back as "the example". An untouched one is reused, so
+                # clicking twice doesn't fill the folder with copies.
+                fresh = example_document()
+                filename = None
+                for entry in self.store.list_songs():
+                    try:
+                        if _is_pristine_example(self.store.load(entry["filename"]), fresh):
+                            filename = entry["filename"]
+                            break
+                    except Exception:  # noqa: BLE001
+                        continue
+                if filename is None:
+                    filename = self.store.free_name(song_file_name(fresh))
+                    self.store.save(filename, fresh)
+                doc = self.store.load(filename)
                 return self._send_json({"filename": filename, "doc": _with_chart_lines(doc)})
 
             if path == "/api/parse":
@@ -670,8 +755,12 @@ class Handler(BaseHTTPRequestHandler):
             doc = model.migrate_document(doc)
             for sec in doc.get("sections", []):
                 sec.pop("chart_line", None)
-            saved_name = self.store.save(filename, doc)
-            return self._send_json({"ok": True, "filename": saved_name})
+            # Saved under the song's own name — "Artist - Title.sng" —
+            # renaming the file if that changed since it was last saved.
+            saved_name = self.store.save_song(filename, doc)
+            return self._send_json({"ok": True, "filename": saved_name,
+                                    "renamed_from": filename
+                                    if saved_name != _safe_filename(filename) else None})
         except Exception as exc:  # noqa: BLE001
             self._send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, str(exc))
 

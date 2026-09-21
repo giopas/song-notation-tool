@@ -152,6 +152,40 @@ the same PDF in a new tab, where Cmd/Ctrl+P does the same thing.
 
 ## Where the files are
 
+**One file per song, named after it** (v0.26): `Artist - Title.sng`, or
+just the title with no artist — the same rule in both apps
+(`constants.song_file_name()`). In the browser app the file follows the
+song: change the title or artist and the next Save renames it
+(`SongStore.save_song()`), saying so in the toast.
+
+- Another song is never overwritten — a taken name becomes
+  `… (2).sng` — and a song is never bumped to "(2)" of itself.
+- The new file is written before the old one is removed, so a failure
+  part-way leaves both, never neither. Every save is atomic: written to a
+  temporary file beside the song and swapped into place.
+- A capitalisation-only change renames too, even on macOS's
+  case-insensitive disk (where the two names are one file, so it's
+  renamed in place rather than copied and deleted).
+- A song with no title keeps the name it has.
+- File names keep brackets, apostrophes and accented letters; anything
+  that could reach outside the folder is removed.
+
+Why not one session file holding every song? Separate files are what let
+you email or AirDrop a single chart, move or back up songs one by one,
+batch-export a folder from the CLI, and lose at most one song — not the
+whole book — if a file is ever damaged.
+
+**Open example song** always gives the example as shipped
+(`Song Notation Tool - Example Song.sng`). An untouched one is reused,
+so repeated clicks don't pile up copies; one you've edited into a song of
+your own is never handed back as the example.
+
+The desktop app's Save panel suggests the same name, but saves wherever
+and as whatever you choose, and doesn't rename files on its own.
+
+### The songs folder
+
+
 Songs live in **`~/Documents/Song Notation Tool`** by default — under
 your home directory, not inside the checkout, so they're covered by
 whatever backs up the rest of your Documents and a `git clean` or a

@@ -113,9 +113,10 @@ whichever way you made it.
 - **Project files** — save/load sessions as `.sng` (plain JSON,
   human-readable); `.sng` files from earlier versions load without loss.
   Songs live under `~/Documents/Song Notation Tool`, not inside this
-  checkout, and the app shows you the folder. **Change…** picks a new one
-  and moves your songs there — only `.sng` files, nothing overwritten, the
-  old folder kept
+  checkout, and the app shows you the folder. Each song's file is named
+  after it — `Artist - Title.sng` — and renamed on Save if you retitle
+  it. **Change…** picks a new folder and moves your songs there — only
+  `.sng` files, nothing overwritten, the old folder kept
 - **Zero dependencies** — pure Python standard library, works out of the box
 - **"Start here" on first launch** — *New song*, *Open example*, or
   *Import project* instead of a blank grid
@@ -402,6 +403,19 @@ the chorus, and instrumental sections are stepped over. The sheet itself
 is kept, so a section you add later can still be given one of its blocks.
 
 ### Where your files are kept
+
+Every song is its own file, named after the song —
+**`Artist - Title.sng`**, or just the title if there's no artist — so the
+folder reads like your song list. Change a song's title or artist and the
+file is renamed the next time you save; the toast tells you when that
+happens. Another song is never overwritten (a name already taken becomes
+`… (2).sng`), and a save is written to a temporary file first and swapped
+into place, so a crash mid-save can't leave half a song behind.
+
+**Open example song** always opens the example as shipped: once you've
+turned it into a song of your own, it's yours, and the next click makes a
+fresh example instead of handing yours back.
+
 
 Songs live in **`~/Documents/Song Notation Tool`** — under your home
 directory, not inside this checkout, so they're covered by whatever backs

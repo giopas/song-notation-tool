@@ -98,7 +98,7 @@ from constants import (
     SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
     PDF_COLUMN_LABELS, LYRICS_LAYOUT_LABELS, LICK_REF_LABELS,
     CHORD_SHEET_LABELS,
-    default_export_name,
+    default_export_name, song_file_name,
 )
 
 # ── macOS: suppress deprecation noise ────────────────────────────────────────
@@ -2556,7 +2556,10 @@ class SongNotationApp(tk.Tk):
     def _save(self):
         self._commit_editor_line(force=True)
         self._sync_doc_meta()
-        default_name = default_export_name(self.doc, "sng")
+        # The same name the browser app gives a song file — "Artist -
+        # Title.sng", spaces and all — so a song reads the same in Finder
+        # whichever app saved it.
+        default_name = song_file_name(self.doc)
 
         path = filedialog.asksaveasfilename(
             defaultextension=".sng",

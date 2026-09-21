@@ -8,7 +8,7 @@ an instrument's string list or the default tab beat count.
 
 from __future__ import annotations
 
-APP_VERSION = "0.25.0"
+APP_VERSION = "0.26.0"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
 # Printed in the footer of every export, so a chart handed to someone else
@@ -182,6 +182,29 @@ RENDER_MODE_LABELS = {"chart": "Chart", "tab": "Tab grid",
 # Default number of beats per tab measure. Can be overridden per measure.
 TAB_BEATS_DEFAULT = 8
 TAB_BEATS_OPTIONS = [8, 16, 32, 64]   # choices in the tab-grid toolbar
+
+
+def song_file_stem(doc: dict) -> str:
+    """What a song's .sng file is called: 'Artist - Title', or just the
+    title with no artist — the name you'd look for in Finder.
+
+    Unlike export names (which use underscores for the sake of email
+    attachments and URLs), a song file keeps its spaces: it lives in your
+    own folder, where it should read like the song it is. Returns "" for
+    a song with no title yet, so the caller can keep whatever name the
+    file already has rather than renaming it to "Untitled".
+    """
+    meta = doc.get("meta", {})
+    artist = (meta.get("artist") or "").strip()
+    title = (meta.get("title") or "").strip()
+    if not title:
+        return ""
+    return f"{artist} - {title}" if artist else title
+
+
+def song_file_name(doc: dict) -> str:
+    """song_file_stem() + '.sng', falling back to 'Untitled Song.sng'."""
+    return (song_file_stem(doc) or "Untitled Song") + ".sng"
 
 
 def default_export_name(doc: dict, ext: str) -> str:

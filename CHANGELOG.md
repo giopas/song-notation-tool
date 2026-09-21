@@ -4,6 +4,55 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.26.0] — 2026-09-21
+
+A song file is now named after the song, and follows it.
+
+### Changed
+- **Song files are called `Artist - Title.sng`** — or just the title,
+  with no artist — and are **renamed on Save** when the title or artist
+  changes. A file used to keep the name it was created with forever: a
+  song started from **Open example song** and turned into Nutshell was
+  still `Example Song.sng` in Finder, so the folder and the app's song
+  list seemed not to match. The toast says when a Save renamed the file.
+  - Another song is never overwritten: a name already taken becomes
+    `… (2).sng`, and a song is never bumped to "(2)" of itself.
+  - The new file is written before the old one is removed, so a failure
+    part-way can leave both, never neither.
+  - A change of capitalisation only ("nirvana" → "Nirvana") renames the
+    file too, even on macOS's case-insensitive disk.
+  - A song with no title yet keeps whatever name it has.
+- **Open example song always gives you the example as shipped.** An
+  example you've already turned into a real song is yours; it's never
+  handed back as "the example" again. An untouched one is reused, so
+  clicking twice doesn't fill the folder with copies. The example's own
+  file is `Song Notation Tool - Example Song.sng`, by the same rule.
+- **New songs are named by the same rule from the start**, and a second
+  song with the same title and artist becomes "(2)" instead of failing
+  with "already exists".
+- **File names keep brackets, apostrophes and accented letters** —
+  "(MTV Unplugged)", "Don't", "Più" — which used to be stripped. Anything
+  that could reach outside the songs folder still is.
+- **Saving is atomic**: the song is written to a temporary file beside it
+  and swapped into place, so a crash or a full disk mid-save leaves the
+  previous version intact rather than a truncated file.
+- The desktop app's Save panel suggests the same `Artist - Title.sng`
+  name (it used to suggest `Artist_-_Title.sng`). Being a Save panel, it
+  saves where and as what you choose; it doesn't rename files itself.
+
+Existing songs are renamed the first time you save them in this version.
+Exports are unchanged: they still use `Artist_-_Title.pdf`, underscores
+and all, which travels better as an email attachment.
+
+### API
+- `constants.py`: `song_file_stem()`, `song_file_name()`.
+- `webserver.SongStore`: `save_song(current, doc)` (save under the song's
+  name, renaming if needed), `free_name(desired, current)`; `save()` is
+  now atomic.
+- `PUT /api/songs/<n>` answers `{ok, filename, renamed_from}` — the name
+  it was saved as, which the front end uses from then on.
+- `POST /api/songs` no longer answers 409 for a name that exists.
+
 ## [0.25.0] — 2026-09-21
 
 ### Added

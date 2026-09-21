@@ -170,10 +170,10 @@ handler — that file is the source of truth. Summary:
 | `GET` | `/api/meta` | app version, section types, render modes, instrument→strings map, the labels for every ⚙ Layout choice (section layout, colour, PDF scale, columns, lyrics, recalled licks, chord shapes), and the songs + export folders |
 | `GET` | `/api/songs` | list `.sng` files in the served directory |
 | `GET` | `/api/songs/<name>` | load one song (migrated to the current schema), sections annotated with a transient `chart_line` |
-| `PUT` | `/api/songs/<name>` | save a doc (creates the file if it doesn't exist) |
+| `PUT` | `/api/songs/<name>` | save a doc (creates the file if it doesn't exist) under the song's own name, `Artist - Title.sng`, renaming the file if the title or artist changed → `{ok, filename, renamed_from}`; use `filename` from then on (v0.26) |
 | `DELETE` | `/api/songs/<name>` | delete a `.sng` file |
-| `POST` | `/api/songs` | create a new song — body `{name?, title, artist, key, time, bpm}` |
-| `POST` | `/api/songs/example` | create/open the built-in example song |
+| `POST` | `/api/songs` | create a new song — body `{name?, title, artist, key, time, bpm}`; named `Artist - Title.sng` unless `name` is given, with "(2)" for a name already taken |
+| `POST` | `/api/songs/example` | open the built-in example as shipped: an untouched copy is reused, otherwise a fresh one is created — never an example you've since edited into a song |
 | `POST` | `/api/parse` | parse one chart line — body `{line, doc?}` → items, unparsed line, rendered fret/symbol rows, or `{ok: false, error}`. With `doc` as context, references are canonicalised to ids, spelled back by name, and expanded for the rendered rows |
 | `POST` | `/api/render` | render an in-memory (possibly unsaved) doc to TXT lines — body `{doc, instruments?}` |
 | `POST` | `/api/lyrics/split` | cut the whole-song sheet on blank lines and propose which block goes to which section — body `{doc, text?}` |

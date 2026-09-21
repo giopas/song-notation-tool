@@ -56,12 +56,15 @@ whichever way you made it.
 - **Lyrics panel** — paste, type, import a `.txt` file, or open a
   browser search for lyrics, scoped to a section or the whole song;
   reference text, never parsed — off by default in the TXT/PDF export
-  and Preview pane, opt in per section with one checkbox. Mark the sheet
+  and Preview pane until you choose where they go. Mark the sheet
   up with `=== Verse 1 ===` lines (drag a section's chip in, or click it)
   and **Split by markers** hands each block to the section it names;
   **Split on blank lines…** is still there for a sheet pasted straight
-  off a lyrics site. Printed words sit **beside** their section's chart,
-  in a column of their own
+  off a lyrics site. Words print wherever **⚙ Layout** says: all together
+  at the start, at the end or down a left-hand column, with each section
+  beside or under its chart, or not at all
+- **⚙ Layout** — every print setting in one panel at the bottom left:
+  page size, columns, colour, section names, lyrics, licks, chord shapes
 - **Named licks** — `{Riff1 = G 5 7 5 | D - - 3}` names a figure and
   `{Riff1}x3` plays it again anywhere in the song; edit it once and every
   place that plays it follows. Print the recalled ones as tab, or as just
@@ -295,17 +298,21 @@ Preview pane alike.
 
 ### Where the words go
 
-A section's words print **beside** its chart: the chart keeps a narrow
-left column, the words run down their own to the right of it, starting
-level with the chart's first line. Nothing is aligned chord to syllable —
-that would be a claim about where the changes fall that a chart like this
-can't honestly make. What it says is *during these words, this is what
-you play*.
+One setting for the whole song, in **⚙ Layout** (bottom left):
 
-The practical gain is vertical. A verse costs the page the taller of the
-two sides rather than the sum of them, so the section after it isn't
-pushed off the sheet. `Lyrics → Under the chart` in Print & export puts
-them back below if you prefer.
+| Choice | What prints |
+|---|---|
+| Don't print | Nothing — the default. The words stay in the Lyrics dialog. |
+| All together — at the start | Every section's words in one block before the chart, each under its section's name |
+| All together — at the end | The same, after the chart |
+| All together — left column | The same block down a column on the left, the chart in one column beside it |
+| Each section — beside chart | Each section's words to the right of its own chart: what you play during them |
+| Each section — under chart | Each section's words under its own chart |
+
+Nothing is aligned chord-to-syllable in any of them — that would be a
+claim about where the changes fall that a chart like this can't
+honestly make. If no section has words yet, the gathered layouts use the
+whole-song sheet, with its `=== Verse 1 ===` markers as headings.
 
 ### Chord shapes
 

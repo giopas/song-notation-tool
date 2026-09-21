@@ -139,7 +139,83 @@ button {
   padding: 12px;
   flex-shrink: 0;
   overflow-y: auto;
+  /* A column, so the Layout button can sit at the bottom however long or
+     short the song list is. */
+  display: flex; flex-direction: column;
 }
+
+/* ---------- layout settings (bottom left) ---------- */
+#sidebar-footer {
+  margin-top: auto;               /* pinned to the bottom of the sidebar */
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.layout-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%;
+}
+.layout-btn.active { border-color: var(--mauve); color: var(--mauve); }
+.layout-btn:disabled { opacity: 0.45; cursor: default; }
+.layout-btn-icon { font-size: 14px; }
+/* What's set, readable without opening anything. */
+.layout-summary {
+  font-size: 11px; color: var(--lbl-gray); line-height: 1.4;
+  text-align: center;
+}
+.layout-summary:empty { display: none; }
+
+/* A popover that opens up from the button, not a modal: the song stays
+   visible and the preview keeps updating while settings change. */
+.layout-panel {
+  position: fixed; left: 12px; bottom: 76px; z-index: 40;
+  width: 340px; max-height: calc(100vh - 140px); overflow-y: auto;
+  background: var(--card-bg); border: 1px solid var(--mauve);
+  border-radius: 10px; padding: 12px 14px 6px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+}
+.layout-panel-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; font-weight: 600; color: var(--mauve);
+  letter-spacing: 0.02em; margin-bottom: 6px;
+}
+.layout-group {
+  padding: 8px 0 6px; border-top: 1px solid var(--border);
+}
+.layout-group:first-of-type { border-top: 0; }
+.layout-group-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--lbl-gray); margin-bottom: 6px;
+}
+.layout-panel label {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; font-size: 12px; color: var(--fg); margin: 2px 0;
+}
+/* Same dark control as the song form — without `appearance: none` macOS
+   draws its own white pill, which is what these looked like at first. */
+.layout-panel select {
+  appearance: none; -webkit-appearance: none;
+  background: var(--input-bg); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 5px; font-family: inherit; font-size: 12px; line-height: 1.2;
+  height: 28px; padding: 4px 24px 4px 8px; cursor: pointer;
+  flex: 0 0 200px; max-width: 200px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--fg) 50%),
+    linear-gradient(135deg, var(--fg) 50%, transparent 50%);
+  background-position: calc(100% - 13px) 12px, calc(100% - 8px) 12px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.layout-panel select:focus { border-color: var(--select-bg); outline: none; }
+.layout-panel select:disabled { opacity: 0.5; }
+.layout-hint {
+  margin: 2px 0 8px; font-size: 11px; line-height: 1.4; color: var(--lbl-gray);
+}
+.layout-hint:empty { display: none; }
+
+/* In the Lyrics dialog: where the words print, and the way to change it. */
+.lyrics-where { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; }
+.lyrics-where .btn { padding: 3px 8px; font-size: 11px; }
 #sidebar-header {
   display: flex; justify-content: space-between; align-items: center;
   color: var(--lbl-gray); font-size: 12px; text-transform: uppercase;
@@ -205,29 +281,6 @@ button {
   display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
 }
 
-/* The print group is framed and tinted so it reads as "how this comes out
-   on paper" rather than as more facts about the song. Dashed, in the
-   mauve accent, because it's a presentation choice — nothing here changes
-   a single note. */
-.meta-print {
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px 9px;
-  border: 1px dashed var(--mauve);
-  border-radius: 7px;
-  background: rgba(203, 166, 247, 0.06);
-  align-self: flex-start;
-  max-width: 100%;
-}
-.meta-print-title {
-  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--mauve); opacity: 0.85; padding-right: 2px; white-space: nowrap;
-}
-.meta-print label { font-size: 10px; }
-/* Slightly smaller than the song fields: secondary controls, and it keeps
-   the frame from dominating the row above it. */
-.meta-print select { font-size: 13px; height: 29px; padding: 4px 24px 4px 7px; }
-.meta-print select { background-position: calc(100% - 13px) 12px, calc(100% - 8px) 12px; }
 #meta-form label {
   display: flex; flex-direction: column; gap: 4px;
   font-size: 11px; color: var(--lbl-gray); text-transform: uppercase;

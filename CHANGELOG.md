@@ -4,6 +4,72 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.24.0] — 2026-09-21
+
+Where the words go is now one choice for the whole song, made on the main
+screen — and every print setting has moved into one Layout menu at the
+bottom left.
+
+### Added
+- **Six lyric placements, one setting.** ⚙ Layout → Lyrics:
+  - **Don't print** — the default for new songs, as lyrics have always been.
+  - **All together — at the start / at the end** — every section's words
+    in one block, in song order, each under its section's name.
+  - **All together — left column** — the same block down a column of its
+    own on the left, with the chart in one column beside it on every page.
+    Columns steps aside (and says so); words longer than the chart get
+    pages of their own, which "fit to one page" shrinks the type to avoid.
+  - **Each section — beside chart** — v0.23's layout: the words to the
+    right of their own chart, showing what you play during them.
+  - **Each section — under chart** — the words under their own chart.
+
+  The gathered modes use each section's words. If no section has any yet
+  they fall back to the whole-song sheet, with its `=== Verse 1 ===`
+  markers promoted to headings — the one place a marker earns ink. A
+  per-section layout on a song whose sheet was never split does the same
+  at the start, so words the song has are never silently left off.
+- **⚙ Layout, bottom left.** Page size, columns, colour, section names,
+  lyrics, recalled licks and chord shapes, in one panel grouped by what
+  they affect, each with a line saying what it does. A summary under the
+  button ("Fit to page · Auto · lyrics: beside") shows what's set without
+  opening anything. It's a popover, not a modal: the song stays visible
+  and the preview keeps updating while you change things. The desktop app
+  has the same settings behind a ⚙ Layout button on a slim bar along the
+  bottom of its window.
+
+### Changed
+- **The Print & Export strip is gone from the song form**, which is back
+  to being about the song: title, artist, key, time, BPM.
+- **No more per-section "print" checkbox** in the Lyrics dialog or the
+  blank-line split. It now says where the words are printing, with a
+  ⚙ Layout… button that jumps to the setting. The dialog is for the
+  words; Layout is for the page.
+- **Songs saved before this version keep printing what they printed.** A
+  song with no placement set opens as "each section — under chart" if any
+  section's box was ticked, "at the start" if only the whole-song sheet
+  was, and "don't print" otherwise.
+- Shorter option labels throughout ("Tab again", "At the end", …) now that
+  each sits next to a label saying what it's for.
+
+### Fixed
+- **"Chord shapes first" crashed the PDF export** — the sheet was drawn
+  before its drawing code was defined. Only "at the end" had a test.
+
+### API
+- `render.py`: `lyrics_mode()`, `section_lyric_lines()`, `lyric_blocks()`,
+  `gathered_lyrics()`, `lyric_block_items()`, `lyric_block_lines()`;
+  `LYRICS_MODES`, `LYRICS_GATHERED`, `LYRICS_PER_SECTION`.
+- `model.py`: `LYRICS_LAYOUTS` now has six values; `migrate_document()`
+  fills in `lyrics_layout` for older songs.
+- `export.resolve_columns()` returns 2 for the left-column layout,
+  whatever `pdf_columns` says.
+- Sections' `print_lyrics` flags no longer affect printing. They're still
+  written when lyrics are assigned, so an older version opening the file
+  makes a similar call.
+
+### Notes
+- 319 tests pass (was 305).
+
 ## [0.23.0] — 2026-09-20
 
 The sheet marks itself up, the words move out of the chart's way, a lick

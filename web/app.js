@@ -204,6 +204,88 @@ async function openExampleSong() {
 }
 
 // ---------------------------------------------------------------------------
+//  Layout panel
+//
+//  Everything about how the song comes out on paper, in one place at the
+//  bottom of the sidebar: out of the way of the song itself, and one spot
+//  to look instead of a row of dropdowns that kept growing.
+// ---------------------------------------------------------------------------
+const LYRICS_HINTS = {
+  none: "Nothing prints. The words stay in the Lyrics dialog as reference.",
+  start: "Every section's words in one block before the chart, each under its section's name.",
+  end: "Every section's words in one block after the chart, each under its section's name.",
+  side: "Every section's words down a column on the left, the chart in one column beside them. Columns steps aside.",
+  beside: "Each section's words in a column to the right of its own chart: what you play during them. Nothing is aligned chord-to-syllable.",
+  below: "Each section's words printed under its own chart.",
+};
+
+function optionLabel(id) {
+  const sel = document.getElementById(id);
+  const opt = sel && sel.options[sel.selectedIndex];
+  return opt ? opt.textContent : "";
+}
+
+/** Keep the panel's dependent bits in step with its settings: the lyrics
+ *  hint, Columns stepping aside in "side" layout, and the one-line summary
+ *  under the sidebar button. */
+function refreshLayoutPanel() {
+  if (!currentDoc) return;
+  const lyr = currentDoc.lyrics_layout || "none";
+  document.getElementById("layout-lyrics-hint").textContent = LYRICS_HINTS[lyr] || "";
+
+  // In "side" layout the page is the words' column plus one chart column,
+  // whatever Columns says — so say that, rather than leave a control on
+  // screen that silently does nothing.
+  const cols = document.getElementById("meta-columns");
+  const side = lyr === "side";
+  cols.disabled = side;
+  document.getElementById("layout-columns-hint").textContent = side
+    ? "Set by the lyrics: their column on the left, one chart column beside it."
+    : "Two columns halve the height a chart needs, and the fit spends that on bigger type. Auto only splits the page when it helps.";
+
+  const bits = [optionLabel("meta-scale")];
+  if (!side) bits.push(optionLabel("meta-columns").replace(/\s*\(.*\)$/, ""));
+  bits.push(lyr === "none" ? "no lyrics" : `lyrics: ${({
+    start: "at the start", end: "at the end", side: "left column",
+    beside: "beside", below: "under" })[lyr]}`);
+  document.getElementById("layout-summary").textContent = bits.filter(Boolean).join(" · ");
+}
+
+function openLayoutPanel() {
+  if (!currentDoc) return;
+  refreshLayoutPanel();
+  document.getElementById("layout-panel").classList.remove("hidden");
+  document.getElementById("btn-layout").classList.add("active");
+}
+
+function closeLayoutPanel() {
+  document.getElementById("layout-panel").classList.add("hidden");
+  document.getElementById("btn-layout").classList.remove("active");
+}
+
+function wireLayoutPanel() {
+  const panel = document.getElementById("layout-panel");
+  const btn = document.getElementById("btn-layout");
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (panel.classList.contains("hidden")) openLayoutPanel();
+    else closeLayoutPanel();
+  });
+  document.getElementById("layout-close").addEventListener("click", closeLayoutPanel);
+  // A popover, not a modal: it closes when you click back into the song,
+  // and stays open while you change several settings in a row — the
+  // preview keeps updating underneath it.
+  document.addEventListener("mousedown", (e) => {
+    if (panel.classList.contains("hidden")) return;
+    if (panel.contains(e.target) || btn.contains(e.target)) return;
+    closeLayoutPanel();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !panel.classList.contains("hidden")) closeLayoutPanel();
+  });
+}
+
+// ---------------------------------------------------------------------------
 //  Editor rendering
 // ---------------------------------------------------------------------------
 function renderEditor() {
@@ -217,11 +299,13 @@ function renderEditor() {
   document.getElementById("meta-scale").value = String(currentDoc.pdf_scale || "fit");
   document.getElementById("meta-columns").value = String(currentDoc.pdf_columns || "auto");
   document.getElementById("meta-lyrics-layout").value =
-    currentDoc.lyrics_layout || "beside";
+    currentDoc.lyrics_layout || "none";
   document.getElementById("meta-chord-sheet").value =
     currentDoc.chord_sheet || "none";
   document.getElementById("meta-lick-refs").value =
     currentDoc.lick_refs || "tab";
+  document.getElementById("btn-layout").disabled = false;
+  refreshLayoutPanel();
 
   const list = document.getElementById("section-list");
   list.innerHTML = "";
@@ -1128,9 +1212,9 @@ function applyTranspose() {
 
 // ---------------------------------------------------------------------------
 //  Lyrics modal — stored non-destructively on the document or a section as
-//  `lyrics_text`, never parsed or aligned to the chart. Printed in the
-//  TXT/PDF export and the Preview pane only when its own `print_lyrics`
-//  flag is on (off by default). "Search online" opens a browser search in
+//  `lyrics_text`, never parsed or aligned to the chart. Whether and where
+//  it prints is one song-wide setting, `lyrics_layout`, in the ⚙ Layout
+//  panel (off by default). "Search online" opens a browser search in
 //  a new tab; it never fetches or auto-pastes lyrics in, by design
 //  (copyright + accuracy).
 // ---------------------------------------------------------------------------
@@ -1284,7 +1368,9 @@ async function applyLyricMarkers() {
     });
   }
 
-  const print = document.getElementById("lyrics-print").checked;
+  // Placement is the Layout panel's business now; the flag is still set
+  // so a file opened in an older version prints what this one would.
+  const print = (currentDoc.lyrics_layout || "none") !== "none";
   const segments = (info.segments || []);
   // Applied on the client so the document in the browser stays the one
   // source of truth — the server only ever told us where the blocks go.
@@ -1357,7 +1443,10 @@ function addSectionFromLyrics() {
 function loadLyricsForScope() {
   const t = lyricsTarget();
   document.getElementById("lyrics-textarea").value = (t && t.lyrics_text) || "";
-  document.getElementById("lyrics-print").checked = !!(t && t.print_lyrics);
+  const lyr = currentDoc.lyrics_layout || "none";
+  document.getElementById("lyrics-where-text").textContent = lyr === "none"
+    ? "Lyrics don't print for this song yet."
+    : `Printing: ${optionLabel("meta-lyrics-layout").toLowerCase()}.`;
   const isSongScope = document.getElementById("lyrics-scope").value === "__song__";
   ["lyrics-split", "lyrics-apply-markers", "lyrics-add-section"].forEach((id) => {
     document.getElementById(id).classList.toggle("hidden", !isSongScope);
@@ -1697,8 +1786,6 @@ async function splitLyricsIntoSections() {
     }
     rows.appendChild(splitRow(sec, choice));
   });
-  document.getElementById("lyrics-split-print").checked =
-    currentDoc.sections.some((s) => s.print_lyrics) || !!currentDoc.print_lyrics;
   document.getElementById("lyrics-split-backdrop").classList.remove("hidden");
 }
 
@@ -1707,7 +1794,9 @@ function closeSplitModal() {
 }
 
 function applyLyricsSplit() {
-  const print = document.getElementById("lyrics-split-print").checked;
+  // Where the words print is ⚙ Layout's call; the per-section flag is
+  // still written so an older version opening the file agrees with it.
+  const print = (currentDoc.lyrics_layout || "none") !== "none";
   let assigned = 0;
   [...document.querySelectorAll("#lyrics-split-rows select")].forEach((sel) => {
     const sec = currentDoc.sections.find((s) => s.id === sel.dataset.sectionId);
@@ -1804,7 +1893,7 @@ async function init() {
    ["meta-color", "color_mode", META.color_modes, "color"],
    ["meta-scale", "pdf_scale", META.pdf_scales, "fit"],
    ["meta-columns", "pdf_columns", META.pdf_columns, "auto"],
-   ["meta-lyrics-layout", "lyrics_layout", META.lyrics_layouts, "beside"],
+   ["meta-lyrics-layout", "lyrics_layout", META.lyrics_layouts, "none"],
    ["meta-chord-sheet", "chord_sheet", META.chord_sheets, "none"],
    ["meta-lick-refs", "lick_refs", META.lick_refs, "tab"],
   ].forEach(([id, key, labels, fallback]) => {
@@ -1822,9 +1911,11 @@ async function init() {
     sel.addEventListener("change", (e) => {
       if (!currentDoc) return;
       currentDoc[key] = e.target.value;
+      refreshLayoutPanel();
       schedulePreviewUpdate();
     });
   });
+  wireLayoutPanel();
 
   renderSongsFolder();
   document.getElementById("btn-songs-folder").addEventListener("click",
@@ -1901,10 +1992,11 @@ async function init() {
     document.getElementById("lyrics-textarea")
       .addEventListener(ev, () => setTimeout(refreshLyricsOverlay, 0));
   });
-  document.getElementById("lyrics-print").addEventListener("change", (e) => {
-    const t = lyricsTarget();
-    if (t) t.print_lyrics = e.target.checked;
-    schedulePreviewUpdate();
+  document.getElementById("lyrics-open-layout").addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeLyricsModal();
+    openLayoutPanel();
+    document.getElementById("meta-lyrics-layout").focus();
   });
   document.getElementById("lyrics-split").addEventListener("click",
     () => splitLyricsIntoSections().catch((e) => toast(String(e))));

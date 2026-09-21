@@ -157,6 +157,7 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
         if instruments is not None and sec.get("instrument") not in instruments:
             continue
         pad = " " * gutter_w
+        chart_lines = []
         if sec.get("render") == "free":
             out += [pad + ln for ln in (sec.get("free_text") or "").splitlines()]
         else:
@@ -164,20 +165,21 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
                 doc.get("transpose", 0), sec.get("transpose", 0))
             chart = render.resolve_references(songmap.chart_items(sec), doc)
             if chart:
-                out += [pad + ln for ln in render.chart_body_lines(
-                    render.resolve_display_items(chart, eff), "", 0)]
+                chart_lines = render.chart_body_lines(
+                    render.resolve_display_items(chart, eff), "", 0)
+                out += [pad + ln for ln in chart_lines]
         if sec.get("annotation"):
             out.append(pad + f'"{sec["annotation"]}"')
-        if sec.get("print_lyrics"):
-            lyric_lines = render.printable_lyrics(sec.get("lyrics_text") or "")
-            if render.lyrics_beside(doc) and lyric_lines:
-                # Beside the chart, a lyric line's width is its own plus
-                # the column the chart occupies to its left.
-                col = render.lyric_column_x(
-                    [ln for ln in out[-len(lyric_lines):]] if out else [], 0)
-                out += [" " * col + ln for ln in lyric_lines]
-            else:
-                out += [pad + ln for ln in lyric_lines]
+        # Gathered lyrics wrap to their column, so they never set the
+        # width; only words printed with a section's chart can.
+        lyric_lines = render.section_lyric_lines(doc, sec)
+        if render.lyrics_beside(doc) and lyric_lines and chart_lines:
+            # Beside the chart, a lyric line's width is its own plus the
+            # column the section's chart occupies to its left.
+            col = render.lyric_column_x(chart_lines, 0) + len(pad)
+            out += [" " * col + ln for ln in lyric_lines]
+        else:
+            out += [pad + ln for ln in lyric_lines]
         if not gutter:
             rep = sec.get("repeat", 1)
             rep_str = f" (x{rep})" if rep and rep != 1 else ""
@@ -342,6 +344,11 @@ def _auto_columns(doc: dict, instruments, orient: str) -> int:
 def resolve_columns(doc: dict, instruments=None, orient: str = "portrait") -> int:
     """How many text columns a document's `pdf_columns` setting asks for.
     Unknown or missing values fall back to auto."""
+    # Words down a column of their own take the page's first column; the
+    # chart gets the second, and only that. Whatever Columns says, that is
+    # two — the setting steps aside rather than fighting the lyrics for it.
+    if render.gathered_lyrics(doc)[0] == "side":
+        return 2
     raw = doc.get("pdf_columns", "auto")
     if isinstance(raw, (int, float)):
         return max(1, min(MAX_PDF_COLUMNS, int(raw)))
@@ -399,15 +406,28 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         lines.append("  " + "   ".join(meta_parts))
     lines += [div("="), ""]
 
-    if doc.get("print_lyrics") and (doc.get("lyrics_text") or "").strip():
-        lines += [div("-"), "  LYRICS", div("-"), ""]
-        lines += [f"  {ln}" for ln in render.printable_lyrics(doc["lyrics_text"])]
-        lines.append("")
+    # Where the words go is one setting for the whole song. Gathered, they
+    # print as one block — here, at the end, or down a column of their
+    # own; per section, they print with each chart further down.
+    gathered_at, gathered = render.gathered_lyrics(doc)
+    if gathered_at == "start":
+        lines += _lyrics_block_lines(gathered, W)
 
     if chords_mod.sheet_position(doc) == "start":
         lines += _chord_sheet_lines(doc, W)
 
     TOKEN_W = 3
+
+    # "side": the words take a column of their own down the left, and the
+    # chart gets what's left — one column of it, however wide the page.
+    side = gathered_at == "side"
+    side_lines, body_w = [], W
+    if side:
+        side_w = _side_lyrics_width(gathered, W)
+        side_lines = render.lyric_block_lines(gathered, width=side_w)
+        body_w = W - side_w - SIDE_GAP
+    sdiv = lambda c="-": c * body_w
+    body = []
     # "gutter" puts each section's name in a left-hand column beside its
     # first line instead of a full-width banner above it — three lines
     # saved per section, which is the difference between a one-page chart
@@ -429,9 +449,9 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
             rep = sec.get("repeat", 1)
             rep_str = f"  (x{rep})" if rep and rep != 1 else ""
             instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
-            lines += [div("-"),
+            body += [sdiv("-"),
                       f"  {sec['name']}{rep_str}{instr}",
-                      div("-"), ""]
+                      sdiv("-"), ""]
 
         body_indent = gutter_w if gutter else render.BODY_INDENT
 
@@ -439,9 +459,9 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
             free = sec.get("free_text", "") or ""
             if free.strip():
                 free_lines = free.splitlines()
-                lines.append(f"{label:<{body_indent}}" + free_lines[0])
-                lines += [" " * body_indent + ln for ln in free_lines[1:]]
-                lines.append("")
+                body.append(f"{label:<{body_indent}}" + free_lines[0])
+                body += [" " * body_indent + ln for ln in free_lines[1:]]
+                body.append("")
                 label = ""
 
         eff = transpose.effective_transpose(
@@ -449,25 +469,24 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         chart = render.resolve_references(songmap.chart_items(sec), doc)
         # The words this section prints, if any — decided here because in
         # the "beside" layout they share their lines with the chart.
-        lyric_lines = (render.printable_lyrics(sec.get("lyrics_text", ""))
-                       if sec.get("print_lyrics") else [])
+        lyric_lines = render.section_lyric_lines(doc, sec)
         beside = render.lyrics_beside(doc)
 
         if sec.get("render", "chart") in ("chart", "both") and chart:
             resolved = render.resolve_display_items(chart, eff)
             chart_lines = render.chart_body_lines(resolved, label, body_indent)
             if beside and lyric_lines:
-                lines += render.compose_beside(chart_lines, lyric_lines,
+                body += render.compose_beside(chart_lines, lyric_lines,
                                                 indent=body_indent)
                 lyric_lines = []
             else:
-                lines += chart_lines
-            lines.append("")
+                body += chart_lines
+            body.append("")
             label = ""
 
         # A gutter section with nothing in it still needs its name printed.
         if label:
-            lines += [label, ""]
+            body += [label, ""]
 
         measures = songmap.measure_items(sec)
         if sec.get("render", "chart") in ("tab", "both") and measures:
@@ -477,7 +496,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
                 [m.get("strings", {}) for m in measures], all_strings) or all_strings
             max_beats = max((m.get("beats", TAB_BEATS_DEFAULT) for m in measures),
                              default=TAB_BEATS_DEFAULT)
-            mpl = render.measures_per_line(len(measures), max_beats, width=W)
+            mpl = render.measures_per_line(len(measures), max_beats, width=body_w)
 
             for chunk_start in range(0, len(measures), mpl):
                 chunk = list(range(chunk_start, min(chunk_start + mpl, len(measures))))
@@ -487,7 +506,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
                     beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
                     cell_w = TOKEN_W * beats + 1
                     hdr += f"{'M' + str(m_idx + 1):<{cell_w}}"
-                lines.append(hdr)
+                body.append(hdr)
                 for st in strings:
                     row = f"{st}| "
                     for m_idx in chunk:
@@ -498,16 +517,24 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
                             tokens.append("-")
                         tokens = tokens[:beats]
                         row += "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
-                    lines.append(row)
-                lines.append("")
+                    body.append(row)
+                body.append("")
 
         if sec.get("annotation"):
-            lines.append(" " * body_indent + f'"{sec["annotation"]}"')
-            lines.append("")
+            body.append(" " * body_indent + f'"{sec["annotation"]}"')
+            body.append("")
 
         if lyric_lines:
-            lines += [" " * body_indent + ln for ln in lyric_lines]
-            lines.append("")
+            body += [" " * body_indent + ln for ln in lyric_lines]
+            body.append("")
+
+    if side:
+        lines += _compose_side(side_lines, body, W - body_w)
+    else:
+        lines += body
+
+    if gathered_at == "end":
+        lines += _lyrics_block_lines(gathered, W)
 
     if chords_mod.sheet_position(doc) == "end":
         lines += _chord_sheet_lines(doc, W)
@@ -517,6 +544,39 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
               f"  {APP_URL}",
               div("=")]
     return lines
+
+
+# The left-hand lyric column in "side" layout: as wide as its longest line
+# needs, within limits — narrow enough to leave the chart room, wide enough
+# that a line of words isn't chopped into three.
+SIDE_MIN_W, SIDE_MAX_FRACTION, SIDE_GAP = 24, 0.42, 3
+
+
+def _side_lyrics_width(blocks, width: int) -> int:
+    longest = max((len(ln) + 2 for b in blocks for ln in b.get("lines", [])),
+                  default=0)
+    longest = max(longest, max((len(b.get("name", "")) for b in blocks), default=0))
+    return max(SIDE_MIN_W, min(longest, int(width * SIDE_MAX_FRACTION)))
+
+
+def _compose_side(left, right, left_w: int) -> list:
+    """Two independent columns of text, side by side: the words down the
+    left, the chart down the right. Neither is cut to fit the other."""
+    out = []
+    for i in range(max(len(left), len(right))):
+        l = left[i] if i < len(left) else ""
+        r = right[i] if i < len(right) else ""
+        out.append((f"{l:<{left_w}}" + r).rstrip() if r else l.rstrip())
+    return out
+
+
+def _lyrics_block_lines(blocks, width: int = DEFAULT_TXT_WIDTH) -> list:
+    """Every section's words as one block, with its own heading — printed
+    once, at whichever end of the chart the song asks for."""
+    body = render.lyric_block_lines(blocks, width=width, indent=2)
+    if not body:
+        return []
+    return ["-" * width, "  LYRICS", "-" * width, ""] + body + [""]
 
 
 def _chord_sheet_lines(doc: dict, width: int = DEFAULT_TXT_WIDTH) -> list:
@@ -703,7 +763,28 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     def vline(x, y1, y2, width=0.4, gray=PDF_COLUMN_RULE_GRAY):
         cur_ln.append(f"{gray:.2f} G {width} w {x:.1f} {y1:.1f} m {x:.1f} {y2:.1f} l S")
 
+    gathered_at, gathered = render.gathered_lyrics(doc)
+    side = gathered_at == "side" and NCOLS >= 2
+    # In "side" layout column 0 belongs to the words on every page, so the
+    # chart's first column is 1. The words are laid out up front, page by
+    # page, and each page draws its share when it's finished — the chart
+    # and the lyrics flow independently and neither waits for the other.
+    CHART_COL0 = 1 if side else 0
+    side_pages = []
+
+    def draw_side_lyrics(page_no):
+        if not side or page_no - 1 >= len(side_pages):
+            return
+        for kind, text, y in side_pages[page_no - 1]:
+            if kind == "head":
+                color(0.16, 0.24, 0.42)
+                txt(col_x0(0), y, text, sz=MONO_SZ, bold=True)
+            elif text:
+                color(0.15, 0.15, 0.15)
+                txt(col_x0(0), y, text, sz=MONO_SZ)
+
     def finish_page():
+        draw_side_lyrics(pn_holder[0])
         # A rule down each gutter. Two columns of chart with nothing
         # between them is two charts you have to guess the edges of;
         # the line says where one ends and the next begins, which is
@@ -729,9 +810,36 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         else:
             finish_page()
             pn_holder[0] += 1
-            col_holder[0] = 0
+            col_holder[0] = CHART_COL0
             top_holder[0] = H - MARGIN
         return top_holder[0]
+
+    def draw_lyrics_block(cy, blocks):
+        """Every section's words as one block, headed LYRICS, flowing down
+        the column (and on to the next) like any other text. Returns the
+        y it left off at."""
+        items = render.lyric_block_items(blocks, int(COL_W_TEXT / CHAR_W))
+        if not items:
+            return cy
+        if cy < FOOTER_H + LINE_H * 3:
+            cy = next_column()
+        # `cy` is where a section's band would *start*; text sits on its
+        # baseline, so it needs a line's drop to clear whatever is above.
+        cy -= LINE_H
+        color(0.16, 0.24, 0.42)
+        txt(col_x0(), cy, "LYRICS", sz=HEAD_SZ, bold=True)
+        cy -= LINE_H + 2 * S
+        for kind, text in items:
+            if cy < FOOTER_H + LINE_H:
+                cy = next_column()
+            if kind == "head":
+                color(0.16, 0.24, 0.42)
+                txt(col_x0(), cy, text, sz=MONO_SZ, bold=True)
+            elif text:
+                color(0.15, 0.15, 0.15)
+                txt(col_x0(), cy, text, sz=MONO_SZ)
+            cy -= LINE_H
+        return cy - LINE_H
 
     sections = doc.get("sections", [])
     max_beats = max(
@@ -776,25 +884,21 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     top_holder[0] = H - 54 * S
     cy_holder[0] = top_holder[0]
 
-    if doc.get("print_lyrics") and (meta_lyrics := (doc.get("lyrics_text") or "")).strip():
-        # Not bound by the "never split a section" rule below — this sits
-        # before any section, so unlike section-level lyrics it's allowed
-        # to run onto a second page if it's long.
-        cy = cy_holder[0]
-        color(0.16, 0.24, 0.42)
-        txt(col_x0(), cy, "LYRICS", sz=HEAD_SZ, bold=True)
-        cy -= LINE_H + 2 * S
-        color(0.15, 0.15, 0.15)
-        for ln in render.printable_lyrics(meta_lyrics):
-            if cy < FOOTER_H + LINE_H:
-                cy = next_column()
-            txt(col_x0(), cy, ln, sz=MONO_SZ)
-            cy -= LINE_H
-        cy -= LINE_H
-        cy_holder[0] = cy
-
-    if chords_mod.sheet_position(doc) == "start":
-        cy_holder[0] = draw_chord_sheet(cy_holder[0])
+    if side:
+        # Lay the words out down column 0 of as many pages as they need:
+        # the first page starts under the banner, the rest at the margin.
+        # One line's drop so the first baseline clears the banner, the way
+        # a section band's height does for the chart beside it.
+        page, y = [], top_holder[0] - LINE_H
+        for kind, text in render.lyric_block_items(
+                gathered, int(COL_W_TEXT / CHAR_W)):
+            if y < FOOTER_H + LINE_H:
+                side_pages.append(page)
+                page, y = [], H - MARGIN
+            page.append((kind, text, y))
+            y -= LINE_H
+        side_pages.append(page)
+        col_holder[0] = CHART_COL0
 
     def draw_chord_sheet(cy):
         """The chord-shape block, drawn in the monospace face the tab uses
@@ -815,6 +919,13 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             txt(col_x0(), cy, ln, sz=MONO_SZ)
             cy -= LINE_H
         return cy - LINE_H
+
+    # Everything that prints before the first section — after the helpers
+    # that draw it are defined, which a chord sheet "first" once wasn't.
+    if gathered_at == "start":
+        cy_holder[0] = draw_lyrics_block(cy_holder[0], gathered)
+    if chords_mod.sheet_position(doc) == "start":
+        cy_holder[0] = draw_chord_sheet(cy_holder[0])
 
     gutter = doc.get("section_layout") == "gutter"
     gutter_w = 0
@@ -892,8 +1003,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                     cy = next_column()
             cy -= 2 * S
 
-        lyric_lines = (render.printable_lyrics(sec.get("lyrics_text", ""))
-                       if sec.get("print_lyrics") else [])
+        lyric_lines = render.section_lyric_lines(doc, sec)
         beside = render.lyrics_beside(doc) and bool(chart_rows) and bool(lyric_lines)
 
         if chart_rows:
@@ -967,10 +1077,17 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         cy -= 18 * S
         cy_holder[0] = cy
 
+    if gathered_at == "end":
+        cy_holder[0] = draw_lyrics_block(cy_holder[0], gathered)
     if chords_mod.sheet_position(doc) == "end":
         cy_holder[0] = draw_chord_sheet(cy_holder[0])
 
     finish_page()
+    # Words that run longer than the chart get pages of their own; the fit
+    # sees them as pages like any other and shrinks the type to avoid them.
+    while side and pn_holder[0] < len(side_pages):
+        pn_holder[0] += 1
+        finish_page()
     return _assemble_pdf(pages, W, H), len(pages)
 
 

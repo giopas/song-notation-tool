@@ -88,7 +88,8 @@ def test_default_export_name_uses_artist_and_title():
 
 
 # ==============================================================================
-#  Lyrics in export (v0.19) — opt-in via print_lyrics, off by default.
+#  Lyrics in export — off by default; since v0.24 one song-wide setting,
+#  `lyrics_layout`, decides where (and whether) they print.
 # ==============================================================================
 
 def test_build_song_lines_omits_lyrics_by_default():
@@ -103,7 +104,7 @@ def test_build_song_lines_omits_lyrics_by_default():
 
 def test_build_song_lines_includes_whole_song_lyrics_when_enabled():
     doc = _doc_with_one_section()
-    doc["print_lyrics"] = True
+    doc["lyrics_layout"] = "start"
     doc["lyrics_text"] = "Whole song line one\nWhole song line two"
     text = "\n".join(export.build_song_lines(doc))
     assert "LYRICS" in text
@@ -113,7 +114,7 @@ def test_build_song_lines_includes_whole_song_lyrics_when_enabled():
 
 def test_build_song_lines_includes_section_lyrics_when_enabled():
     doc = _doc_with_one_section()
-    doc["sections"][0]["print_lyrics"] = True
+    doc["lyrics_layout"] = "below"
     doc["sections"][0]["lyrics_text"] = "Section lyric line"
     text = "\n".join(export.build_song_lines(doc))
     assert "Section lyric line" in text
@@ -121,7 +122,7 @@ def test_build_song_lines_includes_section_lyrics_when_enabled():
 
 def test_build_pdf_valid_with_lyrics_enabled():
     doc = _doc_with_one_section()
-    doc["print_lyrics"] = True
+    doc["lyrics_layout"] = "below"
     doc["lyrics_text"] = "Line one\nLine two"
     doc["sections"][0]["print_lyrics"] = True
     doc["sections"][0]["lyrics_text"] = "Verse line"
@@ -864,3 +865,108 @@ def test_chord_sheet_reaches_the_pdf():
     without = export.build_pdf(doc)
     assert len(with_sheet) > len(without)
     assert with_sheet.startswith(b"%PDF")
+
+
+# ---------------------------------------------------------------------------
+#  Lyric placement — one song-wide setting, six choices
+# ---------------------------------------------------------------------------
+
+def _placed(mode):
+    import grammar
+    doc = model.new_document(title="Man Who Sold", artist="Nirvana")
+    doc["lyrics_layout"] = mode
+    for sid, name, line, words in [
+            ("v1", "Verse_1", "5A 5D", "We passed upon the stairs"),
+            ("c1", "Chorus_1", "5C 8F", "Who knows? Not me")]:
+        sec = model.new_section(sid, name, "Verse", instrument="Bass (4-string)")
+        sec["items"] = grammar.parse_items(line)
+        sec["lyrics_text"] = words
+        doc["sections"].append(sec)
+    return doc
+
+
+def _index(lines, needle):
+    return next(i for i, ln in enumerate(lines) if needle in ln)
+
+
+def test_none_prints_no_words_even_when_sections_have_them():
+    text = "\n".join(export.build_song_lines(_placed("none")))
+    assert "We passed" not in text and "LYRICS" not in text
+
+
+def _banner(lines, name):
+    """The section's own banner line — the one under a dashed rule — as
+    opposed to the same name heading its words in a lyrics block."""
+    return next(i for i, ln in enumerate(lines)
+                if ln.strip() == name and i and lines[i - 1].startswith("---"))
+
+
+def test_start_gathers_every_sections_words_before_the_chart():
+    lines = export.build_song_lines(_placed("start"))
+    assert _index(lines, "LYRICS") < _index(lines, "We passed") \
+        < _index(lines, "Who knows") < _banner(lines, "Verse_1")
+    # headed by the section they belong to
+    assert lines[_index(lines, "We passed") - 1].strip() == "Verse_1"
+
+
+def test_end_gathers_them_after_the_chart():
+    lines = export.build_song_lines(_placed("end"))
+    assert _index(lines, "LYRICS") > _banner(lines, "Chorus_1")
+
+
+def test_side_puts_the_words_in_a_column_left_of_the_chart():
+    lines = export.build_song_lines(_placed("side"))
+    words = next(ln for ln in lines if "We passed upon the stairs" in ln)
+    assert words.index("We passed") < 5          # left edge
+    # the chart shares the line, to the right of the words
+    assert any("We passed" in ln and ("Verse_1" in ln or "---" in ln or "A" in ln[30:])
+               for ln in lines)
+    assert "LYRICS" not in "\n".join(lines)      # the column is its own heading
+
+
+def test_per_section_modes_never_gather():
+    for mode in ("beside", "below"):
+        text = "\n".join(export.build_song_lines(_placed(mode)))
+        assert "LYRICS" not in text and "We passed" in text
+
+
+def test_per_section_mode_falls_back_to_the_sheet_when_no_section_has_words():
+    """Words the song has are never silently dropped: a sheet nobody has
+    split yet prints gathered at the start, with its markers as headings."""
+    doc = _placed("beside")
+    for sec in doc["sections"]:
+        sec["lyrics_text"] = ""
+    doc["lyrics_text"] = "=== Verse_1 ===\nsheet words"
+    lines = export.build_song_lines(doc)
+    assert _index(lines, "LYRICS") < _index(lines, "sheet words")
+    assert lines[_index(lines, "sheet words") - 1].strip() == "Verse_1"
+
+
+def test_side_forces_a_lyrics_column_and_one_chart_column():
+    doc = _placed("side")
+    doc["pdf_columns"] = "1"
+    assert export.resolve_columns(doc) == 2
+
+
+def test_every_placement_builds_a_pdf():
+    for mode in ("none", "start", "end", "side", "beside", "below"):
+        pdf = export.build_pdf(_placed(mode))
+        assert pdf.startswith(b"%PDF") and b"%%EOF" in pdf
+
+
+def test_long_side_lyrics_get_pages_of_their_own():
+    doc = _placed("side")
+    doc["pdf_scale"] = "normal"
+    doc["sections"][0]["lyrics_text"] = "\n".join(f"line {i}" for i in range(160))
+    _, pages = export._build_pdf(doc, export._all_instruments(doc), "portrait", 1.0, 2)
+    assert pages >= 2
+
+
+def test_chord_sheet_first_in_the_pdf_no_longer_crashes():
+    """The chord sheet used to be drawn before its drawing function was
+    defined — exporting with "Chord shapes first" raised NameError."""
+    import chords
+    doc = _placed("none")
+    doc["chords"] = [model.make_chord("C", chords.shape_from_text("x32010"))]
+    doc["chord_sheet"] = "start"
+    assert export.build_pdf(doc).startswith(b"%PDF")

@@ -118,3 +118,31 @@ def test_sample_song_fixture_migrates_without_loss():
     by_name = {s["name"]: s for s in migrated["sections"]}
     assert by_name["Verse 2"]["items"][0]["kind"] == "section_ref"
     assert by_name["Chorus 2"]["items"][0]["kind"] == "section_ref"
+
+
+# ---------------------------------------------------------------------------
+#  Songs saved before lyric placement was one setting
+# ---------------------------------------------------------------------------
+
+import model  # noqa: E402
+
+def test_old_song_with_ticked_sections_keeps_printing_them_under_the_chart():
+    doc = {"format": 2, "sections": [
+        {"id": "v", "lyrics_text": "words", "print_lyrics": True}]}
+    assert model.migrate_document(doc)["lyrics_layout"] == "below"
+
+
+def test_old_song_with_only_the_sheet_ticked_prints_it_at_the_start():
+    doc = {"format": 2, "sections": [], "lyrics_text": "words", "print_lyrics": True}
+    assert model.migrate_document(doc)["lyrics_layout"] == "start"
+
+
+def test_old_song_with_nothing_ticked_prints_no_words():
+    doc = {"format": 2, "sections": [
+        {"id": "v", "lyrics_text": "words", "print_lyrics": False}]}
+    assert model.migrate_document(doc)["lyrics_layout"] == "none"
+
+
+def test_a_song_that_already_chose_keeps_its_choice():
+    doc = {"format": 2, "sections": [], "lyrics_layout": "side"}
+    assert model.migrate_document(doc)["lyrics_layout"] == "side"

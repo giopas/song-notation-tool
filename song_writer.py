@@ -95,6 +95,9 @@ from constants import (
     SECTION_TYPES as _CONST_SECTION_TYPES,
     RENDER_MODE_LABELS as _CONST_RENDER_MODE_LABELS,
     TAB_BEATS_OPTIONS as _CONST_TAB_BEATS_OPTIONS,
+    SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
+    PDF_COLUMN_LABELS, LYRICS_LAYOUT_LABELS, LICK_REF_LABELS,
+    CHORD_SHEET_LABELS,
     default_export_name,
 )
 
@@ -511,6 +514,7 @@ class SongNotationApp(tk.Tk):
 
         # ── Bottom-up: riff strip, then editor bar, then the map fills
         # whatever is left (design section 3: map / editor bar / riffs).
+        self._build_layout_bar()
         self._build_riff_strip()
         self._build_editor_bar()
         self._build_song_map()
@@ -643,6 +647,137 @@ class SongNotationApp(tk.Tk):
         entry.icursor(pos + text.index("-"))
         entry.focus_set()
         self._on_editor_keystroke(None)
+
+    # ==========================================================================
+    #  LAYOUT — how the song comes out on paper, bottom left
+    # ==========================================================================
+    # (key, label, choices, default, hint) — the same seven settings, in the
+    # same groups, as the browser's Layout panel.
+    _LAYOUT_SETTINGS = (
+        ("Page", [
+            ("pdf_scale", "Size", PDF_SCALE_LABELS, "fit",
+             "Fit to page grows the type to fill the paper; fit to one page "
+             "shrinks it if that's what it takes to get the song on one sheet."),
+            ("pdf_columns", "Columns", PDF_COLUMN_LABELS, "auto",
+             "Two columns halve the height a chart needs. Auto only splits the "
+             "page when it helps."),
+            ("color_mode", "Colour", COLOR_MODE_LABELS, "color",
+             "Colour tells section types apart at a glance; notes stay black."),
+        ]),
+        ("Sections", [
+            ("section_layout", "Section names", SECTION_LAYOUT_LABELS, "banner",
+             "A band above each section, or a column down its left."),
+        ]),
+        ("Lyrics", [
+            ("lyrics_layout", "Lyrics", LYRICS_LAYOUT_LABELS, "none", ""),
+        ]),
+        ("Licks & chords", [
+            ("lick_refs", "Recalled licks", LICK_REF_LABELS, "tab",
+             "{Riff1} as its tab again, or just its name and count."),
+            ("chord_sheet", "Chord shapes", CHORD_SHEET_LABELS, "none",
+             "Shapes are edited from Chords 🎸 in the toolbar."),
+        ]),
+    )
+    _LYRICS_HINTS = {
+        "none": "Nothing prints. The words stay in the Lyrics dialog as reference.",
+        "start": "Every section's words in one block before the chart.",
+        "end": "Every section's words in one block after the chart.",
+        "side": "Every section's words down a column on the left, the chart in "
+                "one column beside them. Columns steps aside.",
+        "beside": "Each section's words to the right of its own chart — what you "
+                  "play during them. Not aligned chord-to-syllable.",
+        "below": "Each section's words under its own chart.",
+    }
+
+    def _build_layout_bar(self):
+        """A slim bar along the very bottom: the Layout button on the left,
+        and a line saying what's set, so it's visible without opening it."""
+        bar = tk.Frame(self)
+        bar.pack(side="bottom", fill="x", padx=8, pady=(0, 6))
+        self.layout_bar = bar
+        self.btn_layout = ttk.Button(bar, text="⚙ Layout", style="Normal.TButton",
+                                      command=self._layout_dialog)
+        self.btn_layout.pack(side="left")
+        ToolTip(self.btn_layout,
+                "How this song comes out on paper: page size, columns, colour, "
+                "where the lyrics go, licks and chord shapes.")
+        self.lbl_layout = tk.Label(bar, text="", font=FONT_TINY, anchor="w")
+        self.lbl_layout.pack(side="left", padx=(8, 0))
+        self._topbar_labels.append(self.lbl_layout)
+
+    def _layout_summary(self) -> str:
+        d = self.doc or {}
+        lyr = d.get("lyrics_layout", "none")
+        bits = [PDF_SCALE_LABELS.get(str(d.get("pdf_scale", "fit")), "")]
+        if lyr != "side":
+            bits.append(PDF_COLUMN_LABELS.get(str(d.get("pdf_columns", "auto")),
+                                              "").split(" (")[0])
+        bits.append("no lyrics" if lyr == "none" else "lyrics: " + {
+            "start": "at the start", "end": "at the end", "side": "left column",
+            "beside": "beside", "below": "under"}.get(lyr, lyr))
+        return "  ·  ".join(b for b in bits if b)
+
+    def _layout_dialog(self):
+        t = THEMES[self.current_theme]
+        dlg = tk.Toplevel(self)
+        dlg.title("Layout — how this song prints")
+        dlg.configure(bg=t["bg"])
+        dlg.transient(self)
+        dlg.resizable(False, False)
+
+        widgets = {}
+
+        def _sync():
+            lyr = self.doc.get("lyrics_layout", "none")
+            lyr_hint.configure(text=self._LYRICS_HINTS.get(lyr, ""))
+            # In "side" layout the page is the words' column plus one chart
+            # column whatever Columns says — so the control says so rather
+            # than sitting there doing nothing.
+            side = lyr == "side"
+            widgets["pdf_columns"].configure(state="disabled" if side else "readonly")
+            cols_hint.configure(text=(
+                "Set by the lyrics: their column on the left, one chart column beside it."
+                if side else self._LAYOUT_SETTINGS[0][1][1][4]))
+            self.lbl_layout.configure(text=self._layout_summary())
+            self.dirty = True
+            self._refresh_page_indicator()
+
+        lyr_hint = cols_hint = None
+        for group, rows in self._LAYOUT_SETTINGS:
+            tk.Label(dlg, text=group.upper(), bg=t["bg"], fg=t["accent"],
+                     font=FONT_TINY).pack(anchor="w", padx=16, pady=(12, 2))
+            for key, label, choices, default, hint in rows:
+                row = tk.Frame(dlg, bg=t["bg"])
+                row.pack(fill="x", padx=16, pady=1)
+                tk.Label(row, text=label, bg=t["bg"], fg=t["fg"], font=FONT_TINY,
+                         width=14, anchor="w").pack(side="left")
+                values = list(choices.values())
+                keys = list(choices.keys())
+                cur = str(self.doc.get(key, default))
+                var = tk.StringVar(value=choices.get(cur, choices.get(default, "")))
+                cb = ttk.Combobox(row, textvariable=var, values=values,
+                                  state="readonly", width=30, font=FONT_TINY)
+                cb.pack(side="left")
+                widgets[key] = cb
+
+                def _on_pick(_e=None, k=key, v=var, ks=keys, vs=values):
+                    self.doc[k] = ks[vs.index(v.get())]
+                    _sync()
+                cb.bind("<<ComboboxSelected>>", _on_pick)
+                h = tk.Label(dlg, text=hint, bg=t["bg"], fg=t["fg"], font=FONT_TINY,
+                             justify="left", wraplength=380, anchor="w")
+                h.pack(fill="x", padx=16, pady=(0, 4))
+                if key == "lyrics_layout":
+                    lyr_hint = h
+                if key == "pdf_columns":
+                    cols_hint = h
+
+        ttk.Button(dlg, text="Done", command=dlg.destroy,
+                    style="Accent.TButton").pack(side="right", padx=16, pady=(8, 14))
+        lyr_hint.configure(text=self._LYRICS_HINTS.get(
+            self.doc.get("lyrics_layout", "none"), ""))
+        side = self.doc.get("lyrics_layout", "none") == "side"
+        widgets["pdf_columns"].configure(state="disabled" if side else "readonly")
 
     def _build_riff_strip(self):
         outer = tk.Frame(self)
@@ -1349,6 +1484,8 @@ class SongNotationApp(tk.Tk):
     def _refresh_page_indicator(self):
         n = render.estimate_page_count(self.doc, instrument_strings=INSTRUMENT_STRINGS)
         self.lbl_pages.configure(text=f"[{n} page{'s' if n != 1 else ''}]")
+        if getattr(self, "lbl_layout", None) is not None and self.doc is not None:
+            self.lbl_layout.configure(text=self._layout_summary())
 
     # ==========================================================================
     #  THEME ENGINE  (ported from QLC+ Swiss Knife v0.4)
@@ -1777,7 +1914,6 @@ class SongNotationApp(tk.Tk):
             txt.delete("1.0", "end")
             if tgt is not None:
                 txt.insert("1.0", tgt.get("lyrics_text", ""))
-                print_var.set(bool(tgt.get("print_lyrics", False)))
             btn_split.configure(
                 state=("normal" if scope_var.get() == "song" else "disabled"))
             btn_markers.configure(
@@ -1860,46 +1996,21 @@ class SongNotationApp(tk.Tk):
             ttk.Button(marker_strip, text="+ Section…", style="Normal.TButton",
                         command=_new_section_from_here).pack(side="left", padx=(8, 2))
 
-        print_var = tk.BooleanVar(value=False)
+        # Whether and where the words print is one song-wide setting in
+        # ⚙ Layout — this dialog is for the words, that one for the page.
+        body_footer = tk.Frame(dlg, bg=t["bg"])
+        _where = LYRICS_LAYOUT_LABELS.get(self.doc.get("lyrics_layout", "none"), "")
+        tk.Label(body_footer, text=(
+            "Lyrics don't print for this song yet." if self.doc.get(
+                "lyrics_layout", "none") == "none"
+            else f"Printing: {_where.lower()}."),
+            bg=t["bg"], fg=t["fg"], font=FONT_TINY).pack(side="left")
 
-        def _on_print_toggle():
-            tgt = target_box.get("obj")
-            if tgt is not None:
-                tgt["print_lyrics"] = print_var.get()
-                self.dirty = True
-                self._rebuild_map()
-
-        chk = tk.Checkbutton(
-            body_footer := tk.Frame(dlg, bg=t["bg"]),
-            text="Include in TXT/PDF export and the Preview pane",
-            variable=print_var, command=_on_print_toggle,
-            bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
-            activebackground=t["bg"], font=FONT_TINY)
-        chk.pack(anchor="w")
-
-        # Where the words go on the page. Beside the chart is the default:
-        # it shows what the instrument does *during* those words without
-        # the verse pushing the next section off the sheet. Nothing is
-        # aligned chord-to-syllable either way.
-        layout_var = tk.StringVar(
-            value=self.doc.get("lyrics_layout", "beside"))
-
-        def _on_layout():
-            self.doc["lyrics_layout"] = layout_var.get()
-            self.dirty = True
-            self._rebuild_map()
-            self._refresh_page_indicator()
-
-        layout_row = tk.Frame(body_footer, bg=t["bg"])
-        layout_row.pack(anchor="w", pady=(2, 0))
-        tk.Label(layout_row, text="When printed:", bg=t["bg"], fg=t["accent"],
-                 font=FONT_TINY).pack(side="left")
-        for val, lbl in (("beside", "beside the chart"),
-                          ("below", "under the chart")):
-            tk.Radiobutton(layout_row, text=lbl, variable=layout_var, value=val,
-                           command=_on_layout, bg=t["bg"], fg=t["fg"],
-                           selectcolor=t["input_bg"], activebackground=t["bg"],
-                           font=FONT_TINY).pack(side="left", padx=(6, 0))
+        def _to_layout():
+            dlg.destroy()
+            self._layout_dialog()
+        ttk.Button(body_footer, text="⚙ Layout…", style="Normal.TButton",
+                    command=_to_layout).pack(side="left", padx=(8, 0))
 
         body_footer.pack(fill="x", padx=16, pady=(0, 2))
 
@@ -1980,13 +2091,6 @@ class SongNotationApp(tk.Tk):
                                  side="left", fill="x", expand=True)
                 pickers.append((var, values, keeps))
 
-            print_var2 = tk.BooleanVar(value=any(
-                s.get("print_lyrics") for s in sections) or bool(
-                    self.doc.get("print_lyrics")))
-            tk.Checkbutton(win, text="Print each section's lyrics on the chart",
-                           variable=print_var2, bg=t["bg"], fg=t["fg"],
-                           selectcolor=t["input_bg"], activebackground=t["bg"],
-                           font=FONT_TINY).pack(anchor="w", padx=16, pady=(8, 2))
             tk.Label(win, text="The whole-song sheet is kept as it is — add a section "
                                 "later and its blocks are still here to give it one. It "
                                 "stops printing on its own, so the same words don't land "
@@ -2007,7 +2111,7 @@ class SongNotationApp(tk.Tk):
                         assignment.append(values.index(label)
                                           - (2 if keeps else 1))
                 n = songlyrics.apply_assignment(self.doc, blocks, assignment,
-                                                 print_lyrics=print_var2.get())
+                                                 print_lyrics=self.doc.get("lyrics_layout", "none") != "none")
                 self.dirty = True
                 self._rebuild_map()
                 win.destroy()
@@ -2043,8 +2147,9 @@ class SongNotationApp(tk.Tk):
                     stype = next((ty for ty in SECTION_TYPES
                                   if nm.lower().startswith(ty.lower())), "Verse")
                     self._add_section(name=nm, section_type=stype)
-            out = songlyrics.apply_marked(self.doc, sheet,
-                                           print_lyrics=print_var.get())
+            out = songlyrics.apply_marked(
+                self.doc, sheet,
+                print_lyrics=self.doc.get("lyrics_layout", "none") != "none")
             self.dirty = True
             self._rebuild_map()
             self._refresh_page_indicator()
@@ -2140,7 +2245,7 @@ class SongNotationApp(tk.Tk):
                 "tab — nothing is fetched or pasted in for you; copy what "
                 "you want back into this box.")
 
-        _load_scope()  # now that print_var and btn_split both exist
+        _load_scope()  # now that btn_split exists
 
         tk.Label(dlg, text="Off by default: a reference layer, never aligned to the "
                  "chart automatically. Check the box above to include it in the "
@@ -2182,33 +2287,6 @@ class SongNotationApp(tk.Tk):
         self._sync_doc_meta()
         return songexport.build_song_lines(self.doc, instruments=instruments)
 
-    def _lick_refs_choice(self, dlg, t):
-        """"Recalled licks: as tab / by name only" — shown only when the
-        song actually recalls a lick, since otherwise it's a choice about
-        nothing. Written straight to the document, like Columns: it's a
-        property of the song, so it travels with the .sng."""
-        uses_refs = any(
-            it.get("kind") == "lick_ref"
-            for sec in self.doc.get("sections", [])
-            for it in songchords._walk(sec.get("items", [])))
-        if not uses_refs:
-            return
-        tk.Label(dlg, text="Recalled licks ({Riff1}):", bg=t["bg"], fg=t["accent"],
-                 font=FONT_TINY).pack(padx=16, pady=(10, 2), anchor="w")
-        var = tk.StringVar(value=self.doc.get("lick_refs", "tab"))
-
-        def _set():
-            self.doc["lick_refs"] = var.get()
-            self.dirty = True
-            self._refresh_page_indicator()
-
-        for val, lbl in (("tab", "Print the tab again"),
-                          ("name", "Name only — Riff1 (x3)")):
-            tk.Radiobutton(dlg, text=lbl, variable=var, value=val, command=_set,
-                           bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
-                           activebackground=t["bg"], font=FONT_TINY
-                           ).pack(anchor="w", padx=28)
-
     def _export_txt(self):
         self._commit_editor_line(force=True)
         t = THEMES[self.current_theme]
@@ -2228,8 +2306,6 @@ class SongNotationApp(tk.Tk):
             tk.Checkbutton(dlg, text=instr, variable=v, bg=t["bg"], fg=t["fg"],
                            selectcolor=t["input_bg"], activebackground=t["bg"],
                            font=FONT_TINY).pack(anchor="w", padx=28)
-
-        self._lick_refs_choice(dlg, t)
 
         def do_export():
             instrs = {i for i, v in instr_vars.items() if v.get()}
@@ -2295,8 +2371,6 @@ class SongNotationApp(tk.Tk):
             tk.Checkbutton(dlg, text=instr, variable=v, bg=t["bg"], fg=t["fg"],
                            selectcolor=t["input_bg"], activebackground=t["bg"],
                            font=FONT_TINY).pack(anchor="w", padx=28)
-
-        self._lick_refs_choice(dlg, t)
 
         def do_export():
             instrs = {i for i, v in instr_vars.items() if v.get()}
@@ -2396,9 +2470,12 @@ class SongNotationApp(tk.Tk):
         "song — paste it, import a .txt file, or open a browser search for "
         "it. Mark the sheet up with \"=== Verse 1 ===\" lines (the buttons "
         "above the box write one for you) and \"Split by markers\" hands each "
-        "block to the section it names; the markers never print. Printed "
-        "words sit beside their section's chart, in a column of their own — "
-        "nothing is aligned chord to syllable.\n\n"
+        "block to the section it names; the markers never print.\n\n"
+        "⚙ Layout (bottom left) holds every print setting — page size, "
+        "columns, colour, section names, licks, chord shapes — and where the "
+        "lyrics go: all together at the start, the end or down a left-hand "
+        "column, with each section beside or under its chart, or not at all. "
+        "Nothing is aligned chord to syllable.\n\n"
         "Name a lick — {Riff1 = G 5 7 5 | D - - 3} — and {Riff1}x3 plays it "
         "again anywhere in the song; edit it once and every place that plays "
         "it follows.\n\n"

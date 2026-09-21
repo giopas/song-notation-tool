@@ -35,6 +35,7 @@ serves that, not by difficulty.
 
 | **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.24.0** | **Lyric placement and a Layout menu** — six places the words can go (none; all together at the start, the end or down a left column; with each section beside or under its chart), chosen once per song; every print setting moved into ⚙ Layout at the bottom left. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.23.0** | **Lyrics that carry their own structure, named licks, chord shapes** — `=== Section ===` markers in the lyric sheet (drag a section in, "Split by markers" hands each block out); a section's words print *beside* its chart rather than under it; `{Riff1 = …}` names a lick and `{Riff1}x3` recalls it; a Chords dialog prints chord-shape diagrams at either end of the chart. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.22.0** | **Two-column printing** — a Columns setting (auto / 1 / 2) that splits the page when it makes the chart bigger or saves a sheet, with a rule down the gutter; fit and column count are now decided together. See [CHANGELOG.md](CHANGELOG.md). |
 

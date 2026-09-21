@@ -66,8 +66,11 @@
       <li><strong>Lyrics</strong>: mark a sheet up with
         <code>=== Verse 1 ===</code> lines (drag the section chips in the Lyrics
         dialog) and "Split by markers" hands each block to its section. Markers
-        never print. A section's words print beside its chart, in their own
-        column.</li>
+        never print. Where the words go — all together at the start, the end
+        or down a left column, with each section, or nowhere — is set in
+        <strong>⚙ Layout</strong>, bottom left.</li>
+      <li><strong>⚙ Layout</strong> (bottom left) holds every print setting:
+        size, columns, colour, section names, lyrics, licks, chord shapes.</li>
       <li><strong>Chord shapes</strong>: the <strong>Chords</strong> button keeps a
         list of voicings (<code>x32010</code> is C), printed as diagrams at the
         start or the end of the chart.</li>
@@ -113,7 +116,57 @@
         <span class="songs-folder-hint hidden">Run with <code>--dir</code> to use
           a different folder, or open the app in its own window to change it here.</span>
       </div>
+
+      <!-- Layout settings: everything about how the song comes out on
+           paper, in one place, out of the way of the song itself. Pinned to
+           the bottom of the sidebar; the line under the button says what's
+           set, so you can see it without opening anything. -->
+      <div id="sidebar-footer">
+        <button id="btn-layout" class="btn layout-btn" disabled
+                title="How this song comes out on paper: page size, columns, colour, where the lyrics go, licks and chord shapes">
+          <span class="layout-btn-icon">⚙</span> Layout
+        </button>
+        <span id="layout-summary" class="layout-summary"></span>
+      </div>
     </aside>
+
+    <div id="layout-panel" class="layout-panel hidden" role="dialog"
+         aria-label="Layout settings">
+      <div class="layout-panel-head">
+        <span>Layout — how this song prints</span>
+        <button id="layout-close" class="icon-btn" title="Close (Esc)">×</button>
+      </div>
+
+      <div class="layout-group">
+        <div class="layout-group-title">Page</div>
+        <label>Size <select id="meta-scale"></select></label>
+        <p class="layout-hint">Fit to page grows the type to fill the paper; fit to one page shrinks it if that's what it takes to get the whole song on one sheet.</p>
+        <label>Columns <select id="meta-columns"></select></label>
+        <p class="layout-hint" id="layout-columns-hint">Two columns halve the height a chart needs, and the fit spends that on bigger type. Auto only splits the page when it helps.</p>
+        <label>Colour <select id="meta-color"></select></label>
+        <p class="layout-hint">Colour tells section types apart at a glance; the notes stay black either way.</p>
+      </div>
+
+      <div class="layout-group">
+        <div class="layout-group-title">Sections</div>
+        <label>Section names <select id="meta-layout"></select></label>
+        <p class="layout-hint">A band above each section, or a column down its left — the column fits far more on a page.</p>
+      </div>
+
+      <div class="layout-group">
+        <div class="layout-group-title">Lyrics</div>
+        <label>Lyrics <select id="meta-lyrics-layout"></select></label>
+        <p class="layout-hint" id="layout-lyrics-hint"></p>
+      </div>
+
+      <div class="layout-group">
+        <div class="layout-group-title">Licks &amp; chords</div>
+        <label>Recalled licks <select id="meta-lick-refs"></select></label>
+        <p class="layout-hint">{Riff1} as its tab again, or just its name and count — "Riff1 (x3)".</p>
+        <label>Chord shapes <select id="meta-chord-sheet"></select></label>
+        <p class="layout-hint">Shapes are edited from Chords 🎸 in the toolbar.</p>
+      </div>
+    </div>
 
     <main id="main">
       <!-- First-launch / empty state -->
@@ -128,9 +181,8 @@
 
       <section id="editor" class="hidden">
         <div id="meta-form">
-          <!-- Row one is the song itself. Row two is only about how it
-               comes out on paper — framed and labelled separately so it
-               doesn't read as more facts about the song. -->
+          <!-- The song itself. How it comes out on paper lives in the
+               Layout panel at the bottom of the sidebar. -->
           <div class="meta-row">
             <label>Title <input id="meta-title" type="text" placeholder="Song title"></label>
             <label>Artist <input id="meta-artist" type="text" placeholder="Artist"></label>
@@ -139,30 +191,6 @@
             <label>BPM <input id="meta-bpm" type="text" size="4" placeholder=""></label>
           </div>
 
-          <div class="meta-row meta-print" role="group" aria-label="Print and export layout">
-            <span class="meta-print-title">Print &amp; export</span>
-            <label title="Where each section's name goes in the exported chart: a header band above it, or a left-hand column beside it. The left column fits far more of a song on one page.">Layout
-              <select id="meta-layout"></select>
-            </label>
-            <label title="Colour gives each section heading a colour by type, so you can find your place at a glance. The notes stay black either way. Black &amp; white is for a mono printer or a photocopy.">Colour
-              <select id="meta-color"></select>
-            </label>
-            <label title="Fit to page scales the whole chart up until it fills the paper without spilling onto another page — for reading off a music stand, or from the floor. Fit to one page goes the other way when it has to, shrinking the type until the whole song lands on a single sheet.">Size
-              <select id="meta-scale"></select>
-            </label>
-            <label title="Where a section's words print: beside its chart, in a column of their own, or underneath it. Beside is usually what you want — it shows what the instrument does during those words without the verse pushing the next section off the page. Nothing is aligned chord-to-syllable either way.">Lyrics
-              <select id="meta-lyrics-layout"></select>
-            </label>
-            <label title="What a recalled lick — {Riff1} — prints as. Tab plays the notes again wherever it's used; Name only prints 'Riff1 (x3)' and leaves the notes where the lick was written, which is how a handwritten chart does it and makes for a shorter page.">Licks
-              <select id="meta-lick-refs"></select>
-            </label>
-            <label title="Print the song's chord shapes as a block of diagrams, once, at the start or the end of the chart. Shapes are edited from the Chords button in the toolbar.">Chord shapes
-              <select id="meta-chord-sheet"></select>
-            </label>
-            <label title="Most chart lines are short, so one column down the page wastes half of it. Two columns halve the height the chart needs, and Fit to page spends that on bigger type — the same song, easier to read. Auto only splits the page when it actually helps.">Columns
-              <select id="meta-columns"></select>
-            </label>
-          </div>
         </div>
 
         <div id="section-list"></div>
@@ -256,10 +284,13 @@
         <textarea id="lyrics-textarea" rows="14" spellcheck="false"
                   placeholder="Paste or type lyrics here…"></textarea>
       </div>
-      <label class="modal-checkbox">
-        <input id="lyrics-print" type="checkbox">
-        Include in TXT/PDF export and the Preview pane
-      </label>
+      <!-- Whether and where the words print is one song-wide choice on the
+           main screen, not a box per section in here: this dialog is for
+           the words, the Layout panel is for the page. -->
+      <p class="modal-hint lyrics-where">
+        <span id="lyrics-where-text"></span>
+        <button id="lyrics-open-layout" type="button" class="btn subtle">⚙ Layout…</button>
+      </p>
       <div class="modal-actions" style="justify-content: space-between;">
         <div>
           <button id="lyrics-import" class="btn subtle">Import from file…</button>
@@ -274,10 +305,10 @@
         </div>
         <button id="lyrics-close" class="btn accent">Done</button>
       </div>
-      <p class="modal-hint">Off by default: a reference layer, never aligned to the chart
-        automatically. Check the box above to print it too — a section's words print
-        beside its chart, in their own column, so the page shows what the instrument
-        does while they're sung. "Search online ↗" asks for the
+      <p class="modal-hint">A reference layer, never aligned to the chart automatically.
+        Where the words print — all together at the start, the end or down a
+        left-hand column, with each section, or not at all — is set in
+        <strong>⚙ Layout</strong> at the bottom left. "Search online ↗" asks for the
         song title and artist, then opens a DuckDuckGo search in a new tab; nothing is
         fetched or pasted in for you.</p>
     </div>
@@ -293,7 +324,7 @@
         <code>x32010</code> is C, <code>320003</code> is G. Frets past the ninth need
         spaces: <code>x 0 12 12 12 x</code>. Use <code>x</code> for a string you don't
         sound. They print as a block of diagrams, once, wherever
-        <strong>Print &amp; export → Chord shapes</strong> says.
+        <strong>⚙ Layout → Chord shapes</strong> (bottom left) says.
       </p>
       <p id="chords-transposed" class="modal-hint chord-transposed hidden"></p>
       <div id="chords-rows" class="chord-rows"></div>
@@ -322,10 +353,8 @@
         sections as sing it — a chorus is written once and played three times.
       </p>
       <div id="lyrics-split-rows" class="split-rows"></div>
-      <label class="modal-checkbox">
-        <input id="lyrics-split-print" type="checkbox">
-        Print each section's lyrics on the chart
-      </label>
+      <p class="modal-hint">Whether and where the words print is set in
+        <strong>⚙ Layout</strong>, bottom left.</p>
       <div class="modal-actions">
         <button id="lyrics-split-cancel" class="btn subtle">Cancel</button>
         <button id="lyrics-split-apply" class="btn accent">Assign</button>

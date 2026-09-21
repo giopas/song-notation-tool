@@ -223,3 +223,14 @@ ordinary download and the browser's own settings decide where it lands.
   lower of its E-form and A-form barres; anything with no template is
   slid whole, like a capo. Only the song's transpose applies — the sheet
   belongs to the whole song, not to any one section.
+- **Lyric placement is one song-wide setting** (`lyrics_layout`, v0.24):
+  `none`, `start`, `end`, `side`, `beside`, `below`. The gathered modes
+  (`start`/`end`/`side`) print `render.lyric_blocks()` — each section's
+  words under its name, or the marked-up sheet if no section has any —
+  wrapped to the column they're given. `side` makes the page two columns
+  whatever `pdf_columns` says: column 0 on every page is the words, laid
+  out up front page by page and drawn as each page is finished, so the
+  chart and the lyrics flow independently; words that outrun the chart
+  add pages, which the one-page fit counts and shrinks to avoid.
+- **Every print setting lives in ⚙ Layout**, bottom left, in both front
+  ends.

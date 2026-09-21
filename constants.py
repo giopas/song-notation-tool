@@ -8,7 +8,7 @@ an instrument's string list or the default tab beat count.
 
 from __future__ import annotations
 
-APP_VERSION = "0.23.0"
+APP_VERSION = "0.24.0"
 APP_TITLE = f"Song Notation Tool  v{APP_VERSION}"
 
 # Printed in the footer of every export, so a chart handed to someone else
@@ -35,27 +35,34 @@ INSTRUMENT_STRINGS = {
 SECTION_LAYOUT_LABELS = {"banner": "Sections on top",
                          "gutter": "Sections on the left"}
 
-# Where a section's words sit against its chart. "Beside" is the default:
-# the chart keeps a narrow left column and the words run down the right of
-# it, so the page says what the instrument does *during* those words
-# without the verse pushing the next section off the sheet. Nothing is
-# aligned chord-to-syllable — that would be a claim about where the
-# changes fall that a chart like this can't honestly make.
-LYRICS_LAYOUT_LABELS = {"beside": "Beside the chart",
-                        "below": "Under the chart"}
+# Where the song's lyrics print — one choice for the whole song, made on
+# the main screen. Either every section's words gathered into one block
+# (at the start, at the end, or down a column of their own on the left),
+# or each section's words with its own chart, or nothing. "Beside" is
+# the pick for reading while playing: the chart keeps a narrow column and
+# the words run down the right of it — what the instrument does *during*
+# those words, with no pretence of aligning chord to syllable.
+LYRICS_LAYOUT_LABELS = {
+    "none":   "Don't print",
+    "start":  "All together — at the start",
+    "end":    "All together — at the end",
+    "side":   "All together — left column",
+    "beside": "Each section — beside chart",
+    "below":  "Each section — under chart",
+}
 
 # What a recalled lick ({Riff1}) prints as. "Tab" plays it back in full
 # wherever it's used; "Name only" prints "Riff1 (x3)" and leaves the notes
 # where the lick was written — how the handwritten charts do it, and the
 # shorter page.
-LICK_REF_LABELS = {"tab": "Recalled licks as tab",
-                   "name": "Recalled licks by name only"}
+LICK_REF_LABELS = {"tab": "Tab again",
+                   "name": "Name only — Riff1 (x3)"}
 
 # A page of chord shapes — the voicings you had to work out — printed
 # once at one end of the song rather than beside every chord symbol.
-CHORD_SHEET_LABELS = {"none": "Don't print chord shapes",
-                      "start": "Chord shapes first",
-                      "end": "Chord shapes at the end"}
+CHORD_SHEET_LABELS = {"none": "Don't print",
+                      "start": "At the start",
+                      "end": "At the end"}
 
 # Print colours, one per section type, mirroring the accent each section
 # card carries in the UI so screen and paper agree at a glance. These are

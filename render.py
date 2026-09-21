@@ -547,10 +547,115 @@ def printable_lyrics(text: str) -> list:
     return text.splitlines() if text.strip() else []
 
 
+# Where the words go. One setting for the whole song, chosen on the main
+# screen: either every section's words gathered into one block (at the
+# start, at the end, or down a column of their own), or each section's
+# words with its chart (beside it or under it) — or none at all.
+LYRICS_MODES = ("none", "start", "end", "side", "beside", "below")
+LYRICS_GATHERED = ("start", "end", "side")
+LYRICS_PER_SECTION = ("beside", "below")
+
+
+def lyrics_mode(doc: dict) -> str:
+    """This document's lyric placement, from LYRICS_MODES."""
+    # Missing means a song the loader hasn't seen (a bare dict in a test,
+    # a hand-built document): nothing prints unless asked for, which is
+    # how lyrics have behaved since they were added.
+    mode = ((doc or {}).get("lyrics_layout") or "none").strip().lower()
+    return mode if mode in LYRICS_MODES else "none"
+
+
 def lyrics_beside(doc: dict) -> bool:
-    """True when this document prints a section's words beside its chart
-    rather than under it."""
-    return (doc or {}).get("lyrics_layout", "beside") != "below"
+    """True when each section prints its words beside its chart."""
+    return lyrics_mode(doc) == "beside"
+
+
+def section_lyric_lines(doc: dict, sec: dict) -> list:
+    """The words this section prints *with its chart* — none unless the
+    song's lyrics are placed per section. In the gathered modes the same
+    words print once, together, somewhere else."""
+    if doc is not None and lyrics_mode(doc) not in LYRICS_PER_SECTION:
+        return []
+    return printable_lyrics(sec.get("lyrics_text", ""))
+
+
+def lyric_blocks(doc: dict) -> list:
+    """Every lyric the song has, as [{"name", "lines"}] in song order.
+
+    Sections' own words come first in priority: they're what the sheet
+    was split into. Only when no section has any does the whole-song
+    sheet stand in — with its "=== Verse 1 ===" markers promoted from
+    structure to headings, which is the one place they earn ink.
+    """
+    blocks = []
+    for sec in (doc or {}).get("sections", []) or []:
+        lines = printable_lyrics(sec.get("lyrics_text", ""))
+        if lines:
+            blocks.append({"name": sec.get("name", ""), "lines": lines})
+    if blocks:
+        return blocks
+    import lyrics as lyrics_mod
+    for seg in lyrics_mod.split_marked((doc or {}).get("lyrics_text", "")):
+        lines = printable_lyrics(seg.get("text", ""))
+        if lines:
+            blocks.append({"name": seg.get("name", ""), "lines": lines})
+    return blocks
+
+
+def gathered_lyrics(doc: dict):
+    """(position, blocks) for the words that print as one block — or
+    (None, []) when there's nothing to gather.
+
+    Position is "start", "end" or "side". A per-section layout with no
+    section lyrics but a filled-in sheet gathers the sheet at the start
+    instead, so words the song has are never silently left off the page.
+    """
+    mode = lyrics_mode(doc)
+    if mode == "none":
+        return None, []
+    if mode in LYRICS_GATHERED:
+        blocks = lyric_blocks(doc)
+        return (mode, blocks) if blocks else (None, [])
+    has_section_words = any(printable_lyrics(sec.get("lyrics_text", ""))
+                            for sec in (doc or {}).get("sections", []) or [])
+    if has_section_words:
+        return None, []
+    blocks = lyric_blocks(doc)
+    return ("start", blocks) if blocks else (None, [])
+
+
+def lyric_block_items(blocks, width: int = None) -> list:
+    """Gathered lyric blocks as [(kind, text)] — kind "head" for a section
+    heading, "line" for a line of words (indented two), "gap" between
+    blocks. Lines longer than `width` wrap: a column of words is narrower
+    than a verse was typed for, and running off the page is not an option.
+    """
+    import textwrap
+    out = []
+    for i, b in enumerate(blocks or []):
+        if i:
+            out.append(("gap", ""))
+        if b.get("name"):
+            out.append(("head", b["name"]))
+        for ln in b.get("lines", []):
+            if not ln.strip():
+                out.append(("line", ""))
+            elif width and len(ln) + 2 > width:
+                # A wrapped line hangs its continuation further in, so it
+                # reads as the rest of the line above rather than a new one.
+                parts = textwrap.wrap(ln, max(8, width - 4))
+                out += [("line", ("  " if j == 0 else "    ") + w)
+                        for j, w in enumerate(parts)]
+            else:
+                out.append(("line", "  " + ln))
+    return out
+
+
+def lyric_block_lines(blocks, width: int = None, indent: int = 0) -> list:
+    """The same, as plain text lines — for the TXT export."""
+    pad = " " * indent
+    return [pad + text if text else "" for _kind, text in
+            lyric_block_items(blocks, None if width is None else width - indent)]
 
 
 def lyric_column_x(chart_rows, indent: int = BODY_INDENT) -> int:
@@ -675,7 +780,10 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
     """
     items = section.get("items", [])
     annotation = section.get("annotation", "")
-    lyrics = section.get("lyrics_text", "") if section.get("print_lyrics") else ""
+    if doc is not None:
+        lyrics = "\n".join(section_lyric_lines(doc, section))
+    else:
+        lyrics = section.get("lyrics_text", "") if section.get("print_lyrics") else ""
     beside = lyrics_beside(doc) if doc is not None else True
     chart_lines_drawn = 0
     render_mode = section.get("render", "chart")

@@ -29,12 +29,17 @@ RENDER_MODES = ("chart", "tab", "both", "free")
 #              which fits far more of a song on one page
 SECTION_LAYOUTS = ("banner", "gutter")
 
-# How a section's lyrics sit against its chart in the export:
-#   "beside" — chart in a narrow left column, words to the right of it,
-#              so the page says what the instrument does *during* those
-#              words without pretending to align chord to syllable
-#   "below"  — the words under the chart, the way v0.21 printed them
-LYRICS_LAYOUTS = ("beside", "below")
+# Where the song's lyrics print — one choice for the whole song:
+#   "none"   — not at all
+#   "start"  — every section's words together, before the chart
+#   "end"    — the same, after it
+#   "side"   — the same, down a column of their own on the left, with the
+#              chart in one column beside them
+#   "beside" — each section's words in a column to the right of its own
+#              chart: what the instrument does *during* those words, with
+#              no pretence of aligning chord to syllable
+#   "below"  — each section's words under its chart
+LYRICS_LAYOUTS = ("none", "start", "end", "side", "beside", "below")
 
 # What a recalled lick — {Riff1} — prints as:
 #   "tab"  — the notes again, with the name over them
@@ -144,7 +149,7 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "transpose": 0,
         "lyrics_text": "",
         "print_lyrics": False,
-        "lyrics_layout": "beside",
+        "lyrics_layout": "none",
         "lick_refs": "tab",
         "chords": [],
         "chord_sheet": "none",
@@ -216,8 +221,31 @@ def migrate_document(doc: dict) -> dict:
     """
     fmt = doc.get("format", 1)
     if fmt >= FORMAT_VERSION:
+        return _fill_lyrics_layout(doc)
+    return _fill_lyrics_layout(_migrate_v1_to_v2(doc))
+
+
+def _fill_lyrics_layout(doc: dict) -> dict:
+    """Give a song saved before lyric placement was one setting the
+    placement its old checkboxes amounted to.
+
+    Up to v0.22, lyrics printed per section, under the chart, wherever a
+    section's "print" box was ticked, and the whole-song sheet printed at
+    the top if its own box was. Reading that back as "under each section"
+    / "all at the start" / "none" means opening an old song prints what it
+    always printed — nothing appears or vanishes on the way in.
+    """
+    if "lyrics_layout" in doc:
         return doc
-    return _migrate_v1_to_v2(doc)
+    sections = doc.get("sections", []) or []
+    if any(sec.get("print_lyrics") and (sec.get("lyrics_text") or "").strip()
+           for sec in sections):
+        doc["lyrics_layout"] = "below"
+    elif doc.get("print_lyrics") and (doc.get("lyrics_text") or "").strip():
+        doc["lyrics_layout"] = "start"
+    else:
+        doc["lyrics_layout"] = "none"
+    return doc
 
 
 def _migrate_v1_to_v2(doc: dict) -> dict:

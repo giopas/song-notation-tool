@@ -186,8 +186,15 @@ class _JsApi:
 
     # ── Songs folder ──────────────────────────────────────────────────
     def choose_songs_folder(self):
-        """Pick a new songs folder. Existing songs are left where they
-        are — this points the app at a folder, it doesn't move data."""
+        """Ask the OS for a folder, and say what moving there would do.
+
+        Nothing changes yet: the app shows the plan ("move 12 songs? 2
+        have the same name there already") and only then calls
+        set_songs_folder with the answer. Only reachable through the
+        native window's bridge — deliberately not an HTTP endpoint, since
+        the local server has no way to tell the app's own page from any
+        other page in the browser asking it to move your files.
+        """
         import webview
         try:
             window = _RUNTIME.get("webview_window")
@@ -198,9 +205,20 @@ class _JsApi:
             if not chosen:
                 return {"ok": False, "cancelled": True}
             path = chosen if isinstance(chosen, str) else chosen[0]
-            userpaths.set_songs_dir(path)
-            Handler.store = SongStore(path)
-            return {"ok": True, "path": path}
+            plan = userpaths.plan_relocation(Handler.store.dir, path)
+            return {"ok": True, "path": plan["new"], "plan": plan}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc)}
+
+    def set_songs_folder(self, path: str, move: bool = True):
+        """Switch to `path` as the songs folder, moving the songs if asked.
+        Only .sng files move, a same-named song at the destination is never
+        overwritten, and the old folder is never deleted."""
+        try:
+            res = userpaths.relocate_songs(Handler.store.dir, path, bool(move))
+            if res.get("ok"):
+                Handler.store = SongStore(res["path"])
+            return res
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc)}
 

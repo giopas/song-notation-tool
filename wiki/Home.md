@@ -12,11 +12,13 @@ twice. Runs as a **desktop app**, a **browser front end**, or a
   and the `webserver.py` browser front end: full command and API
   reference, beyond what's in the README.
 - **[[Chart Line Syntax]]** — the compact grammar typed into a section's
-  chart line: symbols, frets, repeats, groups, riffs, references, marks,
-  and the free-text escape hatch.
-- **[[Printing and Layout]]** — how a chart comes out on paper: section
-  layout, colour vs black & white, fit-to-page scaling, printing through
-  the OS, and where your songs and exports are kept.
+  chart line: symbols, frets, repeats, groups, riffs, references, licks
+  (and naming and recalling them), marks, and the free-text escape hatch.
+- **[[Printing and Layout]]** — how a chart comes out on paper, all set
+  from **⚙ Layout**: size, columns, colour, section names, where the
+  lyrics go, licks and chord shapes; printing through the OS; and where
+  your songs and exports are kept, including changing and moving the
+  songs folder.
 - **[[Architecture]]** — how the pure engine (`model` / `grammar` /
   `render` / `transpose` / `songmap` / `export`) relates to the three
   front ends (`song_writer.py`, `cli.py`, `webserver.py`), and where to

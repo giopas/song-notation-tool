@@ -66,11 +66,17 @@ whichever way you made it.
 - **⚙ Layout** — every print setting in one panel at the bottom left:
   page size, columns, colour, section names, lyrics, licks, chord shapes
 - **Named licks** — `{Riff1 = G 5 7 5 | D - - 3}` names a figure and
-  `{Riff1}x3` plays it again anywhere in the song; edit it once and every
-  place that plays it follows. Print the recalled ones as tab, or as just
-  `Riff1 (x3)` the way a handwritten chart does
+  `{Riff1}x3` plays it again anywhere in the song (braces, not `=` — that
+  one's for sections); edit it once and every place that plays it
+  follows. The name prints in front of the tab (`Riff1 |G|-5-7-5-|`),
+  and recalled ones can print as tab again or as just `Riff1 (x3)`, the
+  way a handwritten chart does. Every lick you've named gets its own
+  button in the section's insert strip
 - **Chord shapes** — a list of voicings (`x32010`), printed as a block of
-  tab-style diagrams at the start or the end of the chart
+  tab-style diagrams at the start or the end of the chart. Checked against
+  the chords the chart plays (**+ From chart** adds the missing ones), and
+  re-voiced when the song is transposed: open shape to open shape, else
+  its barre
 - **Marks** — barlines, 1st/2nd endings, segno, coda, D.C./D.S., `simile`,
   with a quick-insert palette beside every chart line so you never have to
   remember the spelling, and a Notation panel explaining what each one
@@ -80,7 +86,9 @@ whichever way you made it.
   `//>` breaks *and* indents, so a phrase sits inside the one above it
 - **Licks** — `{G 5 7 5 | D - - 3}` writes a short tab figure inline, at
   the point it's played, printed as a small tab block in among the chords
-  instead of in a separate grid; transposes with the section
+  instead of in a separate grid; transposes with the section. In the PDF
+  every fret sits on its column and each string is a solid line from bar
+  to bar, so frets played together line up across strings
 - **Free-text sections** — a fourth render mode for the bits this notation
   doesn't cover: a plain text box, kept and printed exactly as typed.
   Switching to it is non-destructive, so switching back restores the
@@ -95,8 +103,9 @@ whichever way you made it.
 - **Stage View** (Ctrl/Cmd+P) — full-window, high-contrast, read-only
 - **Live page-count indicator**, and a PDF export that never splits a
   section across a page break
-- **Compact export** — empty strings are dropped, references aren't
-  expanded, and PDF targets one page (Portrait A4 default)
+- **Compact export** — empty strings are dropped, and the PDF fills the
+  page — or shrinks to fit one — in one or two columns (Portrait A4
+  default)
 - **Light / Dark theme** — switch on the fly
 - **Export** — save as `.txt` (plain text) or `.pdf` (formatted sheet with
   a footer carrying the version, date and project link); exports open a
@@ -104,7 +113,9 @@ whichever way you made it.
 - **Project files** — save/load sessions as `.sng` (plain JSON,
   human-readable); `.sng` files from earlier versions load without loss.
   Songs live under `~/Documents/Song Notation Tool`, not inside this
-  checkout, and the app shows you the folder
+  checkout, and the app shows you the folder. **Change…** picks a new one
+  and moves your songs there — only `.sng` files, nothing overwritten, the
+  old folder kept
 - **Zero dependencies** — pure Python standard library, works out of the box
 - **"Start here" on first launch** — *New song*, *Open example*, or
   *Import project* instead of a blank grid
@@ -222,9 +233,12 @@ tab, stops the server).
 Once it's open, you get the song list, meta form, and a chart-line
 editor per section with the same live-parsing preview the desktop
 app's editor bar has, plus TXT/PDF export, Transpose (whole song or
-one section), the Lyrics panel, a quick-insert palette beside each
-chart line (rests, repeat barlines, endings, groups, annotations — all
-dropped in at the cursor), and **free-text sections**. Tab-grid
+one section), the Lyrics panel (with section markers you can drag into
+the sheet), the Chords dialog, a quick-insert palette beside each chart
+line (rests, repeat barlines, endings, groups, annotations, licks and
+every lick you've already named — all dropped in at the cursor),
+**free-text sections**, and **⚙ Layout** at the bottom left of the
+sidebar for everything about how the song prints. Tab-grid
 (measure) sections are editable in the browser too now — switch a
 section's render mode to Tab or Both, add measures, and type fret
 numbers straight into the cells. The render mode is the whole story for
@@ -246,10 +260,14 @@ size, scaling, page range — and a preview before anything reaches paper.
 It's deliberately not a silent print job. In a browser tab the same PDF
 opens in a new tab, where Cmd/Ctrl+P does the same thing.
 
-Four settings next to BPM shape the exported chart. All four are
-properties of the song, saved in the `.sng`, and apply to the PDF, Print
-and the Preview pane (TXT is plain text, so colour, size and columns
-don't reach it).
+The settings that shape the exported chart live in **⚙ Layout**, at the
+bottom left of the sidebar (in the desktop app, a ⚙ Layout button along
+the bottom of the window): Size, Columns and Colour for the page, where
+section names go, where the lyrics go, how recalled licks print, and
+whether chord shapes print. A line under the button says what's set.
+They're all properties of the song, saved in the `.sng`, and apply to
+the PDF, Print and the Preview pane (TXT is plain text, so colour, size
+and columns don't reach it).
 
 **Colour** gives each section heading a colour chosen by its type, so you
 can find your place on a stand at a glance and every Verse looks like
@@ -314,6 +332,11 @@ claim about where the changes fall that a chart like this can't
 honestly make. If no section has words yet, the gathered layouts use the
 whole-song sheet, with its `=== Verse 1 ===` markers as headings.
 
+Beside the chart, every section's words start in the same column, so
+they read straight down the page. Songs saved before v0.24 keep printing
+what they printed: they open as "each section — under chart" if you'd
+ticked any section's old print box, and "don't print" if you hadn't.
+
 ### Chord shapes
 
 The **Chords 🎸** dialog keeps the voicings you had to work out, written
@@ -349,7 +372,9 @@ typed is what's stored — only the printed sheet moves.
 ### Lyrics
 
 **Lyrics** holds the words as a reference layer — never parsed, never
-aligned to the chart automatically, and printed only if you ask. Paste
+aligned to the chart automatically, and printed only if you ask: whether
+and where they print is set once for the song in **⚙ Layout** (see
+[Where the words go](#where-the-words-go)), and the dialog says which. Paste
 them in, import a `.txt`, or use "Search online ↗", which opens a search
 in your browser and pastes nothing back.
 
@@ -362,9 +387,10 @@ the words that belong to it — or drag that section's chip into the sheet,
 which writes the marker for you — and every marked block goes to the
 section it names. Names match loosely, so `=== Chorus_1 ===` finds
 "Chorus 1". A section the sheet never mentions is left exactly as it was,
-and a name with no section behind it is offered as one to create. The
-markers are structure, not words: they show in the editor and never
-print.
+and a name with no section behind it is offered as one to create —
+**+ Section…** in the dialog does the same from scratch, marking the
+sheet for it as it goes. The markers are structure, not words: they show
+in the editor (in colour) and never print.
 
 **Split on blank lines…** is the older route, for a sheet pasted straight
 off a lyrics site with no markers in it. It takes the whole song's sheet,
@@ -386,8 +412,16 @@ folder are moved there automatically the first time you run
 name that already exists in the target is left alone and reported.
 
 The folder is shown in the sidebar, with **Reveal** (open it in Finder)
-and **Change…** next to it when you're running in the native window. The
-choice is remembered in:
+and **Change…** next to it when you're running in the native window.
+
+**Change…** opens the folder picker and then tells you what it would do
+before doing it: how many songs will move, and which ones will stay
+because a song with the same name is already in the new folder. You can
+**move them**, **just use the new folder** and leave them where they are,
+or cancel. Only `.sng` files ever move, nothing at the destination is
+overwritten, and the old folder isn't deleted — so pointing it at iCloud
+Drive, Dropbox or an external disk is safe to try. The choice is
+remembered in:
 
 ```
 ~/Library/Application Support/Song Notation Tool/config.json

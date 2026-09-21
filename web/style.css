@@ -788,3 +788,16 @@ button {
 .chord-prints-as { color: var(--blue); font-size: 11px; }
 .chord-prints-as:empty { display: none; }
 .chord-transposed { color: var(--blue); margin: 0 0 4px; }
+
+/* ---------- change songs folder ---------- */
+.folder-paths { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 10px; }
+.folder-paths code {
+  font-family: var(--mono); font-size: 12px; word-break: break-all;
+  background: var(--input-bg); padding: 2px 6px; border-radius: 4px;
+}
+.folder-lbl {
+  display: inline-block; width: 38px; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--lbl-gray);
+}
+.folder-summary { margin: 6px 0; }
+.folder-clashes { color: var(--amber); }

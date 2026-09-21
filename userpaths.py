@@ -157,3 +157,79 @@ def migrate_legacy_songs(legacy_dir: str, target_dir: str):
         except OSError:
             skipped.append(name)
     return moved, skipped
+
+
+# ==============================================================================
+#  Changing the songs folder — and taking the songs along
+#
+#  Pointing the app at a new folder used to leave every song behind in the
+#  old one, so "change folder" looked like "my songs are gone". Now the
+#  choice is explicit: move them, or just use the new folder as it is.
+#
+#  The move is the same conservative one the legacy migration uses: only
+#  .sng files (the folder could be ~/Documents itself — nothing else in it
+#  is ours to move), never overwrite a song already at the destination
+#  (a clash is skipped and reported, and stays where it was), and never
+#  delete the old folder.
+# ==============================================================================
+
+def song_files(directory: str) -> list:
+    """The .sng files directly inside `directory`, sorted — the songs a
+    move would take along."""
+    return _sng_files(os.path.abspath(os.path.expanduser(directory)))
+
+
+def plan_relocation(current_dir: str, new_dir: str) -> dict:
+    """What moving from `current_dir` to `new_dir` would do, without doing
+    it — for the question the app asks before it touches anything.
+
+    {"current", "new", "same", "to_move": [...], "clashes": [...],
+     "already_there": n, "writable": bool, "error": str}
+    """
+    cur = os.path.abspath(os.path.expanduser(current_dir))
+    new = os.path.abspath(os.path.expanduser(new_dir))
+    out = {"current": cur, "new": new, "same": cur == new, "to_move": [],
+           "clashes": [], "already_there": 0, "writable": True, "error": ""}
+    if os.path.exists(new) and not os.path.isdir(new):
+        out.update(writable=False, error=f"{new} is a file, not a folder")
+        return out
+    parent = new if os.path.isdir(new) else os.path.dirname(new)
+    while parent and not os.path.isdir(parent):
+        parent = os.path.dirname(parent)
+    if not parent or not os.access(parent, os.W_OK):
+        out.update(writable=False, error=f"can't write to {new}")
+        return out
+    there = set(song_files(new)) if os.path.isdir(new) else set()
+    out["already_there"] = len(there)
+    if not out["same"]:
+        here = song_files(cur)
+        out["to_move"] = [n for n in here if n not in there]
+        out["clashes"] = [n for n in here if n in there]
+    return out
+
+
+def relocate_songs(current_dir: str, new_dir: str, move: bool = True) -> dict:
+    """Make `new_dir` the songs folder, moving the songs there if `move`.
+
+    The config is only updated once the new folder exists and is usable,
+    so a failed change leaves the app pointing where it was. Returns
+    {"ok", "path", "moved": [...], "skipped": [...], "error"}.
+    """
+    plan = plan_relocation(current_dir, new_dir)
+    new = plan["new"]
+    if not plan["writable"]:
+        return {"ok": False, "path": new, "moved": [], "skipped": [],
+                "error": plan["error"]}
+    try:
+        os.makedirs(new, exist_ok=True)
+    except OSError as exc:
+        return {"ok": False, "path": new, "moved": [], "skipped": [],
+                "error": str(exc)}
+    moved, skipped = [], []
+    if move and not plan["same"]:
+        moved, skipped = migrate_legacy_songs(plan["current"], new)
+    if not set_songs_dir(new):
+        return {"ok": False, "path": new, "moved": moved, "skipped": skipped,
+                "error": "couldn't save the setting"}
+    return {"ok": True, "path": new, "moved": moved, "skipped": skipped,
+            "error": ""}

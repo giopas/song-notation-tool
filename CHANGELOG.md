@@ -4,6 +4,55 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.25.0] — 2026-09-21
+
+### Added
+- **Change the songs folder — and take your songs with you.** Change… in
+  the sidebar opens the system folder picker, then says what would happen
+  before anything does: both paths, how many songs will move, and which
+  ones will stay because a song with the same name is already there.
+  Three choices: **Move N songs**, **Just use this folder** (point the app
+  there, leave the songs where they are), or **Cancel**.
+
+  The move is deliberately conservative: only `.sng` files move (the
+  folder could be ~/Documents itself, and nothing else in it is ours), a
+  song already in the new folder is never overwritten, the old folder is
+  never deleted, and it works across drives and into iCloud Drive. The
+  setting only changes once the new folder is known to be usable. The song
+  you have open stays open, unsaved edits and all, if it moved with the
+  rest; if it didn't, it's closed rather than left for a later Save to
+  write a stray copy into the new folder.
+
+  Native window only, on purpose: the local web server has no way to tell
+  the app's own page from any other page in the browser asking it to move
+  files, so the move is reachable only through pywebview's bridge. In a
+  browser tab, `--dir` still chooses the folder per run.
+
+### Fixed
+- **Change… and Reveal were missing in the app's own window**, which
+  showed the browser-tab hint instead. The page checked for pywebview's
+  bridge at startup, before pywebview had injected it; it now also checks
+  when the `pywebviewready` event says the bridge has arrived.
+
+### Documentation
+- README and wiki brought in line with everything from v0.23 on: the
+  ⚙ Layout menu and all seven settings, the six lyric placements and the
+  shared lyric column, section markers, named licks (and that braces —
+  not `=` — recall one), recalled-lick printing, chord shapes with the
+  coverage check and transpose re-voicing, tab drawn on the column grid,
+  and changing/moving the songs folder. The wiki's API table gains the
+  lyrics, chords and quit routes; Architecture lists `lyrics.py` and
+  `chords.py`.
+- Corrected: the wiki said the PDF body is set in Courier. It's
+  Helvetica positioned on a Courier-width column grid; and the README
+  said references aren't expanded in the export, which stopped being
+  true in v0.20.
+
+### API
+- `userpaths.py`: `song_files()`, `plan_relocation()`, `relocate_songs()`.
+- Native bridge: `choose_songs_folder()` now returns a plan and changes
+  nothing; `set_songs_folder(path, move)` does the switch.
+
 ## [0.24.3] — 2026-09-21
 
 ### Fixed

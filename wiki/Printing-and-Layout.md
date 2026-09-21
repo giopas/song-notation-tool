@@ -3,11 +3,27 @@
 Everything about how a chart comes out on paper, and where the files
 go. Added in v0.20.
 
-The four settings below live in the **Print & export** group on the
-second row of the meta panel, framed separately from Title/Artist/Key
-because none of them changes a single note. They're properties of the
-*song*, saved in the `.sng` (`section_layout`, `color_mode`,
-`pdf_scale`, `pdf_columns`), so a chart prints the same way wherever
+## ⚙ Layout — where the settings live
+
+Every setting on this page is in **⚙ Layout**, at the bottom of the
+sidebar (v0.24). It opens a popover rather than a modal, so the song
+stays in view and the preview keeps updating while you change things,
+and the line under the button says what's set ("Fit to page · Auto ·
+lyrics: beside"). The desktop app has the same settings behind a
+⚙ Layout button on a bar along the bottom of its window.
+
+| Group | Setting | Stored as |
+|---|---|---|
+| Page | Size | `pdf_scale` |
+| Page | Columns | `pdf_columns` |
+| Page | Colour | `color_mode` |
+| Sections | Section names | `section_layout` |
+| Lyrics | Lyrics | `lyrics_layout` |
+| Licks & chords | Recalled licks | `lick_refs` |
+| Licks & chords | Chord shapes | `chord_sheet` |
+
+None of them changes a single note, and they're properties of the
+*song*, saved in the `.sng`, so a chart prints the same way wherever
 it's opened.
 
 ## Layout — where the section name goes
@@ -146,7 +162,9 @@ target is left alone and reported).
 
 The folder is shown in the sidebar with **Reveal** and **Change…**
 buttons (native window only — a browser tab can't open a folder
-picker). The choice is remembered in:
+picker); Change… can also move your songs, see
+[Changing the songs folder](#changing-the-songs-folder) below. The
+choice is remembered in:
 
 ```
 ~/Library/Application Support/Song Notation Tool/config.json   # macOS
@@ -165,11 +183,12 @@ ordinary download and the browser's own settings decide where it lands.
 
 ## What the printed chart shows
 
-- **The body is 9pt Courier at 100%** (`export.MONO_SIZE`), headings
-  10.5pt Helvetica-Bold. Size and character width are locked together:
-  Courier's advance is exactly 0.6 em and that advance is the column
-  arithmetic every chart row, tab grid and width bound is measured in, so
-  `MONO_CHAR_W` follows `MONO_SIZE` and neither moves alone.
+- **The body is 9pt Helvetica at 100%** (`export.MONO_SIZE`), headings
+  10.5pt Helvetica-Bold, laid out on a **fixed column grid** 0.6 em wide
+  (`MONO_CHAR_W`) — Courier's advance, which every chart row, tab grid
+  and width bound is measured in. The face is proportional but the
+  *positions* are monospace: see the next two points. (A Courier font
+  object is declared in the PDF but not currently used.)
 - **Fret numbers are a figure over the chord**, not a line of notes:
   smaller than the symbols, raised close to the line below, amber on
   colour and a light grey in black & white
@@ -182,6 +201,17 @@ ordinary download and the browser's own settings decide where it lands.
   being drawn as one string — the padding is measured, not drawn.
   Expanded free text is the exception: prose, not column data, so it is
   set as written.
+- **Tab lines are drawn mark by mark** (v0.24.3). A lick's string line
+  used to be drawn as one piece of text, and in a proportional face a
+  "4" is wider than a "-": a line with more digits came out longer, and
+  its frets drifted off the frets above them. Now every fret number and
+  bar line sits on its own column, and each run of dashes is a solid rule
+  that meets the bar lines, so a string reads as one line and frets
+  played together line up across strings.
+- **A named lick's name sits in front of its tab**, on its first string
+  line — `Riff1 |D|-----3---|` — with the other strings indented to match
+  (v0.24.2). A recalled lick printed "name only" shows as `Riff1 (x3)` on
+  the chord row instead; see [[Chart Line Syntax]].
 - **A tab block standing on its own** — a lick with no chord symbols
   beside it — is set off by a blank line above *and* below, so the chart
   line after it doesn't read as part of the tab. A lick written in among
@@ -197,40 +227,99 @@ ordinary download and the browser's own settings decide where it lands.
   prints the Interlude's notes, not the pointer. See
   [[Chart Line Syntax]].
 - **Footers** carry the version, the date, and the project URL.
-- **Lyrics print beside their chart**, not under it (`lyrics_layout`,
-  `"beside"` by default; `"below"` for the old behaviour). The chart keeps
-  a narrow left column, the words run down their own to the right of it,
-  starting level with the chart's first line — `render.lyric_column_x()`
-  picks the column, `render.compose_beside()` lays the two out for TXT,
-  and the PDF draws them as two independent runs from the same starting
-  `y` so a rest or a fret row keeps its own line height. Nothing is
-  aligned chord to syllable: the claim is *during these words, this is
-  what you play*, and no more than that. A verse therefore costs the page
-  the taller of the two sides — which is what the section-height estimate
-  and the width bound both measure.
-- **Lyric section markers never print.** `=== Verse 1 ===` lines are
-  structure for the editor; `render.printable_lyrics()` strips them
-  everywhere words are drawn.
-- **Chord shapes print once**, as a block of tab-style diagrams at the
-  start or the end of the chart (`chord_sheet`: `"none"` / `"start"` /
-  `"end"`). `chords.sheet_lines()` lays them out in as many per row as
-  the column width takes, grouped by instrument — a row mixing a
-  four-string and a six-string shape reads as one wrong diagram rather
-  than two right ones.
-- **Chord shapes transpose with the song** (`chords.transpose_chord()`),
-  re-voiced rather than slid: a movable shape slides; an open shape goes
-  to the new chord's open shape if standard tuning has one, else to the
-  lower of its E-form and A-form barres; anything with no template is
-  slid whole, like a capo. Only the song's transpose applies — the sheet
-  belongs to the whole song, not to any one section.
-- **Lyric placement is one song-wide setting** (`lyrics_layout`, v0.24):
-  `none`, `start`, `end`, `side`, `beside`, `below`. The gathered modes
-  (`start`/`end`/`side`) print `render.lyric_blocks()` — each section's
-  words under its name, or the marked-up sheet if no section has any —
-  wrapped to the column they're given. `side` makes the page two columns
-  whatever `pdf_columns` says: column 0 on every page is the words, laid
-  out up front page by page and drawn as each page is finished, so the
-  chart and the lyrics flow independently; words that outrun the chart
-  add pages, which the one-page fit counts and shrinks to avoid.
-- **Every print setting lives in ⚙ Layout**, bottom left, in both front
-  ends.
+
+## Lyrics — where the words go
+
+One setting for the whole song, **⚙ Layout → Lyrics** (`lyrics_layout`,
+v0.24):
+
+| Choice | Stored as | What prints |
+|---|---|---|
+| Don't print | `"none"` (default for new songs) | Nothing. The words stay in the Lyrics dialog as reference |
+| All together — at the start | `"start"` | Every section's words in one block before the chart, each under its section's name |
+| All together — at the end | `"end"` | The same, after the chart |
+| All together — left column | `"side"` | The same block down column 0 of every page, the chart in one column beside it |
+| Each section — beside chart | `"beside"` | Each section's words in a column to the right of its own chart |
+| Each section — under chart | `"below"` | Each section's words under its own chart |
+
+Nothing is aligned chord to syllable in any of them. The claim is
+*during these words, this is what you play*, and no more than that.
+
+**The gathered layouts** (`start`, `end`, `side`) print
+`render.lyric_blocks()`: each section's words under its name, in song
+order, wrapped to the column they're given (a wrapped line hangs its
+continuation further in). If no section has words yet they use the
+whole-song sheet instead, with its `=== Verse 1 ===` markers promoted
+to headings — the one place a marker earns ink. A per-section layout on
+a song whose sheet was never split does the same at the start, so words
+the song has are never silently left off the page.
+
+**Left column** makes the page two columns whatever `pdf_columns` says,
+and ⚙ Layout greys Columns out and says why. Column 0 on every page is
+the words — laid out up front, page by page, and drawn as each page is
+finished — so the chart and the lyrics flow independently. Words that
+outrun the chart get pages of their own, which "fit to one page" counts
+and shrinks the type to avoid.
+
+**Beside the chart**: every section's words start in **one column for
+the whole song** (`render.shared_lyric_column()`, v0.24.1), clear of the
+widest chart that has words beside it — so down the page they read as a
+column instead of zigzagging with each chart's width. A wide
+instrumental section with no words doesn't push them out. The first
+lyric line sits level with the chart's first line, and a section costs
+the page the taller of the two sides, which is what the section-height
+estimate and the width bound both measure.
+
+**Markers never print.** `=== Verse 1 ===` lines are structure for the
+editor; `render.printable_lyrics()` strips them everywhere words are
+drawn.
+
+**Older songs** keep printing what they printed: a song saved before
+v0.24 opens as `"below"` if any section's old print box was ticked,
+`"start"` if only the whole-song sheet's was, and `"none"` otherwise
+(`model.migrate_document()`). The per-section `print_lyrics` flags no
+longer decide anything.
+
+## Chord shapes
+
+**⚙ Layout → Chord shapes** (`chord_sheet`: `"none"` / `"start"` /
+`"end"`) prints the shapes from the **Chords 🎸** dialog once, as a
+block of tab-style diagrams. `chords.sheet_lines()` lays them out in as
+many per row as the column width takes, grouped by instrument — a row
+mixing a four-string and a six-string shape reads as one wrong diagram
+rather than two right ones.
+
+**They move with the song's transpose** (`chords.transpose_chord()`),
+re-voiced the way a player would rather than slid:
+
+| Shape as typed | Prints after a transpose as |
+|---|---|
+| No open strings (a barre, a power chord) | the same shape, slid — up an octave if it would fall off the nut |
+| Open, and the new chord has an open shape | that open shape — C up a tone prints as `xx0232` |
+| Open, no open shape for the new chord | the lower-sitting of its E-form and A-form barres |
+| No barre template (add9, slash chords) | slid whole, open strings included, like a capo |
+
+Off standard six-string tuning only the sliding rules apply. Only the
+song's transpose moves the sheet, not a section's: the sheet belongs to
+the whole song. The shapes stored are always the ones you typed.
+
+## Changing the songs folder
+
+**Change…** in the sidebar (native window, v0.25) opens the system
+folder picker, then shows what would happen *before* anything does:
+both paths, how many songs will move, and which will stay because a
+song with the same name is already in the new folder. The choices are
+**Move N songs**, **Just use this folder** (switch, leave the songs
+where they are) or **Cancel**.
+
+The move (`userpaths.relocate_songs()`) is conservative: only `.sng`
+files move — the folder could be ~/Documents itself, and nothing else in
+it is ours — a song already at the destination is never overwritten,
+the old folder is never deleted, and the setting only changes once the
+new folder is known to be usable. It works across drives and into
+iCloud Drive or Dropbox. The song you have open stays open, unsaved
+edits and all, if it moved; if it didn't, it's closed rather than left
+for a later Save to write a stray copy into the new folder.
+
+It's native-window only on purpose — see [[CLI and Web Use]]. In a
+browser tab, `--dir` chooses the folder for a run.

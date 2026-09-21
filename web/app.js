@@ -1115,6 +1115,8 @@ function renderSongsFolder() {
   box.querySelector(".songs-folder-hint").classList.toggle("hidden", native);
 }
 
+let folderPlan = null;
+
 async function changeSongsFolder() {
   const api = nativeApi();
   if (!api || !api.choose_songs_folder) return;
@@ -1123,14 +1125,68 @@ async function changeSongsFolder() {
     if (res && !res.cancelled) toast(`Could not change folder: ${res.error || "?"}`);
     return;
   }
+  const plan = res.plan || {};
+  if (plan.same) { toast("That's already your songs folder"); return; }
+  if (!plan.writable) { toast(`Can't use that folder: ${plan.error}`); return; }
+  folderPlan = plan;
+
+  // Say what will happen before anything does: how many songs move, and
+  // which ones stay because a song of the same name is already there.
+  document.getElementById("folder-from").textContent = plan.current;
+  document.getElementById("folder-to").textContent = plan.new;
+  const n = (plan.to_move || []).length;
+  const there = plan.already_there || 0;
+  document.getElementById("folder-summary").textContent =
+    (n ? `${n} song${n === 1 ? "" : "s"} will move to the new folder.`
+       : "There are no songs to move.")
+    + (there ? ` It already has ${there} song${there === 1 ? "" : "s"} of its own, which will show up too.` : "");
+  const clashes = plan.clashes || [];
+  const cl = document.getElementById("folder-clashes");
+  cl.classList.toggle("hidden", !clashes.length);
+  cl.textContent = clashes.length
+    ? `Staying where they are — a song with the same name is already there: ${clashes.join(", ")}`
+    : "";
+  const moveBtn = document.getElementById("folder-move");
+  moveBtn.textContent = n ? `Move ${n} song${n === 1 ? "" : "s"}` : "Use this folder";
+  document.getElementById("folder-use").classList.toggle("hidden", !n);
+  document.getElementById("folder-modal-backdrop").classList.remove("hidden");
+}
+
+function closeFolderModal() {
+  document.getElementById("folder-modal-backdrop").classList.add("hidden");
+  folderPlan = null;
+}
+
+async function applySongsFolder(move) {
+  const api = nativeApi();
+  const plan = folderPlan;
+  closeFolderModal();
+  if (!api || !plan) return;
+  const res = await api.set_songs_folder(plan.new, move);
+  if (!res || !res.ok) {
+    toast(`Could not change folder: ${(res && res.error) || "?"}`);
+    return;
+  }
   META.songs_dir = res.path;
   renderSongsFolder();
-  currentFilename = null;
-  currentDoc = null;
-  document.getElementById("editor").classList.add("hidden");
-  document.getElementById("start-here").classList.remove("hidden");
+
+  // The open song stays open if it came along: same file name, new
+  // folder, and any unsaved edits still in the editor. If it didn't come
+  // (a clash, or "just use this folder"), close it rather than let a
+  // later Save quietly write a copy into the new folder.
+  const moved = res.moved || [];
+  if (!(currentFilename && moved.includes(currentFilename))) {
+    currentFilename = null;
+    currentDoc = null;
+    document.getElementById("editor").classList.add("hidden");
+    document.getElementById("start-here").classList.remove("hidden");
+  }
   await refreshSongList();
-  toast(`Songs folder is now ${res.path}`);
+  const skipped = res.skipped || [];
+  toast(move
+    ? `Moved ${moved.length} song${moved.length === 1 ? "" : "s"} to ${res.path}`
+      + (skipped.length ? ` — ${skipped.length} left where they were` : "")
+    : `Songs folder is now ${res.path}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1918,8 +1974,17 @@ async function init() {
   wireLayoutPanel();
 
   renderSongsFolder();
+  // pywebview injects its bridge *after* the page has loaded, and says so
+  // with this event. Checking only at startup found no bridge, so the
+  // native window showed the browser-tab hint and hid Change… and Reveal.
+  window.addEventListener("pywebviewready", renderSongsFolder);
   document.getElementById("btn-songs-folder").addEventListener("click",
     () => changeSongsFolder().catch((e) => toast(String(e))));
+  document.getElementById("folder-cancel").addEventListener("click", closeFolderModal);
+  document.getElementById("folder-move").addEventListener("click",
+    () => applySongsFolder(true).catch((e) => toast(String(e))));
+  document.getElementById("folder-use").addEventListener("click",
+    () => applySongsFolder(false).catch((e) => toast(String(e))));
   document.getElementById("btn-reveal-songs").addEventListener("click", () => {
     const api = nativeApi();
     if (api && api.reveal) api.reveal(META.songs_dir || "");

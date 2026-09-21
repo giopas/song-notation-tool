@@ -111,10 +111,11 @@
           <button id="btn-reveal-songs" class="btn subtle hidden"
                   title="Open this folder in Finder">Reveal</button>
           <button id="btn-songs-folder" class="btn subtle hidden"
-                  title="Choose a different folder to keep your songs in">Change…</button>
+                  title="Choose a different folder for your songs — and move them there, if you want">Change…</button>
         </div>
-        <span class="songs-folder-hint hidden">Run with <code>--dir</code> to use
-          a different folder, or open the app in its own window to change it here.</span>
+        <span class="songs-folder-hint hidden">Changing and moving the folder
+          works in the app's own window. In a browser tab, run with
+          <code>--dir</code> to use a different folder.</span>
       </div>
 
       <!-- Layout settings: everything about how the song comes out on
@@ -314,6 +315,30 @@
     </div>
   </div>
 
+
+  <!-- Change songs folder: what the move would do, asked before doing it -->
+  <div id="folder-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3>Change songs folder</h3>
+      <div class="folder-paths">
+        <div><span class="folder-lbl">From</span> <code id="folder-from"></code></div>
+        <div><span class="folder-lbl">To</span> <code id="folder-to"></code></div>
+      </div>
+      <p id="folder-summary" class="folder-summary"></p>
+      <p id="folder-clashes" class="modal-hint folder-clashes hidden"></p>
+      <p class="modal-hint">Only song files (<code>.sng</code>) move; anything else in the
+        folder stays put. A song that already exists in the new folder is never
+        overwritten, and the old folder isn't deleted.</p>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <button id="folder-cancel" class="btn subtle">Cancel</button>
+        <div>
+          <button id="folder-use" class="btn"
+                  title="Point the app at the new folder and leave your songs where they are">Just use this folder</button>
+          <button id="folder-move" class="btn accent">Move songs</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Chord shapes -->
   <div id="chords-modal-backdrop" class="modal-backdrop hidden">

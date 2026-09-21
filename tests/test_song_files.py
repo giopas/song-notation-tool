@@ -130,3 +130,19 @@ def test_an_edited_example_is_never_handed_back_as_the_example(store):
     second = _open_example(store)
     assert store.load(second)["meta"]["title"] == example_document()["meta"]["title"]
     assert len(_files(store)) == 2
+
+
+# ── pywebview's file-dialog constants ───────────────────────────────────
+
+def test_dialog_kind_prefers_the_new_pywebview_name():
+    """pywebview 5+ warns on webview.FOLDER_DIALOG; FileDialog.FOLDER is
+    the current name. Old pywebview only has the old one."""
+    import types
+    new = types.SimpleNamespace(
+        FileDialog=types.SimpleNamespace(FOLDER="new-folder", SAVE="new-save"),
+        FOLDER_DIALOG="old-folder", SAVE_DIALOG="old-save")
+    old = types.SimpleNamespace(FOLDER_DIALOG="old-folder", SAVE_DIALOG="old-save")
+    assert webserver._dialog_kind(new, "FOLDER") == "new-folder"
+    assert webserver._dialog_kind(new, "SAVE") == "new-save"
+    assert webserver._dialog_kind(old, "FOLDER") == "old-folder"
+    assert webserver._dialog_kind(old, "SAVE") == "old-save"

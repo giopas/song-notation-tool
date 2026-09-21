@@ -98,6 +98,22 @@ WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 _RUNTIME = {"webview_window": None, "httpd": None}
 
 
+def _dialog_kind(webview, kind: str):
+    """The pywebview constant for a file dialog — `"SAVE"`, `"OPEN"` or
+    `"FOLDER"`.
+
+    pywebview 5 moved these from `webview.SAVE_DIALOG` and friends to
+    `webview.FileDialog.SAVE`, and warns on every use of the old names,
+    which it will eventually remove. The new name is used when this
+    pywebview has it, the old one otherwise, so the app works — quietly —
+    on either.
+    """
+    enum = getattr(webview, "FileDialog", None)
+    if enum is not None and hasattr(enum, kind):
+        return getattr(enum, kind)
+    return getattr(webview, f"{kind}_DIALOG")
+
+
 class _JsApi:
     """Exposed to the front end as `window.pywebview.api` in native-window
     mode. `window.open(url, "_blank")` is a no-op there (pywebview's
@@ -132,7 +148,7 @@ class _JsApi:
             if window is None:
                 return {"ok": False, "error": "no window"}
             chosen = window.create_file_dialog(
-                webview.SAVE_DIALOG,
+                _dialog_kind(webview, "SAVE"),
                 directory=userpaths.last_export_dir(),
                 save_filename=default_name,
             )
@@ -201,7 +217,7 @@ class _JsApi:
             if window is None:
                 return {"ok": False, "error": "no window"}
             chosen = window.create_file_dialog(
-                webview.FOLDER_DIALOG, directory=userpaths.songs_dir())
+                _dialog_kind(webview, "FOLDER"), directory=userpaths.songs_dir())
             if not chosen:
                 return {"ok": False, "cancelled": True}
             path = chosen if isinstance(chosen, str) else chosen[0]

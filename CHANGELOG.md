@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.26.1] — 2026-09-21
+
+### Fixed
+- **No more "FOLDER_DIALOG is deprecated" in the terminal.** pywebview 5
+  renamed its file-dialog constants (`webview.FOLDER_DIALOG` →
+  `webview.FileDialog.FOLDER`, and the same for `SAVE_DIALOG`) and logs a
+  warning each time the old name is read — once per click on Change…, and
+  per export in the native window. The app now uses the new names, falling
+  back to the old ones only on a pywebview old enough not to have them, so
+  it keeps working when the old names are removed. Nothing else changes:
+  the values are identical, and so are both dialogs.
+
 ## [0.26.0] — 2026-09-21
 
 A song file is now named after the song, and follows it.

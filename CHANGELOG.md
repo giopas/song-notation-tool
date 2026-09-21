@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.24.3] — 2026-09-21
+
+### Fixed
+- **Lick tab lines line up in the PDF.** Each string line was drawn as one
+  piece of text in a proportional face, where a "4" is wider than a "-",
+  so a line with more digits came out longer than its neighbours — and a
+  fret on one string drifted off the fret it's played with on the next.
+  Every mark is now placed on its own column of the grid the chords use,
+  and each run of dashes is drawn as a solid rule from mark to mark, so a
+  string reads as one line between its bar lines. TXT and the on-screen
+  preview were already right; only the PDF changes.
+
 ## [0.24.2] — 2026-09-21
 
 ### Changed

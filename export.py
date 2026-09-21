@@ -742,8 +742,51 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                    and span_role(spans, j, base) == role):
                 j += 1
             color(*role_rgb(role))
-            txt(x + i * CHAR_W, y, text[i:j], sz=MONO_SZ)
+            if role == render.ROLE_LICK and "|" in text[i:j]:
+                draw_tab_run(x, y, text, i, j, role_rgb(role))
+            else:
+                txt(x + i * CHAR_W, y, text[i:j], sz=MONO_SZ)
             i = j
+
+    def draw_tab_run(x, y, text, i, j, rgb):
+        """One line of a lick's tab — "|A|-4-4---4-|" — on the column grid.
+
+        Drawn as one string, a line with more digits came out longer than
+        its neighbours (a "4" is wider than a "-" in a proportional face),
+        so the strings ended at different places and, worse, a fret on one
+        string no longer sat above the fret it's played with on the next.
+        In tab, that vertical line-up is the whole point. So every mark is
+        placed at its own column, and each run of dashes is drawn as a
+        solid rule across the columns it covers — a string, not a row of
+        separate hyphens with gaps between them.
+        """
+        mid = y + MONO_SZ * 0.30          # where a hyphen sits on the line
+        k = i
+        while k < j:
+            if text[k] == "-":
+                e = k
+                while e < j and text[e] == "-":
+                    e += 1
+                # Meet the mark on either side: touch a bar line, so the
+                # string reads as one line from bar to bar, and stop just
+                # short of a fret number, so it isn't struck through.
+                left = text[k - 1] if k > i else ""
+                right = text[e] if e < j else ""
+                x1 = x + CHAR_W * (k - 0.4 if left == "|" else
+                                   k - 0.2 if left else k)
+                x2 = x + CHAR_W * (e + 0.38 if right == "|" else
+                                   e + 0.08 if right else e)
+                cur_ln.append(f"{rgb[0]:.3f} {rgb[1]:.3f} {rgb[2]:.3f} RG "
+                              f"{max(0.4, 0.06 * MONO_SZ):.2f} w "
+                              f"{x1:.1f} {mid:.1f} m {x2:.1f} {mid:.1f} l S")
+                k = e
+            else:
+                # Centre narrow marks ("|", "1") in their column, so a bar
+                # line sits in the middle of its cell like it does on screen.
+                ch = text[k]
+                off = CHAR_W * (0.35 if ch == "|" else 0.12 if ch.isdigit() else 0)
+                txt(x + k * CHAR_W + off, y, ch, sz=MONO_SZ)
+                k += 1
 
     def hline(x1, y, x2, width=0.25, gray=0.72):
         cur_ln.append(f"{gray:.2f} G {width} w {x1:.1f} {y:.1f} m {x2:.1f} {y:.1f} l S")

@@ -993,3 +993,22 @@ def test_beside_lyrics_share_one_column_across_sections():
     # the wide instrumental section has no words, so it doesn't push them out
     bridge = max(len(ln) for ln in lines if "5  5  8  8  5  5  5  5  8  8" in ln)
     assert a < bridge
+
+
+def test_pdf_places_every_tab_mark_on_the_column_grid():
+    """Each string line of a lick used to be drawn as one proportional
+    string, so a line with more digits came out longer and its frets
+    drifted off the frets above them. Every mark is now its own text run
+    at its column, and the dashes are drawn as rules."""
+    import grammar, re, zlib
+    doc = model.new_document(title="T")
+    doc["pdf_scale"] = "normal"
+    sec = model.new_section("c", "Chorus", "Chorus", instrument="Bass (4-string)")
+    sec["items"] = grammar.parse_items("{G - - - - | A 4 4 - 4}")
+    doc["sections"].append(sec)
+    pdf = export.build_pdf(doc)
+    stream = zlib.decompress(re.search(rb"stream\r?\n(.*?)endstream", pdf, re.S).group(1))
+    runs = re.findall(rb"\((.*?)\) Tj", stream)
+    assert b"|A|-4-4---4-|" not in runs and b"|G|---------|" not in runs
+    assert runs.count(b"4") == 3                      # each fret on its own
+    assert b" l S" in stream                          # dash runs as rules

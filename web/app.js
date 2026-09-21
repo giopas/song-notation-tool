@@ -1455,6 +1455,12 @@ function chordRow(chord, index) {
   const err = document.createElement("span");
   err.className = "chord-error";
 
+  // With the song transposed, a row is the shape as typed and prints as
+  // something else — say what, and how it was re-voiced.
+  const printsAs = document.createElement("span");
+  printsAs.className = "chord-prints-as";
+  printsAs.dataset.index = String(index);
+
   const readShape = async () => {
     chord.instrument = instrument.value;
     chord.shape_text = shape.value;
@@ -1493,7 +1499,7 @@ function chordRow(chord, index) {
     renderChordRows();
   });
 
-  [name, instrument, shape, note, del, err].forEach((el) => row.appendChild(el));
+  [name, instrument, shape, note, del, printsAs, err].forEach((el) => row.appendChild(el));
   return row;
 }
 
@@ -1510,6 +1516,22 @@ function renderChordCoverageNow() {
   const line = document.getElementById("chords-coverage");
   if (!line) return;
   API.chordCoverage(currentDoc).then((cov) => {
+    const n = cov.transpose || 0;
+    const head = document.getElementById("chords-transposed");
+    head.classList.toggle("hidden", !n);
+    head.textContent = n
+      ? `The song is transposed ${n > 0 ? "+" : ""}${n}. Shapes are stored as `
+        + "you typed them and print moved with it: an open shape goes to the "
+        + "open shape of the new chord, or its barre if there isn't one; a "
+        + "barre slides."
+      : "";
+    const how = { open: "open shape", barre: "barre", moved: "moved",
+                  capo: "slid, open strings too" };
+    document.querySelectorAll("#chords-rows .chord-prints-as").forEach((el) => {
+      const p = (cov.printed || [])[Number(el.dataset.index)];
+      el.textContent = n && p && p.name && p.voicing !== "as typed"
+        ? `prints as ${p.name} · ${how[p.voicing] || p.voicing}` : "";
+    });
     const bits = [];
     if ((cov.missing || []).length) bits.push(`No shape yet: ${cov.missing.join(", ")}`);
     if ((cov.unused || []).length) bits.push(`Not played in this song: ${cov.unused.join(", ")}`);
@@ -1532,7 +1554,10 @@ async function addChordsFromChart() {
   }
   const guitar = Object.keys(META.instruments || {})
     .find((k) => k.toLowerCase().startsWith("guitar")) || defaultInstrument();
-  missing.forEach((name) => chordList().push(
+  // Stored un-transposed, so each row prints as the chord the chart
+  // shows: on a song moved up a tone, the chart's D is stored as C.
+  const stored = cov.missing_stored || missing;
+  stored.forEach((name) => chordList().push(
     { name, instrument: guitar, frets: [], shape_text: "", note: "" }));
   if ((currentDoc.chord_sheet || "none") === "none") {
     currentDoc.chord_sheet = "end";
@@ -1541,7 +1566,9 @@ async function addChordsFromChart() {
     if (sel) sel.value = "end";
   }
   renderChordRows();
-  toast(`Added ${missing.length} chord(s) — type a shape for each`);
+  toast((cov.transpose
+    ? `Added ${missing.length} chord(s), as they read before the transpose — type a shape for each`
+    : `Added ${missing.length} chord(s) — type a shape for each`));
 }
 
 function renderChordPreview() {

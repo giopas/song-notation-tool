@@ -1482,8 +1482,19 @@ class SongNotationApp(tk.Tk):
                  bg=t["bg"], fg=t["fg"], font=FONT_TINY, justify="left"
                  ).pack(anchor="w", padx=16, pady=(12, 6))
 
+        n_song = int(self.doc.get("transpose", 0) or 0)
+        if n_song:
+            tk.Label(dlg, text=(
+                f"The song is transposed {n_song:+d}. Shapes are stored as you "
+                "typed them and print moved with it: an open shape goes to the "
+                "open shape of the new chord, or its barre if there isn't one; "
+                "a barre slides."), bg=t["bg"], fg=t["accent"], font=FONT_TINY,
+                justify="left", wraplength=580).pack(anchor="w", padx=16,
+                                                     pady=(0, 6))
+
         rows_frame = tk.Frame(dlg, bg=t["bg"])
         rows_frame.pack(fill="both", expand=True, padx=16)
+        prints_as = {}   # id(chord) -> label showing what it prints as
 
         preview = tk.Text(dlg, height=9, wrap="none", bg=t["input_bg"],
                            fg=t["fg"], font=FONT_MONO, relief="flat",
@@ -1504,7 +1515,21 @@ class SongNotationApp(tk.Tk):
                 bits.append("Not played in this song: " + ", ".join(cov["unused"]))
             coverage_lbl.configure(text="  ·  ".join(bits))
 
+        how_words = {"open": "open shape", "barre": "barre", "moved": "moved",
+                     "capo": "slid, open strings too"}
+
+        def _refresh_prints_as():
+            for chord in self.doc["chords"]:
+                lbl = prints_as.get(id(chord))
+                if lbl is None:
+                    continue
+                tr = songchords.transpose_chord(chord, n_song)
+                show = n_song and chord.get("frets") and tr["voicing"] != "as typed"
+                lbl.configure(text=(f"→ {tr['name']} · {how_words.get(tr['voicing'])}"
+                                    if show else ""))
+
         def _refresh_preview():
+            _refresh_prints_as()
             preview.configure(state="normal")
             preview.delete("1.0", "end")
             preview.insert("1.0", "\n".join(songchords.sheet_lines(self.doc, 76)))
@@ -1570,6 +1595,9 @@ class SongNotationApp(tk.Tk):
                     _refresh_preview()
                 ttk.Button(row, text="🗑", width=3, style="Normal.TButton",
                             command=_remove).pack(side="left")
+                pa = tk.Label(row, text="", bg=t["bg"], fg=t["fg"], font=FONT_TINY)
+                pa.pack(side="left", padx=(6, 0))
+                prints_as[id(chord)] = pa
                 err_lbl.pack(fill="x", padx=(4, 0))
                 row_widgets.append(row)
 
@@ -1603,7 +1631,9 @@ class SongNotationApp(tk.Tk):
             guitar = next((k for k in INSTRUMENT_STRINGS
                            if k.lower().startswith("guitar")),
                           songchords.DEFAULT_INSTRUMENT)
-            for nm in missing:
+            # Stored un-transposed, so each row prints as the chord the
+            # chart shows: on a song moved up a tone, the chart's D is C.
+            for nm in (songchords.stored_name(m, self.doc) for m in missing):
                 self.doc["chords"].append({"name": nm, "instrument": guitar,
                                            "frets": [], "shape_text": "", "note": ""})
             if self.doc.get("chord_sheet", "none") == "none":

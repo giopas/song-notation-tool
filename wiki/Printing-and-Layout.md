@@ -217,3 +217,9 @@ ordinary download and the browser's own settings decide where it lands.
   the column width takes, grouped by instrument — a row mixing a
   four-string and a six-string shape reads as one wrong diagram rather
   than two right ones.
+- **Chord shapes transpose with the song** (`chords.transpose_chord()`),
+  re-voiced rather than slid: a movable shape slides; an open shape goes
+  to the new chord's open shape if standard tuning has one, else to the
+  lower of its E-form and A-form barres; anything with no template is
+  slid whole, like a capo. Only the song's transpose applies — the sheet
+  belongs to the whole song, not to any one section.

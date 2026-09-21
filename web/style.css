@@ -731,3 +731,7 @@ button {
    error — amber rather than red, because nothing here is wrong. */
 .chord-coverage { color: var(--amber); margin: 2px 0 4px; }
 .chord-coverage:empty { display: none; }
+
+.chord-prints-as { color: var(--blue); font-size: 11px; }
+.chord-prints-as:empty { display: none; }
+.chord-transposed { color: var(--blue); margin: 0 0 4px; }

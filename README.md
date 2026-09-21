@@ -333,6 +333,12 @@ song plays with no shape yet, and shapes for chords it never plays, and
 printed* — so after a transpose it asks for the chords you'll actually
 see on the page.
 
+Transpose the song and the shapes move with it, the way a player would
+re-voice them: an open shape goes to the open shape of the new chord (C
+up a tone prints as the open D, `xx0232`), or to its E- or A-form barre
+when there's no open one; a barre slides up or down the neck. What you
+typed is what's stored — only the printed sheet moves.
+
 ### Lyrics
 
 **Lyrics** holds the words as a reference layer — never parsed, never

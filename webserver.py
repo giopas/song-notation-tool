@@ -609,6 +609,18 @@ class Handler(BaseHTTPRequestHandler):
                 doc = model.migrate_document(body.get("doc") or {})
                 cov = chords_mod.coverage(doc)
                 cov["used"] = chords_mod.used_symbols(doc)
+                # What to store for each missing chord so it *prints* as
+                # the chart says — the song's transpose, undone.
+                cov["missing_stored"] = [chords_mod.stored_name(m, doc)
+                                         for m in cov["missing"]]
+                # Per shape, in the document's order: what it prints as
+                # with the song's transpose, and how it was re-voiced.
+                n = int(doc.get("transpose", 0) or 0)
+                cov["printed"] = [
+                    {"name": t.get("name", ""), "voicing": t.get("voicing", "")}
+                    for t in (chords_mod.transpose_chord(c, n)
+                              for c in (doc.get("chords") or []))]
+                cov["transpose"] = n
                 return self._send_json(cov)
 
             if path == "/api/export.txt" or path == "/api/export.pdf":

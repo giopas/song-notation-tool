@@ -124,7 +124,7 @@ def sheet_lines(doc: dict, width: int = 100, indent: int = 2) -> list:
     have different numbers of strings, and a row mixing them reads as one
     wrong diagram rather than two right ones.
     """
-    chords = [c for c in (doc.get("chords") or []) if (c.get("name") or "").strip()]
+    chords = printed_chords(doc)
     if not chords:
         return []
 
@@ -165,6 +165,204 @@ def sheet_position(doc: dict) -> str:
     if not [c for c in (doc.get("chords") or []) if (c.get("name") or "").strip()]:
         return "none"
     return pos
+
+
+# ==============================================================================
+#  Transposing a shape
+#
+#  Chord symbols transpose by arithmetic; chord *shapes* don't. Move a song
+#  up a tone and the C you were holding becomes a D — but the hand doesn't
+#  slide x32010 up two frets (that's x54232, which nobody plays); it goes
+#  to the open D, xx0232. So, in order:
+#
+#    1. A shape with no open strings is already movable (a barre, a power
+#       chord, a jazz voicing): slide it. Same hand, different fret —
+#       which is what the player chose it for.
+#    2. An open shape goes to the open shape of the new chord, if there
+#       is one in standard tuning.
+#    3. If there isn't — there's no open F, no open B minor — it goes to
+#       the E-form or A-form barre of that chord, whichever sits lower on
+#       the neck.
+#    4. A chord with no barre template either (an add9, a slash chord) is
+#       slid as a whole, open strings included — the capo answer. Always
+#       playable, if not always pretty.
+#
+#  Only step 1 and step 4 apply off standard six-string tuning: the open
+#  and barre libraries are shapes for E A D G B E and nothing else.
+#
+#  Like every other transpose in this program it happens at render time:
+#  the shape you typed is what's stored, and what prints follows the song.
+# ==============================================================================
+
+STANDARD_GUITAR = "Guitar (6-string)"
+
+# Standard open shapes, written low string first as chord charts write them.
+# Keyed by (root, quality) with sharps as the canonical spelling, the same
+# spelling transpose.py produces.
+_OPEN_TEXT = {
+    ("C", ""): "x32010",  ("C", "7"): "x32310",  ("C", "maj7"): "x32000",
+    ("C", "add9"): "x32030",
+    ("D", ""): "xx0232",  ("D", "m"): "xx0231",  ("D", "7"): "xx0212",
+    ("D", "m7"): "xx0211", ("D", "maj7"): "xx0222", ("D", "sus2"): "xx0230",
+    ("D", "sus4"): "xx0233", ("D", "5"): "xx023x",
+    ("E", ""): "022100",  ("E", "m"): "022000",  ("E", "7"): "020100",
+    ("E", "m7"): "020000", ("E", "maj7"): "021100", ("E", "sus4"): "022200",
+    ("E", "5"): "022xxx",
+    ("F", "maj7"): "xx3210",
+    ("G", ""): "320003",  ("G", "7"): "320001",  ("G", "maj7"): "320002",
+    ("A", ""): "x02220",  ("A", "m"): "x02210",  ("A", "7"): "x02020",
+    ("A", "m7"): "x02010", ("A", "maj7"): "x02120", ("A", "sus2"): "x02200",
+    ("A", "sus4"): "x02230", ("A", "5"): "x022xx",
+    ("B", "7"): "x21202",
+}
+
+# Movable barre templates at the nut (fret 0 = root on the open string),
+# low string first. "E" roots on the low E string, "A" on the A string.
+_BARRE_TEXT = {
+    "":     {"E": "022100", "A": "x02220"},
+    "m":    {"E": "022000", "A": "x02210"},
+    "7":    {"E": "020100", "A": "x02020"},
+    "m7":   {"E": "020000", "A": "x02010"},
+    "maj7": {"E": "0x110x", "A": "x02120"},
+    "sus4": {"E": "022200", "A": "x02230"},
+    "sus2": {"A": "x02200"},
+    "5":    {"E": "022xxx", "A": "x022xx"},
+    "6":    {"E": "022120", "A": "x02222"},
+    "m6":   {"E": "022020", "A": "x02212"},
+}
+
+# Spellings of the same quality, folded to the one the tables use.
+_QUALITY_ALIASES = {
+    "maj": "", "M": "", "min": "m", "-": "m", "mi": "m",
+    "M7": "maj7", "Maj7": "maj7", "ma7": "maj7", "Δ": "maj7", "Δ7": "maj7",
+    "min7": "m7", "-7": "m7", "mi7": "m7", "sus": "sus4", "dom7": "7",
+    "min6": "m6", "-6": "m6",
+}
+
+_E_INDEX = 7   # CHROMATIC index of E  (transpose.CHROMATIC starts at A)
+_A_INDEX = 0
+
+
+def split_chord_name(name: str):
+    """(root_index, quality) for a chord name, or (None, name) if it
+    doesn't start with a note. The quality is folded to the spelling the
+    shape tables use, so "Amin7", "A-7" and "Am7" all find the same shape."""
+    import transpose
+    root, suffix = transpose._parse_root_suffix((name or "").strip())
+    if root is None:
+        return None, name
+    idx = transpose.note_to_index(root)
+    return idx, _QUALITY_ALIASES.get(suffix, suffix)
+
+
+def _open_shape(root_idx: int, quality: str):
+    import transpose
+    text = _OPEN_TEXT.get((transpose.CHROMATIC[root_idx], quality))
+    return shape_from_text(text, STANDARD_GUITAR) if text else None
+
+
+def _barre_shape(root_idx: int, quality: str):
+    """The lower-sitting of the E-form and A-form barres for this chord,
+    or None if the quality has no template. Lower wins because it's the
+    easier reach from wherever the song's other chords are; a tie goes to
+    the E form, which is the one most hands know first."""
+    forms = _BARRE_TEXT.get(quality)
+    if not forms:
+        return None
+    best = None
+    for form, text in forms.items():
+        fret = (root_idx - (_E_INDEX if form == "E" else _A_INDEX)) % 12
+        frets = [f if f == "x" else str(int(f) + fret)
+                 for f in shape_from_text(text, STANDARD_GUITAR)]
+        cand = (fret, 0 if form == "E" else 1, frets)
+        if best is None or cand[:2] < best[:2]:
+            best = cand
+    return best[2]
+
+
+def _shift(frets, semitones: int):
+    """Slide a whole shape along the neck — up or down, whichever octave
+    keeps every sounded string on the fretboard and the hand lowest."""
+    best = None
+    for n in (semitones, semitones - 12, semitones + 12):
+        out = []
+        for f in frets:
+            if f == "x":
+                out.append("x")
+                continue
+            v = int(f) + n
+            if not 0 <= v <= MAX_FRET:
+                break
+            out.append(str(v))
+        else:
+            top = max((int(f) for f in out if f != "x"), default=0)
+            if best is None or top < best[0]:
+                best = (top, out)
+    return best[1] if best else list(frets)
+
+
+def is_open_shape(frets) -> bool:
+    """True if any sounded string is open — the shape is tied to the nut
+    and can't simply slide."""
+    return any(f == "0" for f in (frets or []))
+
+
+def transpose_chord(chord: dict, semitones: int) -> dict:
+    """`chord` as it prints with the song moved `semitones`: name
+    transposed, shape re-voiced by the rules above. Adds `"voicing"` —
+    "as typed", "moved", "open", "barre" or "capo" — so a front end can
+    say what happened. The stored chord is never modified."""
+    import transpose
+    out = dict(chord)
+    out["frets"] = list(chord.get("frets") or [])
+    if not semitones:
+        out["voicing"] = "as typed"
+        return out
+
+    # The name moves with the song even before a shape has been typed —
+    # a row with no frets yet still has to say which chord it's for.
+    out["name"] = transpose.transpose_symbol(chord.get("name", ""), semitones)
+    if not out["frets"]:
+        out["voicing"] = "as typed"
+        return out
+    frets = out["frets"]
+    standard = (chord.get("instrument") or DEFAULT_INSTRUMENT) == STANDARD_GUITAR
+
+    if not is_open_shape(frets):
+        out["frets"], out["voicing"] = _shift(frets, semitones), "moved"
+        return out
+
+    root, quality = split_chord_name(out["name"])
+    if standard and root is not None:
+        shape = _open_shape(root, quality)
+        if shape:
+            out["frets"], out["voicing"] = shape, "open"
+            return out
+        shape = _barre_shape(root, quality)
+        if shape:
+            out["frets"], out["voicing"] = shape, "barre"
+            return out
+
+    out["frets"], out["voicing"] = _shift(frets, semitones), "capo"
+    return out
+
+
+def printed_chords(doc: dict) -> list:
+    """The document's chord shapes as they print: moved with the song's
+    own transpose. (A section's transpose doesn't apply — the sheet
+    belongs to the whole song, not to any one section of it.)"""
+    n = int(doc.get("transpose", 0) or 0)
+    return [transpose_chord(c, n) for c in (doc.get("chords") or [])
+            if (c.get("name") or "").strip()]
+
+
+def stored_name(printed: str, doc: dict) -> str:
+    """The name to store for a chord that should *print* as `printed` —
+    the reverse of the song's transpose, so a row added for the D on a
+    chart moved up a tone is stored as C and prints as D."""
+    import transpose
+    n = int(doc.get("transpose", 0) or 0)
+    return transpose.transpose_symbol(printed, -n) if n else printed
 
 
 # ==============================================================================
@@ -235,7 +433,9 @@ def coverage(doc: dict) -> dict:
     chords, and guessing that one was meant for the other is how a sheet
     ends up printing the wrong diagram.
     """
-    names = [(c.get("name") or "").strip() for c in (doc.get("chords") or [])]
+    # Compared as printed: with the song moved up a tone, a shape stored
+    # as C prints as D, and D is what it has to match on the chart.
+    names = [(c.get("name") or "").strip() for c in printed_chords(doc)]
     names = [n for n in names if n]
     used = used_symbols(doc)
     # Anything played anywhere counts as used, so a shape isn't flagged

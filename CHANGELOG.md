@@ -67,6 +67,23 @@ print on the sheet instead of in your head.
   root, not a chord to finger. `cli.py lint` reports the same two lists
   as notes, never as failures.
 
+  **Shapes move with the song.** Transpose the song and the chord sheet
+  follows — re-voiced the way a player would, not by sliding every fret:
+  1. a shape with no open strings (a barre, a power chord) is already
+     movable, so it **slides** — same hand, different fret;
+  2. an open shape goes to the **open shape** of the new chord if there
+     is one — C up a tone is `xx0232`, not `x54232`;
+  3. if there isn't (no open F, no open Bm) it goes to the **E-form or
+     A-form barre**, whichever sits lower on the neck;
+  4. a chord with no barre template (an add9, a slash chord) is slid
+     whole, open strings included — the capo answer.
+  Off standard six-string tuning only 1 and 4 apply. As with everything
+  else it's render-time: the shape you typed is what's stored. The dialog
+  says what each row prints as ("→ D · open shape") while the song is
+  transposed, coverage compares shapes *as printed*, and **+ From chart**
+  stores each new row under its un-transposed name so it prints as the
+  chord the chart shows.
+
 ### Changed
 - **A section's words print beside its chart, not under it.** The chart
   keeps a narrow left column and the words run down their own column to
@@ -93,7 +110,8 @@ print on the sheet instead of in your head.
   `lyric_column_x()`, `compose_beside()`, `beside_line_count()`.
 - `chords.py`: `shape_from_text()`, `shape_to_text()`, `diagram_lines()`,
   `sheet_lines()`, `sheet_position()`, `strings_for()`, `used_symbols()`,
-  `coverage()`.
+  `coverage()`, `transpose_chord()`, `printed_chords()`, `stored_name()`,
+  `split_chord_name()`, `is_open_shape()`.
 - `songmap.py`: `lick_index()`, `find_lick()`, `lick_names()`.
 - `model.py`: `make_lick(lines, name, repeat)`, `make_lick_ref()`,
   `make_chord()`; new document keys `lyrics_layout`, `lick_refs`,
@@ -106,7 +124,7 @@ print on the sheet instead of in your head.
 - `{G}` used to be a parse error (a lick line needs frets as well as a
   string name); it is now a reference to a lick named `G`. Nothing that
   parsed before parses differently.
-- 291 tests pass (was 241), including a new `tests/test_chords.py`.
+- 305 tests pass (was 241), including a new `tests/test_chords.py`.
 
 ## [0.22.0] — 2026-09-20
 

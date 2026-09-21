@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Documentation
+- **New screenshots from a clean session** (a throwaway `--dir`, so no
+  personal songs or paths): eight of them, now named by subject —
+  `start-here`, `editor`, `layout-panel`, `lyrics-dialog`,
+  `chord-shapes`, `notation-reference`, `help-strip`, `export-menu` —
+  and halved to 1912 px wide. The README shows the editor full width and
+  the other seven as a two-column grid of captioned thumbnails, each
+  linking to the full image. This also fixes the README's images, which
+  were broken on GitHub after the previous set was removed.
+
 ## [0.26.2] — 2026-09-21
 
 ### Fixed

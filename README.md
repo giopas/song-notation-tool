@@ -135,24 +135,12 @@ beside each line insert notation at the cursor.
 
 ![The editor, with the example song open](screenshots/editor.png)
 
-**⚙ Layout** — every print setting in one panel at the bottom left: page
-size, columns, colour, section names, where the lyrics go, how recalled
-licks print, and chord shapes.
-
-![The Layout panel](screenshots/layout-panel.png)
-
-**Lyrics** — paste or import the words, drag a section's chip into the
-sheet to mark where its words begin, then **Split by markers**.
-
-![The Lyrics dialog](screenshots/lyrics-dialog.png)
-
-**Notation reference** and the **how this works** strip — everything you
-can type on a chart line, and the ideas behind it, without leaving the
-app.
-
-![The Notation reference](screenshots/notation-reference.png)
-
-![The help strip](screenshots/help-strip.png)
+<table>
+<tr><td width="50%" valign="top"><a href="screenshots/start-here.png"><img src="screenshots/start-here.png" alt="Start here"></a><br><b>Start here</b> — A new or returning user sees New song and Open example, not an empty grid.</td><td width="50%" valign="top"><a href="screenshots/layout-panel.png"><img src="screenshots/layout-panel.png" alt="⚙ Layout"></a><br><b>⚙ Layout</b> — Every print setting in one panel at the bottom left: size, columns, colour, section names, lyrics, licks, chord shapes.</td></tr>
+<tr><td width="50%" valign="top"><a href="screenshots/lyrics-dialog.png"><img src="screenshots/lyrics-dialog.png" alt="Lyrics"></a><br><b>Lyrics</b> — Paste or import the words, drag a section's chip into the sheet to mark where its words begin, then <b>Split by markers</b>.</td><td width="50%" valign="top"><a href="screenshots/chord-shapes.png"><img src="screenshots/chord-shapes.png" alt="Chord shapes"></a><br><b>Chord shapes</b> — Voicings typed as <code>x32010</code>, checked against the chords the chart plays; <b>+ From chart</b> adds the missing ones.</td></tr>
+<tr><td width="50%" valign="top"><a href="screenshots/notation-reference.png"><img src="screenshots/notation-reference.png" alt="Notation reference"></a><br><b>Notation reference</b> — Everything you can type on a chart line, with examples that are checked against the real parser.</td><td width="50%" valign="top"><a href="screenshots/help-strip.png"><img src="screenshots/help-strip.png" alt="How this works"></a><br><b>How this works</b> — The ideas behind the chart line, one line each, a click away.</td></tr>
+<tr><td width="50%" valign="top"><a href="screenshots/export-menu.png"><img src="screenshots/export-menu.png" alt="Export"></a><br><b>Export</b> — TXT, PDF in portrait or landscape, or straight to the OS print dialog.</td><td width="50%"></td></tr>
+</table>
 
 ---
 

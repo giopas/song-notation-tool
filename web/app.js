@@ -35,6 +35,9 @@ const API = {
   markedLyrics: (doc, text) => fetchJSON("/api/lyrics/marked", {
     method: "POST", body: JSON.stringify({ doc, text }),
   }),
+  chordCoverage: (doc) => fetchJSON("/api/chords/coverage", {
+    method: "POST", body: JSON.stringify({ doc }),
+  }),
   chordShape: (text, instrument) => fetchJSON("/api/chords/shape", {
     method: "POST", body: JSON.stringify({ text, instrument }),
   }),
@@ -217,6 +220,8 @@ function renderEditor() {
     currentDoc.lyrics_layout || "beside";
   document.getElementById("meta-chord-sheet").value =
     currentDoc.chord_sheet || "none";
+  document.getElementById("meta-lick-refs").value =
+    currentDoc.lick_refs || "tab";
 
   const list = document.getElementById("section-list");
   list.innerHTML = "";
@@ -1495,7 +1500,52 @@ function chordRow(chord, index) {
 /** The shapes as they will print, drawn from the same diagram code the
  *  export uses — asking the server to render it is how the dialog and the
  *  paper stay the same thing. */
+/** Say, under the rows, which chords the chart plays with no shape and
+ *  which shapes it never plays. Reported, not enforced: plenty of chords
+ *  need no diagram. */
+// Debounced: the preview redraws on every keystroke in a chord's name,
+// and the coverage only needs to catch up once the typing stops.
+const renderChordCoverage = debounce(() => renderChordCoverageNow(), 250);
+function renderChordCoverageNow() {
+  const line = document.getElementById("chords-coverage");
+  if (!line) return;
+  API.chordCoverage(currentDoc).then((cov) => {
+    const bits = [];
+    if ((cov.missing || []).length) bits.push(`No shape yet: ${cov.missing.join(", ")}`);
+    if ((cov.unused || []).length) bits.push(`Not played in this song: ${cov.unused.join(", ")}`);
+    line.textContent = bits.join("  ·  ");
+  }).catch(() => { line.textContent = ""; });
+}
+
+/** A row for every chord the chart plays that has no shape yet. The
+ *  names come from the printed chart, so a song transposed up a tone
+ *  asks for D, not the C you typed. */
+async function addChordsFromChart() {
+  let cov;
+  try { cov = await API.chordCoverage(currentDoc); }
+  catch (e) { toast(String(e)); return; }
+  const missing = cov.missing || [];
+  if (!missing.length) {
+    toast((cov.used || []).length ? "Every chord on the chart already has a shape"
+      : "No chord symbols on the chart yet");
+    return;
+  }
+  const guitar = Object.keys(META.instruments || {})
+    .find((k) => k.toLowerCase().startsWith("guitar")) || defaultInstrument();
+  missing.forEach((name) => chordList().push(
+    { name, instrument: guitar, frets: [], shape_text: "", note: "" }));
+  if ((currentDoc.chord_sheet || "none") === "none") {
+    currentDoc.chord_sheet = "end";
+    document.getElementById("chords-where").value = "end";
+    const sel = document.getElementById("meta-chord-sheet");
+    if (sel) sel.value = "end";
+  }
+  renderChordRows();
+  toast(`Added ${missing.length} chord(s) — type a shape for each`);
+}
+
 function renderChordPreview() {
+  renderChordCoverage();
   const box = document.getElementById("chords-preview");
   const chords = chordList().filter((c) => (c.name || "").trim() && (c.frets || []).length);
   if (!chords.length) { box.textContent = ""; return; }
@@ -1729,6 +1779,7 @@ async function init() {
    ["meta-columns", "pdf_columns", META.pdf_columns, "auto"],
    ["meta-lyrics-layout", "lyrics_layout", META.lyrics_layouts, "beside"],
    ["meta-chord-sheet", "chord_sheet", META.chord_sheets, "none"],
+   ["meta-lick-refs", "lick_refs", META.lick_refs, "tab"],
   ].forEach(([id, key, labels, fallback]) => {
     const sel = document.getElementById(id);
     Object.entries(labels || {}).forEach(([value, label]) => {
@@ -1796,6 +1847,8 @@ async function init() {
   document.getElementById("btn-lyrics").addEventListener("click", openLyricsModal);
   document.getElementById("btn-chords").addEventListener("click", openChordsModal);
   document.getElementById("chords-add").addEventListener("click", addChord);
+  document.getElementById("chords-from-chart").addEventListener("click",
+    () => addChordsFromChart().catch((e) => toast(String(e))));
   document.getElementById("chords-close").addEventListener("click", closeChordsModal);
   document.getElementById("chords-where").addEventListener("change", (e) => {
     if (!currentDoc) return;

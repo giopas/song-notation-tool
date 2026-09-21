@@ -42,6 +42,13 @@ print on the sheet instead of in your head.
   `{ name = tab }` button inserts `Riff1`, `Riff2`, … — and the browser's
   palette offers every lick already named as a button that inserts the
   reference.
+
+  What a recalled lick prints as is a setting, `lick_refs`: *tab* (the
+  default) plays the notes again wherever it's used; *name only* prints
+  `Riff1 (x3)` and leaves the notes where the lick was written — the
+  shorter page, and how the handwritten charts do it. Either way a lick's
+  name prints in the lick blue, and a reference that finds nothing keeps
+  its braces (`{Nope}`), so a typo is visible on paper.
 - **Chord shapes, printed once.** A new **Chords 🎸** dialog keeps a list
   of voicings written the way a chord chart writes them (`x32010` is C,
   `x 0 12 12 12 x` when the frets need two digits), and prints them as a
@@ -50,6 +57,15 @@ print on the sheet instead of in your head.
   first time you add a shape. Shapes are grouped by instrument, laid out
   in as many diagrams per row as the page width takes, and each can carry
   a word of its own ("barre", "thumb"). New module: `chords.py`.
+
+  The dialog checks the shapes against the chart: it says which chords
+  are played with no shape yet and which shapes are for chords the song
+  never plays, and **+ From chart** adds a row for every missing one.
+  "Played" means *as printed* — references expanded, transpose applied —
+  so a song moved up a tone asks for D, not the C you typed. Guitar
+  sections only when the song has any, since on a bass chart "A" is a
+  root, not a chord to finger. `cli.py lint` reports the same two lists
+  as notes, never as failures.
 
 ### Changed
 - **A section's words print beside its chart, not under it.** The chart
@@ -76,19 +92,21 @@ print on the sheet instead of in your head.
 - `render.py`: `printable_lyrics()`, `lyrics_beside()`,
   `lyric_column_x()`, `compose_beside()`, `beside_line_count()`.
 - `chords.py`: `shape_from_text()`, `shape_to_text()`, `diagram_lines()`,
-  `sheet_lines()`, `sheet_position()`, `strings_for()`.
+  `sheet_lines()`, `sheet_position()`, `strings_for()`, `used_symbols()`,
+  `coverage()`.
 - `songmap.py`: `lick_index()`, `find_lick()`, `lick_names()`.
 - `model.py`: `make_lick(lines, name, repeat)`, `make_lick_ref()`,
-  `make_chord()`; new document keys `lyrics_layout`, `chords`,
-  `chord_sheet`; new item kind `lick_ref`.
-- `webserver.py`: `POST /api/lyrics/marked`, `POST /api/chords/shape`;
-  `/api/meta` gains `lyrics_layouts` and `chord_sheets`.
+  `make_chord()`; new document keys `lyrics_layout`, `lick_refs`,
+  `chords`, `chord_sheet`; new item kind `lick_ref`.
+- `webserver.py`: `POST /api/lyrics/marked`, `POST /api/chords/shape`,
+  `POST /api/chords/coverage`; `/api/meta` gains `lyrics_layouts`,
+  `chord_sheets` and `lick_refs`.
 
 ### Notes
 - `{G}` used to be a parse error (a lick line needs frets as well as a
   string name); it is now a reference to a lick named `G`. Nothing that
   parsed before parses differently.
-- 283 tests pass (was 241), including a new `tests/test_chords.py`.
+- 291 tests pass (was 241), including a new `tests/test_chords.py`.
 
 ## [0.22.0] — 2026-09-20
 

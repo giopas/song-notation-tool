@@ -252,6 +252,13 @@ name above them, which is how the handwritten charts say it ("RIFF 1
 a section reference does — and there is no separate library to keep in
 step: the name lives on the lick where you wrote it.
 
+If you'd rather the notes printed once — where the lick was written —
+and every recall said just `Riff1 (x3)`, set **Licks → Recalled licks by
+name only** in Print & export (in the desktop app it's in the Export
+dialogs, shown whenever the song recalls a lick). A reference that
+doesn't find its lick keeps its braces on paper, so a misspelt name is
+visible.
+
 Names match loosely (`{riff1}` finds `Riff1`) and can't start like a
 chord: `A1` would read as a chord symbol on a chart line, so it's
 refused. The `{ name = tab }` button fills a free name in for you —

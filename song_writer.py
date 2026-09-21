@@ -1490,11 +1490,26 @@ class SongNotationApp(tk.Tk):
                            padx=8, pady=6)
         row_widgets = []
 
+        coverage_lbl = tk.Label(dlg, text="", bg=t["bg"], fg=t["accent"],
+                                 font=FONT_TINY, anchor="w", justify="left",
+                                 wraplength=580)
+
+        def _refresh_coverage():
+            # Reported, never enforced: plenty of chords need no diagram.
+            cov = songchords.coverage(self.doc)
+            bits = []
+            if cov["missing"]:
+                bits.append("No shape yet: " + ", ".join(cov["missing"]))
+            if cov["unused"]:
+                bits.append("Not played in this song: " + ", ".join(cov["unused"]))
+            coverage_lbl.configure(text="  ·  ".join(bits))
+
         def _refresh_preview():
             preview.configure(state="normal")
             preview.delete("1.0", "end")
             preview.insert("1.0", "\n".join(songchords.sheet_lines(self.doc, 76)))
             preview.configure(state="disabled")
+            _refresh_coverage()
             self.dirty = True
             self._refresh_page_indicator()
 
@@ -1573,10 +1588,40 @@ class SongNotationApp(tk.Tk):
                 where_var.set("end")
             _rebuild_rows()
 
+        def _from_chart():
+            """A row for every chord the printed chart plays with no shape
+            yet — after any transpose, so a song moved up a tone asks for
+            D rather than the C that was typed."""
+            missing = songchords.coverage(self.doc)["missing"]
+            if not missing:
+                messagebox.showinfo(
+                    "Chord shapes",
+                    "Every chord on the chart already has a shape."
+                    if songchords.used_symbols(self.doc)
+                    else "No chord symbols on the chart yet.", parent=dlg)
+                return
+            guitar = next((k for k in INSTRUMENT_STRINGS
+                           if k.lower().startswith("guitar")),
+                          songchords.DEFAULT_INSTRUMENT)
+            for nm in missing:
+                self.doc["chords"].append({"name": nm, "instrument": guitar,
+                                           "frets": [], "shape_text": "", "note": ""})
+            if self.doc.get("chord_sheet", "none") == "none":
+                self.doc["chord_sheet"] = "end"
+                where_var.set("end")
+            _rebuild_rows()
+            _refresh_preview()
+
         btnrow = tk.Frame(dlg, bg=t["bg"])
         btnrow.pack(fill="x", padx=16, pady=(6, 2))
         ttk.Button(btnrow, text="+ Chord", command=_add_chord,
                     style="Normal.TButton").pack(side="left")
+        btn_from = ttk.Button(btnrow, text="+ From chart", command=_from_chart,
+                               style="Normal.TButton")
+        btn_from.pack(side="left", padx=(6, 0))
+        ToolTip(btn_from, "Add a row for every chord the chart plays that has no "
+                "shape yet — as printed, so after any transpose. Guitar sections "
+                "only, if the song has any.")
 
         where_var = tk.StringVar(value=self.doc.get("chord_sheet", "none"))
 
@@ -1594,6 +1639,7 @@ class SongNotationApp(tk.Tk):
                            selectcolor=t["input_bg"], activebackground=t["bg"],
                            font=FONT_TINY).pack(side="left", padx=(6, 0))
 
+        coverage_lbl.pack(fill="x", padx=16)
         preview.pack(fill="x", padx=16, pady=(4, 4))
         _rebuild_rows()
         _refresh_preview()
@@ -2106,6 +2152,33 @@ class SongNotationApp(tk.Tk):
         self._sync_doc_meta()
         return songexport.build_song_lines(self.doc, instruments=instruments)
 
+    def _lick_refs_choice(self, dlg, t):
+        """"Recalled licks: as tab / by name only" — shown only when the
+        song actually recalls a lick, since otherwise it's a choice about
+        nothing. Written straight to the document, like Columns: it's a
+        property of the song, so it travels with the .sng."""
+        uses_refs = any(
+            it.get("kind") == "lick_ref"
+            for sec in self.doc.get("sections", [])
+            for it in songchords._walk(sec.get("items", [])))
+        if not uses_refs:
+            return
+        tk.Label(dlg, text="Recalled licks ({Riff1}):", bg=t["bg"], fg=t["accent"],
+                 font=FONT_TINY).pack(padx=16, pady=(10, 2), anchor="w")
+        var = tk.StringVar(value=self.doc.get("lick_refs", "tab"))
+
+        def _set():
+            self.doc["lick_refs"] = var.get()
+            self.dirty = True
+            self._refresh_page_indicator()
+
+        for val, lbl in (("tab", "Print the tab again"),
+                          ("name", "Name only — Riff1 (x3)")):
+            tk.Radiobutton(dlg, text=lbl, variable=var, value=val, command=_set,
+                           bg=t["bg"], fg=t["fg"], selectcolor=t["input_bg"],
+                           activebackground=t["bg"], font=FONT_TINY
+                           ).pack(anchor="w", padx=28)
+
     def _export_txt(self):
         self._commit_editor_line(force=True)
         t = THEMES[self.current_theme]
@@ -2125,6 +2198,8 @@ class SongNotationApp(tk.Tk):
             tk.Checkbutton(dlg, text=instr, variable=v, bg=t["bg"], fg=t["fg"],
                            selectcolor=t["input_bg"], activebackground=t["bg"],
                            font=FONT_TINY).pack(anchor="w", padx=28)
+
+        self._lick_refs_choice(dlg, t)
 
         def do_export():
             instrs = {i for i, v in instr_vars.items() if v.get()}
@@ -2190,6 +2265,8 @@ class SongNotationApp(tk.Tk):
             tk.Checkbutton(dlg, text=instr, variable=v, bg=t["bg"], fg=t["fg"],
                            selectcolor=t["input_bg"], activebackground=t["bg"],
                            font=FONT_TINY).pack(anchor="w", padx=28)
+
+        self._lick_refs_choice(dlg, t)
 
         def do_export():
             instrs = {i for i, v in instr_vars.items() if v.get()}

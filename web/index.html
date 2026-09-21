@@ -153,6 +153,9 @@
             <label title="Where a section's words print: beside its chart, in a column of their own, or underneath it. Beside is usually what you want — it shows what the instrument does during those words without the verse pushing the next section off the page. Nothing is aligned chord-to-syllable either way.">Lyrics
               <select id="meta-lyrics-layout"></select>
             </label>
+            <label title="What a recalled lick — {Riff1} — prints as. Tab plays the notes again wherever it's used; Name only prints 'Riff1 (x3)' and leaves the notes where the lick was written, which is how a handwritten chart does it and makes for a shorter page.">Licks
+              <select id="meta-lick-refs"></select>
+            </label>
             <label title="Print the song's chord shapes as a block of diagrams, once, at the start or the end of the chart. Shapes are edited from the Chords button in the toolbar.">Chord shapes
               <select id="meta-chord-sheet"></select>
             </label>
@@ -293,9 +296,12 @@
         <strong>Print &amp; export → Chord shapes</strong> says.
       </p>
       <div id="chords-rows" class="chord-rows"></div>
+      <p id="chords-coverage" class="modal-hint chord-coverage"></p>
       <div class="modal-actions" style="justify-content: space-between;">
         <div>
           <button id="chords-add" class="btn subtle">+ Chord</button>
+          <button id="chords-from-chart" class="btn subtle"
+                  title="Add a row for every chord the chart plays that has no shape yet — as printed, so after any transpose. Guitar sections only, if the song has any.">+ From chart</button>
           <label class="chord-where">Print
             <select id="chords-where"></select>
           </label>

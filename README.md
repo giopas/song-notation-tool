@@ -64,7 +64,8 @@ whichever way you made it.
   in a column of their own
 - **Named licks** — `{Riff1 = G 5 7 5 | D - - 3}` names a figure and
   `{Riff1}x3` plays it again anywhere in the song; edit it once and every
-  place that plays it follows
+  place that plays it follows. Print the recalled ones as tab, or as just
+  `Riff1 (x3)` the way a handwritten chart does
 - **Chord shapes** — a list of voicings (`x32010`), printed as a block of
   tab-style diagrams at the start or the end of the chart
 - **Marks** — barlines, 1st/2nd endings, segno, coda, D.C./D.S., `simile`,
@@ -325,6 +326,12 @@ block of tab-style diagrams, at the start or the end of the chart:
 
 Each shape can carry a word of its own ("barre", "thumb"), and shapes for
 different instruments are grouped rather than mixed into one row.
+
+The dialog keeps the shapes honest against the chart: it lists chords the
+song plays with no shape yet, and shapes for chords it never plays, and
+**+ From chart** adds a row for each missing one. It reads the chart *as
+printed* — so after a transpose it asks for the chords you'll actually
+see on the page.
 
 ### Lyrics
 

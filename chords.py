@@ -165,3 +165,83 @@ def sheet_position(doc: dict) -> str:
     if not [c for c in (doc.get("chords") or []) if (c.get("name") or "").strip()]:
         return "none"
     return pos
+
+
+# ==============================================================================
+#  Coverage — the shapes against the chords the chart actually plays
+#
+#  A sheet of shapes drifts out of step with the song the moment the song
+#  changes: a chord added to the bridge with no shape for it, a shape kept
+#  for a chord the arrangement dropped. Neither is an error — plenty of
+#  chords need no diagram — so this reports rather than refuses.
+# ==============================================================================
+
+def _is_guitar(instrument: str) -> bool:
+    return (instrument or "").lower().startswith("guitar")
+
+
+def _walk(items):
+    for it in items or []:
+        yield it
+        if it.get("kind") == "group":
+            yield from _walk(it.get("items", []))
+
+
+def used_symbols(doc: dict, guitar_only: bool = None) -> list:
+    """Every chord symbol the printed chart shows, in order of first use.
+
+    *Printed* is the operative word: references are expanded and the
+    song's and each section's transpose applied, because a shape is for
+    the chord you read on the page, not the one you typed before moving
+    the song up a tone.
+
+    `guitar_only` limits it to guitar sections — on a bass chart "A" is a
+    root note, not a chord to finger. None (the default) means: guitar
+    sections if the song has any, otherwise all of them.
+    """
+    import render
+    import songmap
+    import transpose
+
+    sections = doc.get("sections", []) or []
+    if guitar_only is None:
+        guitar_only = any(_is_guitar(s.get("instrument")) for s in sections)
+
+    out = []
+    for sec in sections:
+        if guitar_only and not _is_guitar(sec.get("instrument")):
+            continue
+        if sec.get("render", "chart") not in ("chart", "both"):
+            continue
+        eff = transpose.effective_transpose(doc.get("transpose", 0),
+                                            sec.get("transpose", 0))
+        items = render.resolve_display_items(
+            render.resolve_references(songmap.chart_items(sec), doc), eff)
+        for it in _walk(items):
+            if it.get("kind") == "token":
+                sym = (it.get("symbol") or "").strip()
+                if sym and sym not in out:
+                    out.append(sym)
+    return out
+
+
+def coverage(doc: dict) -> dict:
+    """{"missing": [...], "unused": [...]}
+
+    `missing` — chords the chart plays that have no shape.
+    `unused`  — shapes for chords the chart never plays.
+
+    Names compare exactly, case included: "Am" and "AM" are different
+    chords, and guessing that one was meant for the other is how a sheet
+    ends up printing the wrong diagram.
+    """
+    names = [(c.get("name") or "").strip() for c in (doc.get("chords") or [])]
+    names = [n for n in names if n]
+    used = used_symbols(doc)
+    # Anything played anywhere counts as used, so a shape isn't flagged
+    # just because the song's only guitar part is written as a bass line.
+    played_anywhere = set(used) | set(used_symbols(doc, guitar_only=False))
+    return {
+        "missing": [u for u in used if u not in names],
+        "unused": [n for n in names if n not in played_anywhere],
+    }

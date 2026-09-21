@@ -44,6 +44,13 @@ SECTION_LAYOUT_LABELS = {"banner": "Sections on top",
 LYRICS_LAYOUT_LABELS = {"beside": "Beside the chart",
                         "below": "Under the chart"}
 
+# What a recalled lick ({Riff1}) prints as. "Tab" plays it back in full
+# wherever it's used; "Name only" prints "Riff1 (x3)" and leaves the notes
+# where the lick was written — how the handwritten charts do it, and the
+# shorter page.
+LICK_REF_LABELS = {"tab": "Recalled licks as tab",
+                   "name": "Recalled licks by name only"}
+
 # A page of chord shapes — the voicings you had to work out — printed
 # once at one end of the song rather than beside every chord symbol.
 CHORD_SHEET_LABELS = {"none": "Don't print chord shapes",

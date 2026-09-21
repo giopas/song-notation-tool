@@ -36,6 +36,13 @@ SECTION_LAYOUTS = ("banner", "gutter")
 #   "below"  — the words under the chart, the way v0.21 printed them
 LYRICS_LAYOUTS = ("beside", "below")
 
+# What a recalled lick — {Riff1} — prints as:
+#   "tab"  — the notes again, with the name over them
+#   "name" — just the name and its repeat, "Riff1 (x3)", the way the
+#            handwritten charts say it; the notes print once, where the
+#            lick was written
+LICK_REF_MODES = ("tab", "name")
+
 # Where the chord-shape sheet prints, if the song has one:
 CHORD_SHEET_POSITIONS = ("none", "start", "end")
 
@@ -138,6 +145,7 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "lyrics_text": "",
         "print_lyrics": False,
         "lyrics_layout": "beside",
+        "lick_refs": "tab",
         "chords": [],
         "chord_sheet": "none",
         "section_layout": "banner",

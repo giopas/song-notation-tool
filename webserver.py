@@ -82,6 +82,7 @@ from constants import (
     APP_VERSION, INSTRUMENT_STRINGS, SECTION_TYPES, RENDER_MODE_LABELS,
     SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
     PDF_COLUMN_LABELS, LYRICS_LAYOUT_LABELS, CHORD_SHEET_LABELS,
+    LICK_REF_LABELS,
     TAB_BEATS_DEFAULT, default_export_name,
 )
 
@@ -452,6 +453,7 @@ class Handler(BaseHTTPRequestHandler):
                     "section_layouts": SECTION_LAYOUT_LABELS,
                     "lyrics_layouts": LYRICS_LAYOUT_LABELS,
                     "chord_sheets": CHORD_SHEET_LABELS,
+                    "lick_refs": LICK_REF_LABELS,
                     "color_modes": COLOR_MODE_LABELS,
                     "pdf_scales": PDF_SCALE_LABELS,
                     "pdf_columns": PDF_COLUMN_LABELS,
@@ -599,6 +601,15 @@ class Handler(BaseHTTPRequestHandler):
                     "strings": chords_mod.strings_for(instrument),
                     "text": chords_mod.shape_to_text(frets, instrument),
                 })
+
+            if path == "/api/chords/coverage":
+                # Which chords the chart plays with no shape, and which
+                # shapes it never plays — reported, never enforced.
+                body = self._read_json_body()
+                doc = model.migrate_document(body.get("doc") or {})
+                cov = chords_mod.coverage(doc)
+                cov["used"] = chords_mod.used_symbols(doc)
+                return self._send_json(cov)
 
             if path == "/api/export.txt" or path == "/api/export.pdf":
                 # Ad-hoc export of an unsaved doc straight from the editor.

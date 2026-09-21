@@ -774,3 +774,35 @@ def test_beside_layout_costs_the_taller_side_only():
     doc["lyrics_layout"] = "below"
     below = render.estimate_section_lines(sec, None, doc)
     assert beside < below
+
+
+def test_recalled_lick_by_name_only_prints_no_tab():
+    import grammar
+    doc = _doc_with_named_lick()
+    doc["lick_refs"] = "name"
+    items = grammar.parse_items("A {riff1}x3")
+    out = "\n".join(render.chart_body_lines(render.resolve_references(items, doc)))
+    assert "Riff1 (x3)" in out          # spelled as defined, not as typed
+    assert "|G|" not in out and "{" not in out
+
+
+def test_an_unknown_lick_keeps_its_braces_in_either_mode():
+    import grammar
+    doc = _doc_with_named_lick()
+    doc["lick_refs"] = "name"
+    out = "\n".join(render.chart_body_lines(
+        render.resolve_references(grammar.parse_items("{Nope}"), doc)))
+    assert "{Nope}" in out
+
+
+def test_lick_names_carry_the_lick_colour():
+    import grammar
+    doc = _doc_with_named_lick()
+    for mode in ("tab", "name"):
+        doc["lick_refs"] = mode
+        rows = render.chart_body_rows(
+            render.resolve_references(grammar.parse_items("A {Riff1}"), doc))
+        sym = next(r for r in rows if "Riff1" in r["text"])
+        start = sym["text"].index("Riff1")
+        assert any(s <= start < e and role == render.ROLE_LICK
+                   for s, e, role in sym["spans"])

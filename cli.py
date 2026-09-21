@@ -130,6 +130,16 @@ def cmd_lint(args):
             continue
         print(f"[{sec.get('name')}] OK — {line!r}" if line else
               f"[{sec.get('name')}] (empty chart)")
+    # Chord shapes against the chords the chart plays. Warnings, not
+    # failures: plenty of chords need no diagram, and a lint that fails a
+    # build over one is a lint that gets switched off.
+    if doc.get("chords"):
+        import chords as chords_mod
+        cov = chords_mod.coverage(doc)
+        if cov["missing"]:
+            print("note: chords played with no shape: " + ", ".join(cov["missing"]))
+        if cov["unused"]:
+            print("note: shapes for chords never played: " + ", ".join(cov["unused"]))
     if ok:
         print("All sections parse cleanly.")
     return 0 if ok else 1

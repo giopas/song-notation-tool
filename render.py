@@ -112,7 +112,10 @@ def _symbol_str(item: dict) -> str:
             s += f" (x{item['repeat']})"
         return s
     if k == "lick_ref":
-        s = "{" + item.get("lick", "") + "}"
+        # A reference that found its lick prints as the bare name; one
+        # that didn't keeps its braces, so a typo is visible on paper.
+        s = (item.get("lick", "") if item.get("resolved")
+             else "{" + item.get("lick", "") + "}")
         if item.get("repeat", 1) != 1:
             s += f" (x{item['repeat']})"
         return s
@@ -279,6 +282,11 @@ def _render_one_row(items, label: str, indent: int):
     for it, sym, w in zip(items, symbols, cols):
         if sym and it.get("kind") == "mark" and it.get("mark") == "rest":
             sym_spans.append((col_x, col_x + len(sym), ROLE_REST))
+        # A lick's name, or a reference to one, is the same thing as the
+        # tab it stands for, so it prints in the same blue — findable at
+        # a glance among the chord symbols, which is the point of naming it.
+        elif sym and it.get("kind") in ("lick", "lick_ref"):
+            sym_spans.append((col_x, col_x + len(sym), ROLE_LICK))
         col_x += w
 
     lick_rows = []
@@ -419,6 +427,14 @@ def resolve_references(items, doc: dict, _seen=None, _depth=0):
             marker = ("lick", songmap._ident(name))
             if target is None or marker in _seen or _depth >= MAX_REF_DEPTH:
                 out.append(it)
+                continue
+            if (doc.get("lick_refs") or "tab") == "name":
+                # Compact: the name and the count, the way a handwritten
+                # chart says "RIFF 1 (x3)" — the notes print once, where
+                # the lick was written. Spelled as the definition spells
+                # it, whatever case the reference was typed in.
+                out.append({"kind": "lick_ref", "lick": target.get("name", name),
+                            "repeat": it.get("repeat", 1), "resolved": True})
                 continue
             # A lick resolves to the notes themselves, carrying its name
             # and this reference's repeat count — "Riff1 (x3)" over the

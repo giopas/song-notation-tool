@@ -726,3 +726,8 @@ button {
 /* A lick already named in this song, offered back as a reference. Blue,
    like the licks themselves print — same thing, said twice. */
 .ins-btn.lick-ref-btn { color: var(--blue); border-color: var(--blue); }
+
+/* What the chart plays with no shape, and the reverse. A hint, not an
+   error — amber rather than red, because nothing here is wrong. */
+.chord-coverage { color: var(--amber); margin: 2px 0 4px; }
+.chord-coverage:empty { display: none; }

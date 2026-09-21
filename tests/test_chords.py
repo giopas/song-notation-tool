@@ -81,3 +81,59 @@ def test_sheet_position_defaults_to_none():
     assert chords.sheet_position(doc) == "none"
     doc["chord_sheet"] = "start"
     assert chords.sheet_position(doc) == "start"
+
+
+# ---------------------------------------------------------------------------
+#  Coverage — shapes against the chords the chart plays
+# ---------------------------------------------------------------------------
+
+def _song(guitar_line="C G [Am F]x2", bass_line="5A 5D"):
+    import grammar
+    doc = model.new_document()
+    g = model.new_section("v", "Verse", instrument="Guitar (6-string)")
+    g["items"] = grammar.parse_items(guitar_line)
+    b = model.new_section("b", "Bass", instrument="Bass (4-string)")
+    b["items"] = grammar.parse_items(bass_line)
+    doc["sections"] += [g, b]
+    return doc
+
+
+def test_used_symbols_reads_guitar_sections_and_looks_inside_groups():
+    assert chords.used_symbols(_song()) == ["C", "G", "Am", "F"]
+
+
+def test_a_bass_only_song_still_has_symbols():
+    """No guitar sections at all means every section counts — otherwise
+    a bass chart could never be given shapes for a guitarist."""
+    doc = _song()
+    doc["sections"] = doc["sections"][1:]
+    assert chords.used_symbols(doc) == ["A", "D"]
+
+
+def test_coverage_reports_both_directions():
+    doc = _song()
+    doc["chords"] = [model.make_chord("C", chords.shape_from_text("x32010")),
+                     model.make_chord("E7", chords.shape_from_text("020100"))]
+    cov = chords.coverage(doc)
+    assert cov["missing"] == ["G", "Am", "F"]
+    assert cov["unused"] == ["E7"]
+
+
+def test_coverage_follows_the_printed_chart_after_a_transpose():
+    """Moved up a tone, the page says D — so D is what needs a shape,
+    and the C shape is for a chord nobody reads any more."""
+    doc = _song()
+    doc["chords"] = [model.make_chord("C", chords.shape_from_text("x32010"))]
+    doc["transpose"] = 2
+    cov = chords.coverage(doc)
+    assert "D" in cov["missing"]
+    assert cov["unused"] == ["C"]
+
+
+def test_coverage_expands_references():
+    import grammar
+    doc = _song()
+    ref = model.new_section("v2", "Verse 2", instrument="Guitar (6-string)")
+    ref["items"] = grammar.parse_items("=Verse Em")
+    doc["sections"].append(ref)
+    assert "Em" in chords.used_symbols(doc)

@@ -99,24 +99,17 @@ def _symbol_str(item: dict) -> str:
         # dropping them would silently lose "3A 12D" down to "A D" — which
         # is exactly what an expanded x2 reference looks like.
         #
-        # A lick nested in the group is the exception: it prints its own
-        # tab, stacked under this column (see _group_lick_lines /
-        # _render_one_row), so naming it again here would either repeat it
-        # or — worse — replace its tab with a bare name, which is exactly
-        # the notation a lick exists to avoid losing.
-        visible = [x for x in item["items"] if x.get("kind") != "lick"]
-        inner = " ".join(_fret_str(x) + _symbol_str(x) for x in visible)
-        rep = item.get("repeat", 1)
-        if inner:
-            s = f"[{inner}]"
-            if rep != 1:
-                s += f"(x{rep})"
-            return s
-        # A group that's nothing but a lick (or licks) has no chords to
-        # show in brackets — its repeat prints next to the lick's own
-        # name instead (see _group_lick_lines), so there's nothing to
-        # put on the symbol row at all.
-        return ""
+        # A group reaching this point is always the simple case: plain
+        # chords (and/or a nested group of plain chords) that fit on one
+        # line. A group that holds a lick or a line break is unwrapped
+        # before rendering ever gets here — see _flatten_bracket_groups —
+        # because neither a lick's tab nor a "//" survives being flattened
+        # into inline bracket text.
+        inner = " ".join(_fret_str(x) + _symbol_str(x) for x in item["items"])
+        s = f"[{inner}]"
+        if item.get("repeat", 1) != 1:
+            s += f"(x{item['repeat']})"
+        return s
     if k == "lick":
         # A named lick prints its name over its tab, so the same figure
         # recalled later as "{Riff1}" is recognisable as the thing you
@@ -174,44 +167,12 @@ def _gutter_width(label: str, indent: int) -> int:
     return max(len(label) + 2, 4) if label else indent
 
 
-def _group_lick_lines(item: dict):
-    """Every lick's tab found inside a group, in order, recursing into
-    nested groups. A group renders as a single column (see _symbol_str),
-    so its licks stack one after another rather than sitting side by side
-    the way top-level licks in the same row do.
-
-    A group's own "(xN)" is echoed onto each of its direct licks' name
-    line, not just left up on the chords row: "[3G 2F#](x4)" above and a
-    bare "Riff3" below used to read as two different things — a repeated
-    pickup, then a riff played once — when they're the same repeated
-    phrase. Repeating the count keeps that legible without following the
-    bracket back up to the chords."""
-    out = []
-    rep = item.get("repeat", 1)
-    tag = f" (x{rep})" if rep != 1 else ""
-    for sub in item.get("items", []):
-        if sub.get("kind") == "lick":
-            lines = _lick_lines(sub)
-            if not lines:
-                continue
-            name = sub.get("name", "") or ""
-            if name:
-                head = name + tag + " "
-                lines = [head + lines[0]] + [" " * len(head) + ln for ln in lines[1:]]
-            out.extend(lines)
-        elif sub.get("kind") == "group":
-            out.extend(_group_lick_lines(sub))
-    return out
-
-
 def _column_lick_height(it: dict) -> int:
-    """How many extra lines this one item (in one row column) contributes
-    from lick tabs — a bare lick's own height, or a group's nested licks
-    stacked (summed, not maxed — see _group_lick_lines)."""
+    """A bare lick's own height in extra tab lines. A group never reaches
+    here holding one — see _flatten_bracket_groups — so this only ever
+    needs to look at the item itself."""
     if it.get("kind") == "lick":
         return len(it.get("lines", []))
-    if it.get("kind") == "group":
-        return sum(_column_lick_height(x) for x in it.get("items", []))
     return 0
 
 
@@ -240,36 +201,59 @@ def split_on_line_breaks(items):
     return runs
 
 
-def _has_line_break(items) -> bool:
-    return any(x.get("kind") == "mark" and x.get("mark") == "line_break"
-               for x in (items or []))
+def _needs_bracket(items) -> bool:
+    """True when a group's own content can't render as the single
+    bracketed line _symbol_str builds — either it holds a lick (whose tab
+    needs rows of its own underneath) or it breaks ("//"), recursing into
+    any group nested inside it. Plain chords, however many, are always
+    fine on one line."""
+    for x in (items or []):
+        k = x.get("kind")
+        if k == "lick":
+            return True
+        if k == "mark" and x.get("mark") == "line_break":
+            return True
+        if k == "group" and _needs_bracket(x.get("items")):
+            return True
+    return False
 
 
-def _flatten_group_line_breaks(items):
-    """A `[ ]xN` group is written as one line — that's the whole point of
-    the brackets — but a repeated *section* or *riff* reference expands
-    into that same "group" item (see _expanded), and either one can carry
-    its own internal `//`. Collapsing a break like that into literal text
-    inside the brackets ("A B // C D") is wrong twice over: it doesn't
-    print as a break, and it hides the very phrasing the break was
-    written for.
+def _flatten_bracket_groups(items):
+    """A group whose content needs more than one printed row — a lick, a
+    "//", or both — is unwrapped here, before rendering, into the flat
+    sequence it stands for. Collapsing either one into the group's usual
+    single bracketed line is wrong: a lick nested in a group used to
+    print its bare name instead of its tab, and a "//" nested in a group
+    used to print as the literal text "//" instead of starting a new
+    line. Unwrapped, a lick prints its tab and a "//" breaks the line
+    exactly as either would at the top level — because, once unwrapped,
+    that's exactly what they are.
 
-    So a group that contains a break is unwrapped here, before line
-    splitting: its own breaks become real ones, and its repeat count
-    rides as a trailing "(xN)" on the last line it produces — the same
-    place a repeated free-text section's count already goes (see
-    chart_body_rows) — rather than on brackets that no longer make sense
-    once the content spans more than one line. A group with no break of
-    its own is left alone; it still renders as the single bracketed
-    column _symbol_str builds."""
+    The group's own repeat count, when it has one, would have nowhere
+    correct to go as inline text once its content might span several
+    rows (which row would "(xN)" belong to?), so it isn't typed in here
+    at all. Instead the first and last item of what the group expands to
+    are tagged (`_group_bracket_start` / `_group_bracket_end`) —
+    render_chart_rows turns that into an actual bracket, drawn down the
+    right of every row the group ends up printing on, once it knows
+    where each one landed (see _apply_group_brackets).
+
+    A group needing none of this — plain chords, however many — is left
+    exactly alone; it still renders as the single bracketed column
+    _symbol_str builds."""
     out = []
     for it in (items or []):
-        if it.get("kind") == "group" and _has_line_break(it.get("items")):
-            inner = _flatten_group_line_breaks(it.get("items", []))
+        if it.get("kind") == "group" and _needs_bracket(it.get("items")):
+            inner = _flatten_bracket_groups(it.get("items", []))
             rep = it.get("repeat", 1)
             if inner and rep != 1:
-                inner = inner[:-1] + [dict(inner[-1],
-                                            _group_repeat_suffix=f"(x{rep})")]
+                if len(inner) == 1:
+                    inner = [dict(inner[0], _group_bracket_start=True,
+                                  _group_bracket_end=rep)]
+                else:
+                    inner = ([dict(inner[0], _group_bracket_start=True)]
+                              + inner[1:-1]
+                              + [dict(inner[-1], _group_bracket_end=rep)])
             out.extend(inner)
             continue
         out.append(it)
@@ -312,6 +296,40 @@ def _row(text: str, role: str, spans=None):
     return {"text": text, "role": role, "spans": list(spans or [])}
 
 
+def _apply_group_brackets(rows, run_ranges):
+    """Turn a _flatten_bracket_groups tag into an actual bracket: a "|" on
+    the right of every printed row a tagged group produced, padded to a
+    common width so they line up in one column, with the group's "(xN)"
+    once, on the vertically-centred row among them — so it reads as
+    belonging to the whole bracketed run, not to whichever chord, lick or
+    line happens to sit on the last row of it.
+
+    `run_ranges` is a list of (row_start, row_end, run) — the slice of
+    `rows` each processed run produced, and the items that made it, in
+    the same order render_chart_rows built them in. A group with no tag
+    anywhere (the overwhelmingly common case) leaves `rows` untouched.
+    """
+    pending, spans = [], []
+    for row_start, row_end, run in run_ranges:
+        for it in run:
+            if it.get("_group_bracket_start"):
+                pending.append(row_start)
+            rep = it.get("_group_bracket_end")
+            if rep:
+                s = pending.pop() if pending else row_start
+                spans.append((s, row_end, rep))
+    if not spans:
+        return rows
+    for s, e, rep in spans:
+        width = max((len(rows[i]["text"]) for i in range(s, e + 1)), default=0)
+        mid = s + (e - s) // 2
+        for i in range(s, e + 1):
+            pad = " " * (width - len(rows[i]["text"]))
+            tail = "  |" + (f" (x{rep})" if i == mid else "")
+            rows[i]["text"] += pad + tail
+    return rows
+
+
 def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):
     """
     render_chart_row's rows, each as a dict:
@@ -327,24 +345,28 @@ def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):
     if not items:
         return [_row(label.rstrip(), ROLE_SYM)] if label else []
 
-    items = _flatten_group_line_breaks(items)
+    items = _flatten_bracket_groups(items)
     runs = split_on_line_breaks(items)
     if len(runs) != 1:
         # Continuation blocks indent to the label's gutter, so every line
         # of the section stacks under the first one rather than sliding
         # back to the left margin beneath the name.
         cont_indent = _gutter_width(label, indent)
-        out = []
+        out, run_ranges = [], []
         for i, (level, run) in enumerate(runs):
             step = level * INDENT_STEP
+            before = len(out)
             if i == 0:
                 out.extend(_render_one_row(run, label, indent + step))
             else:
                 out.extend(_render_one_row(run, "", cont_indent + step))
+            run_ranges.append((before, len(out) - 1, run))
+        out = _apply_group_brackets(out, run_ranges)
         return out or ([_row(label.rstrip(), ROLE_SYM)] if label else [])
-    _, items = runs[0]
+    _, one_run = runs[0]
 
-    return _render_one_row(items, label, indent)
+    rows = _render_one_row(one_run, label, indent)
+    return _apply_group_brackets(rows, [(0, len(rows) - 1, one_run)])
 
 
 def _render_one_row(items, label: str, indent: int):
@@ -355,40 +377,20 @@ def _render_one_row(items, label: str, indent: int):
     frets = [_fret_str(it) for it in items]
     symbols = [_symbol_str(it) for it in items]
 
-    # A flattened group's repeat count (see _flatten_group_line_breaks)
-    # rides in on whichever item ended up last, tagged rather than typed
-    # into the symbol text, so it lands after whatever that item already
-    # prints — a chord's own fret+symbol, a mark's text, or (below) a
-    # lick's name once its tab line is built.
-    for i, it in enumerate(items):
-        suffix = it.get("_group_repeat_suffix")
-        if suffix:
-            symbols[i] = f"{symbols[i]} {suffix}" if symbols[i] else suffix
-
     # A lick occupies the same column as any other item, but stacks its
     # string lines underneath the chord row — so it reads where it's
-    # played, in among the chords, rather than in a separate grid. A
-    # group's nested lick(s) share its column the same way.
-    def _licks_for(it):
-        if it.get("kind") == "lick":
-            return _lick_lines(it)
-        if it.get("kind") == "group":
-            return _group_lick_lines(it)
-        return []
-    licks = [_licks_for(it) for it in items]
+    # played, in among the chords, rather than in a separate grid. (A
+    # group never reaches here holding one of its own — see
+    # _flatten_bracket_groups — so only a bare lick item needs this.)
+    licks = [_lick_lines(it) if it.get("kind") == "lick" else [] for it in items]
 
     # A named lick's name goes on the tab itself, in front of its first
     # string line, rather than on the chord row above it: on a row of its
     # own the name read as a separate line of the chart, one line away
     # from the notes it names. The other string lines are indented by the
     # same amount, so the tab stays a grid.
-    #
-    # A group's tab lines already carry their own name and repeat count
-    # (from _group_lick_lines), so only a bare lick gets this treatment —
-    # a group's bracketed chords, when it has any, stay on the symbol row
-    # rather than being folded into the tab.
     for i, (it, lk) in enumerate(zip(items, licks)):
-        if lk and it.get("kind") == "lick" and symbols[i]:
+        if lk and symbols[i]:
             head = symbols[i] + " "
             licks[i] = [head + lk[0]] + [" " * len(head) + ln for ln in lk[1:]]
             symbols[i] = ""
@@ -965,11 +967,11 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
             else:
                 # one fret + symbol pair per block, plus however many string
                 # lines the tallest lick in each block needs. Flatten first
-                # — a group's own "//" turns into real line breaks here
-                # too (see _flatten_group_line_breaks), or an unresolved
-                # repeated riff/section would count as the one collapsed
-                # line it no longer renders as.
-                flat = _flatten_group_line_breaks(chart_items)
+                # — a group holding a lick or a "//" unwraps into real
+                # top-level rows here too (see _flatten_bracket_groups), or
+                # this would undercount it the same way a real render no
+                # longer does.
+                flat = _flatten_bracket_groups(chart_items)
                 for _level, run in split_on_line_breaks(flat) or [(0, [])]:
                     lines += 2
                     lines += max((_column_lick_height(it) for it in run),

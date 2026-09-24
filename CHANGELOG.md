@@ -9,41 +9,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.26.3] — 2026-09-25
 
 ### Fixed
-- **A lick nested inside a `[ ]xN` group printed its bare name instead of
-  its tab.** `[3B 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4`
-  — a chord pickup and a named riff repeated together — used to collapse
-  the whole group down to `[3B 2F# Riff3](x4)` on export and in both live
-  previews, silently dropping the tab the lick exists to preserve. A lick
-  inside a group (or a lick reference, once resolved) now stacks its tab
-  under the group's column exactly as a top-level lick does, with the
-  group's own chords and repeat count staying on the symbol row above —
-  `[3B 2F#](x4)`.
-- **The repeat count on a chords-plus-lick group read as if only the
-  chords repeated.** `[3B 2F#](x4)` on the symbol row, then a bare
-  `Riff3` on the tab below it, looked like a repeated pickup followed by
-  a riff played once — the `(x4)` never reached the riff it also applies
-  to. The count now prints twice: once on the chords, and again next to
-  the lick's own name — `Riff3 (x4) |G|…` — so the two read as one
-  repeated phrase without having to trace the bracket back up to the
-  chords. A group that's nothing but a lick, with no chords to show in
-  brackets, still prints the count only once, next to the lick's name,
-  the same place a bare `{Riff1}x4` would put it.
+- **A `[ ]xN` group holding a lick or a `//` used to lose it.** A lick
+  nested in a group collapsed down to its bare name instead of its tab
+  (`[3G 2F# Riff3](x4)` instead of the tab itself), and a `//` nested in
+  a group printed as the literal text `//` instead of starting a new
+  line — both because rendering only ever looked at a group's own
+  content as one line of inline text. `[3G 2F# {Riff3 = G - - - - | D 4
+  - - - | A - 4 5 4 | E - - - -}]x4` and `[7B 4G# 3G 5D // 7B 4G# 5A]x4`
+  now both print in full: the tab shows every string, and the `//`
+  breaks the line exactly as it would outside any group. This also
+  fixed a pre-existing instance of the second bug one level removed: a
+  repeated section or riff reference (`=verse1 x4`) expands into this
+  same kind of group internally, so a referenced section with its own
+  `//` had always collapsed the same way, independent of anything
+  wrapped by hand in `[ ]xN`.
+- **The repeat count on a group spanning more than one line read as if
+  it belonged to whichever chord, note or riff happened to be last.**
+  `[3G 2F#](x4)` above a bare `Riff3` tab, or `(x4)` tacked onto the end
+  of a chord line, both put the count somewhere a reader could mistake
+  for "this one note repeats" rather than "this whole phrase repeats".
+  A group whose content spans more than one printed row — a lick's tab,
+  a `//`, or both — now gets a bracket instead: a `|` down the right of
+  every line it printed on, with the `(xN)` once, roughly centred on the
+  bracket rather than glued to any single line:
+  ```
+    3  2                        |
+    G  F#                       |
+           Riff3 |G|---------|  | (x4)
+                 |D|-4-------|  |
+                 |A|---4-5-4-|  |
+                 |E|---------|  |
+  ```
+  A group that fits on one line — plain chords, with no lick and no
+  `//` — is unaffected and still prints as the single bracketed line it
+  always has: `[5A 7D]x2`.
 - The no-`doc` page-estimate heuristic (used before a section has a
-  document to render against) was fixed the same way as the two above,
-  so a repeated riff inside a group can no longer be undercounted and
-  split across a page the real render wouldn't have hit.
-- **A `//` inside a `[ ]xN` group didn't start a new line — it printed
-  as the literal text `//` inside the brackets.** `[7B 4G# 3G 5D // 7B
-  4G# 5A]x4`, a two-line phrase repeated as a whole, collapsed onto one
-  cramped line instead of breaking the way the same `//` does everywhere
-  else on a chart line. A group's own `//` now breaks it exactly like a
-  top-level one does — each line gets its own columns — with the repeat
-  count printing once, after the last thing on the last line, rather
-  than on brackets that no longer make sense once the content spans more
-  than one row. This also fixed a pre-existing instance of the same bug:
-  a repeated section or riff reference (`=verse1 x4`) expands into this
-  same kind of group, so a referenced section with its own `//` had
-  always collapsed the same way.
+  document to render against) was fixed the same way, so a repeated
+  riff or broken phrase inside a group can no longer be undercounted
+  and split across a page the real render wouldn't have hit.
   See [Chart Line Syntax → Groups and repeats](wiki/Chart-Line-Syntax.md#groups-and-repeats).
 
 ### Added

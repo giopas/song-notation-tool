@@ -329,16 +329,36 @@ def test_group_symbol_row_keeps_fret_numbers():
 def test_a_line_break_inside_a_group_actually_breaks_the_line():
     # [A B // C D]x4 used to collapse the "//" into literal text inside
     # the brackets instead of starting a new line — the group swallowed
-    # the break the same way it used to swallow a lick's tab.
+    # the break the same way it used to swallow a lick's tab. It now
+    # breaks properly AND gets a right-hand bracket spanning every line
+    # it produced, with "(x4)" on the bracket rather than glued onto
+    # whichever chord happens to end the last line — see
+    # test_the_repeat_bracket_does_not_read_as_belonging_to_one_chord
+    # below for why that distinction matters.
     import grammar
     from render import render_chart_row
     rows = render_chart_row(grammar.parse_items("[7B 4G# 3G 5D // 7B 4G# 5A]x4"))
-    assert len(rows) == 4                      # two fret+symbol pairs, not one
+    assert rows == [
+        "  7  4   3  5  |",
+        "  B  G#  G  D  | (x4)",
+        "  7  4   5     |",
+        "  B  G#  A     |",
+    ]
     assert "//" not in "\n".join(rows)
-    assert "7  4   3  5" in rows[0]
-    assert "B  G#  G  D" in rows[1]
-    assert "7  4   5" in rows[2]
-    assert "B  G#  A (x4)" in rows[3]           # repeat rides on the last line
+
+
+def test_the_repeat_bracket_does_not_read_as_belonging_to_one_chord():
+    # The whole point of the bracket: "(x4)" must not sit on the same
+    # line as, or right after, any one chord — that reads as "this one
+    # note repeats", which is exactly the ambiguity a bare trailing
+    # "B  G#  A (x4)" used to create.
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("[7B 4G# 3G 5D // 7B 4G# 5A]x4"))
+    last_chord_line = next(r for r in rows if r.rstrip().endswith("A     |"))
+    assert "(x4)" not in last_chord_line
+    # every affected line carries the bar, so the span reads as one unit
+    assert all(r.rstrip().endswith("|") or "(x4)" in r for r in rows)
 
 
 def test_group_with_no_break_still_collapses_to_one_bracketed_line():
@@ -366,9 +386,13 @@ def test_repeated_section_reference_with_a_break_also_breaks_the_line():
 
     resolved = resolve_references(ref_items, doc)
     lines = chart_body_lines(resolved, label="Verse1ref")
-    assert len(lines) == 4
+    assert lines == [
+        "           7  4   3  5  |",
+        "Verse1ref  B  G#  G  D  | (x4)",
+        "           7  4   5     |",
+        "           B  G#  A     |",
+    ]
     assert "//" not in "\n".join(lines)
-    assert lines[-1].endswith("(x4)")
 
 
 def test_broken_group_line_count_matches_the_page_estimate_heuristic():
@@ -488,48 +512,63 @@ def test_a_row_without_a_lick_has_no_extra_lines():
 def test_a_lick_inside_a_group_still_prints_its_tab():
     # A group repeat wraps a whole phrase — chords and a riff together —
     # not just bare chords. Nesting a lick inside [ ]xN used to collapse
-    # it down to its bare name ("[3B 2F# Riff3](x4)"); the tab itself,
+    # it down to its bare name ("[3G 2F# Riff3](x4)"); the tab itself,
     # the reason the lick was written out at all, has to survive that.
+    #
+    # A group holding a lick is unwrapped entirely (see
+    # _flatten_bracket_groups) rather than kept as one bracketed column,
+    # because a lick's tab needs rows of its own under it that a single
+    # bracketed line has no room for. The chords and the tab both print
+    # in full, and a bracket on the right — covering the chords AND the
+    # tab — carries the repeat instead of any inline "[...](x4)" text.
     import grammar
     from render import render_chart_row
-    line = "3B 2F# [3B 2F# {Riff3 = G - - - | D 4 - - | A - 4 5 | E - - -}]x4"
+    line = "[3G 2F# {Riff3 = G - - - | D 4 - - | A - 4 5 | E - - -}]x4"
     rows = render_chart_row(grammar.parse_items(line))
-    text = "\n".join(rows)
-    assert "[3B 2F#](x4)" in text
-    # the repeat is echoed onto the riff's own name, not just left on the
-    # chords above it — "(x4)" belongs to the chords AND the riff together
-    assert "Riff3 (x4) |G|-------|" in text   # tab actually printed, not just the name
-    assert "|D|-4-----|" in text
-    assert "|A|---4-5-|" in text
-    assert "|E|-------|" in text
-    # the group's own chords stay on the symbol row, above the tab
-    sym_line = next(r for r in rows if "[3B 2F#]" in r)
-    tab_line = next(r for r in rows if "|G|" in r)
-    assert rows.index(sym_line) < rows.index(tab_line)
+    assert rows == [
+        "  3  2                      |",
+        "  G  F#                     |",
+        "         Riff3 |G|-------|  | (x4)",
+        "               |D|-4-----|  |",
+        "               |A|---4-5-|  |",
+        "               |E|-------|  |",
+    ]
 
 
-def test_a_lick_only_group_rides_its_repeat_on_the_tab():
-    # No chords to show in brackets, so "(x4)" reads next to the lick's
-    # own name instead of sitting in an empty "[](x4)".
+def test_a_lick_only_group_gets_a_bracket_not_empty_brackets():
+    # No chords means no "[...]" text makes sense at all (there'd be
+    # nothing inside it) — the whole tab gets a right-hand bracket
+    # instead, same as any other group needing more than one row.
     import grammar
     from render import render_chart_row
     rows = render_chart_row(grammar.parse_items("[{Riff3 = G 5 | D 3}]x4"))
-    text = "\n".join(rows)
-    assert "[]" not in text
-    assert "Riff3" in text and "(x4)" in text
-    name_line = next(r for r in rows if "Riff3" in r)
-    assert "(x4)" in name_line
+    assert rows == [
+        "                 |",
+        "  Riff3 |G|-5-|  | (x4)",
+        "        |D|-3-|  |",
+        "                 |",
+    ]
+    assert "[]" not in "\n".join(rows)
 
 
-def test_group_with_two_licks_stacks_them_in_its_own_column():
+def test_group_with_two_licks_plays_them_in_sequence_side_by_side():
+    # A group holding two licks with nothing between them is unwrapped
+    # (see _flatten_bracket_groups) into the same two consecutive
+    # top-level items {Riff1} {Riff2} would be outside any group — so
+    # they sit side by side, in playing order left to right, exactly as
+    # top-level licks already do (see
+    # test_licks_of_different_heights_share_the_row). A bracket wraps
+    # the whole row, with the group's "(x2)" once on it.
     import grammar
     from render import render_chart_row
     line = "[{Riff1 = G 5} {Riff2 = D 3}]x2"
     rows = render_chart_row(grammar.parse_items(line))
     riff1_row = next(i for i, r in enumerate(rows) if "Riff1" in r)
     riff2_row = next(i for i, r in enumerate(rows) if "Riff2" in r)
-    # stacked one under the other, not side by side on the same line
-    assert riff2_row == riff1_row + 1
+    assert riff1_row == riff2_row
+    assert rows[riff1_row].index("Riff1") < rows[riff1_row].index("Riff2")
+    assert rows[riff1_row].endswith("(x2)")
+    assert all(r.rstrip().endswith("|") for i, r in enumerate(rows) if i != riff1_row)
 
 
 def test_licks_of_different_heights_share_the_row():

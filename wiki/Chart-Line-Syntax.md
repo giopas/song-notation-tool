@@ -54,53 +54,54 @@ its name. A single chord can't carry a repeat on its own — wrap it,
 | a riff or section reference | `riff1 x3`, `=verse1 x2` — **with** the space | `riff1 +2`, `=verse1 -1` |
 | a plain chord | not allowed — `[Am]x3` | not allowed |
 
-A group isn't limited to bare chords — wrap a whole phrase, lick
-included, and the group repeats all of it:
+A group isn't limited to bare chords on one line — wrap a whole phrase,
+lick or line break included, and the group repeats all of it:
 
 ```
-3B 2F# [3B 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4
+[3G 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4
 ```
 
-The lick still prints its own tab (see **Licks**, below) — it doesn't
-collapse down to its bare name just because it's inside brackets. The
-group's repeat sits with the chords, above the tab — and is echoed
-next to the lick's own name too, so it doesn't read as a repeated
-pickup followed by a riff played once:
+A plain group of chords still prints as the single bracketed line
+above — `[5A 7D]x2` — but a lick needs rows of its own for its tab, so
+a group holding one is printed in full rather than collapsed down to
+the lick's bare name. A right-hand bracket, spanning every row the
+group prints on, carries the repeat instead of any inline `[...](xN)`
+text:
 
 ```
-  3  2
-  B  F#  [3B 2F#](x4)
-         Riff3 (x4) |G|---------|
-                    |D|-4-------|
-                    |A|---4-5-4-|
-                    |E|---------|
+  3  2                        |
+  G  F#                       |
+         Riff3 |G|---------|  | (x4)
+               |D|-4-------|  |
+               |A|---4-5-4-|  |
+               |E|---------|  |
 ```
 
-A group that's nothing but a lick — `[{Riff3 = …}]x4` — has no chords
-left to put in brackets, so the `(x4)` prints only once, next to the
-lick's name on the tab, exactly where a bare `{Riff3}x4` would put it.
+The bracket is the point: `(x4)` sitting on its own column, next to a
+bar that runs the full height of the chords *and* the tab, reads as
+"this whole thing, four times" — not "the last note repeats", which is
+what text tacked onto one line would say instead.
 
-A group also isn't limited to one line. Put a `//` inside it — a phrase
-you'd otherwise write over two lines — and the group still breaks there:
+A group also isn't limited to one line for another reason: a `//`
+inside it still breaks the line, exactly as it would outside any
+group, and gets the same bracket treatment:
 
 ```
 [7B 4G# 3G 5D // 7B 4G# 5A]x4
 ```
 
 ```
-  7  4   3  5
-  B  G#  G  D
-  7  4   5
-  B  G#  A (x4)
+  7  4   3  5  |
+  B  G#  G  D  | (x4)
+  7  4   5     |
+  B  G#  A     |
 ```
 
-Each line still gets its own columns, exactly as `//` at the top level
-does (see **Breaking a section over several lines**, below) — the group
-boundary doesn't change that. The repeat prints once, after the last
-thing on the last line, rather than on brackets that would otherwise
-have to span two rows of text. The same happens when a *reference*
-expands into a repeat — `=verse1 x4` where Verse 1 itself has a `//` —
-since a repeated reference resolves to this same kind of group.
+Each line still gets its own columns (see **Breaking a section over
+several lines**, below) — the group boundary doesn't change that. The
+same happens when a *reference* expands into a repeat — `=verse1 x4`
+where Verse 1 itself has a `//` — since a repeated reference resolves
+to this same kind of group.
 
 ## Annotations
 

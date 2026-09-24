@@ -290,6 +290,13 @@ ROLE_SYM = "sym"
 ROLE_LICK = "lick"
 ROLE_REST = "rest"
 ROLE_TEXT = "text"
+# A group's repeat bracket ("|", "(xN)") is drawn over rows of every other
+# role — a lick's tab (blue), a chord row (plain) — and has to read the
+# same regardless: plain, default-coloured text, never the lick's blue.
+# Tagged with a span (see _apply_group_brackets) rather than left to the
+# row's own role, which a drawing front end would otherwise apply to it
+# like any other stretch of that row.
+ROLE_BRACKET = "bracket"
 
 
 def _row(text: str, role: str, spans=None):
@@ -339,9 +346,11 @@ def _apply_group_brackets(rows, run_ranges):
         mid = idxs[(len(idxs) - 1) // 2]
         width = max((len(rows[i]["text"]) for i in idxs), default=0)
         for i in idxs:
+            start = len(rows[i]["text"])
             pad = " " * (width - len(rows[i]["text"]))
             tail = "  |" + (f" (x{rep})" if i == mid else "")
             rows[i]["text"] += pad + tail
+            rows[i]["spans"].append((start, len(rows[i]["text"]), ROLE_BRACKET))
     return rows
 
 

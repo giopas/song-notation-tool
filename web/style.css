@@ -654,6 +654,12 @@ button {
 .sec-preview-more.sec-row-lick { color: var(--blue); }
 .tok-rest { color: var(--lbl-gray); }
 
+/* A group's repeat bracket ("|", "(xN)") is drawn over rows of every
+   other role — most often a lick's blue tab — and has to read as plain,
+   default-coloured text regardless, the same way it's forced back to
+   black in the PDF: it marks the phrase, not the tab underneath it. */
+.tok-bracket { color: var(--fg); }
+
 
 /* Split lyrics into sections — one row per section: the name on the left,
    the block it gets on the right. Scrolls, because a long song has more

@@ -571,6 +571,31 @@ def test_the_bracket_never_lands_on_a_fret_row():
                 assert "|" not in r["text"]
 
 
+def test_the_bracket_is_tagged_a_neutral_colour_not_the_rows_own_role():
+    # A lick's own tab prints blue (ROLE_LICK) so it reads as tab among
+    # the chords; the bracket riding along its right edge is a different
+    # thing — the group's repeat marker — and used to inherit that blue
+    # just because it was appended onto the same row's text, with nothing
+    # to tell a drawing front end the two stretches meant different
+    # things. Each bracketed row now carries a span over exactly the "|"
+    # (and "(xN)", where present) tagging it ROLE_BRACKET, so PDF export
+    # and the web preview can colour it plainly regardless of the role
+    # the rest of that row is drawn in.
+    import grammar
+    from render import render_chart_rows, ROLE_BRACKET, ROLE_LICK
+
+    line = "[3G 2F# {Riff3 = G - - - | D 4 - - | A - 4 5 | E - - -}]x4"
+    rows = render_chart_rows(grammar.parse_items(line))
+    lick_rows = [r for r in rows if r["role"] == ROLE_LICK]
+    assert lick_rows   # sanity: the case applies
+    for r in lick_rows:
+        assert r["spans"], f"no bracket span on lick row {r['text']!r}"
+        start, end, role = r["spans"][-1]
+        assert role == ROLE_BRACKET
+        assert r["text"][start:end].strip().startswith("|")
+
+
+
 def test_a_lick_only_group_gets_a_bracket_not_empty_brackets():
     # No chords means no "[...]" text makes sense at all (there'd be
     # nothing inside it) — the whole tab gets a right-hand bracket

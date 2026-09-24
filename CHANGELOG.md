@@ -46,6 +46,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   particular), not a line in its own right, and a bracket mark there
   used to show up small, off-colour, and out of line with the plain bar
   everywhere else. The bracket starts at the chord row under it instead.
+  The bracket itself is always plain, default-coloured text too, even on
+  a lick's own tab row — it used to pick up the tab's blue just from
+  sitting on the same line, which read as part of the tab rather than as
+  the marker riding along its edge.
   A group that fits on one line — plain chords, with no lick and no
   `//` — is unaffected and still prints as the single bracketed line it
   always has: `[5A 7D]x2`.

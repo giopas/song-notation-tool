@@ -330,18 +330,24 @@ def test_a_line_break_inside_a_group_actually_breaks_the_line():
     # [A B // C D]x4 used to collapse the "//" into literal text inside
     # the brackets instead of starting a new line — the group swallowed
     # the break the same way it used to swallow a lick's tab. It now
-    # breaks properly AND gets a right-hand bracket spanning every line
-    # it produced, with "(x4)" on the bracket rather than glued onto
+    # breaks properly AND gets a right-hand bracket spanning every chord
+    # line it produced, with "(x4)" on the bracket rather than glued onto
     # whichever chord happens to end the last line — see
     # test_the_repeat_bracket_does_not_read_as_belonging_to_one_chord
     # below for why that distinction matters.
+    #
+    # A fret row (each line's own "7  4  3  5") gets no bracket segment
+    # of its own — it's set as a superscript over the chord row beneath
+    # it, its own colour and size, not a line in its own right — see
+    # test_a_lick_inside_a_group_still_prints_its_tab for the same rule
+    # on a group's very first line.
     import grammar
     from render import render_chart_row
     rows = render_chart_row(grammar.parse_items("[7B 4G# 3G 5D // 7B 4G# 5A]x4"))
     assert rows == [
-        "  7  4   3  5  |",
+        "  7  4   3  5",
         "  B  G#  G  D  | (x4)",
-        "  7  4   5     |",
+        "  7  4   5",
         "  B  G#  A     |",
     ]
     assert "//" not in "\n".join(rows)
@@ -351,14 +357,18 @@ def test_the_repeat_bracket_does_not_read_as_belonging_to_one_chord():
     # The whole point of the bracket: "(x4)" must not sit on the same
     # line as, or right after, any one chord — that reads as "this one
     # note repeats", which is exactly the ambiguity a bare trailing
-    # "B  G#  A (x4)" used to create.
+    # "B  G#  A (x4)" used to create. With two chord lines to choose
+    # from, it goes on the first rather than the last, for the same
+    # reason.
     import grammar
     from render import render_chart_row
     rows = render_chart_row(grammar.parse_items("[7B 4G# 3G 5D // 7B 4G# 5A]x4"))
     last_chord_line = next(r for r in rows if r.rstrip().endswith("A     |"))
     assert "(x4)" not in last_chord_line
-    # every affected line carries the bar, so the span reads as one unit
-    assert all(r.rstrip().endswith("|") or "(x4)" in r for r in rows)
+    # every chord line carries the bar (fret rows don't), so the span
+    # still reads as one unit
+    chord_lines = [r for r in rows if r.strip().startswith(("B", "G", "A", "D"))]
+    assert all(r.rstrip().endswith("|") or "(x4)" in r for r in chord_lines)
 
 
 def test_group_with_no_break_still_collapses_to_one_bracketed_line():
@@ -387,9 +397,9 @@ def test_repeated_section_reference_with_a_break_also_breaks_the_line():
     resolved = resolve_references(ref_items, doc)
     lines = chart_body_lines(resolved, label="Verse1ref")
     assert lines == [
-        "           7  4   3  5  |",
+        "           7  4   3  5",
         "Verse1ref  B  G#  G  D  | (x4)",
-        "           7  4   5     |",
+        "           7  4   5",
         "           B  G#  A     |",
     ]
     assert "//" not in "\n".join(lines)
@@ -521,18 +531,44 @@ def test_a_lick_inside_a_group_still_prints_its_tab():
     # bracketed line has no room for. The chords and the tab both print
     # in full, and a bracket on the right — covering the chords AND the
     # tab — carries the repeat instead of any inline "[...](x4)" text.
+    #
+    # The fret row above the pickup ("3  2") gets no bracket of its own
+    # either — see test_a_line_break_inside_a_group_actually_breaks_the_line
+    # for the same rule when a group breaks across more than one line.
     import grammar
     from render import render_chart_row
     line = "[3G 2F# {Riff3 = G - - - | D 4 - - | A - 4 5 | E - - -}]x4"
     rows = render_chart_row(grammar.parse_items(line))
     assert rows == [
-        "  3  2                      |",
+        "  3  2",
         "  G  F#                     |",
-        "         Riff3 |G|-------|  | (x4)",
-        "               |D|-4-----|  |",
+        "         Riff3 |G|-------|  |",
+        "               |D|-4-----|  | (x4)",
         "               |A|---4-5-|  |",
         "               |E|-------|  |",
     ]
+
+
+def test_the_bracket_never_lands_on_a_fret_row():
+    # A fret row is drawn as a superscript over the chord row under it —
+    # its own colour, its own smaller size, tighter line spacing — in
+    # every renderer that reads render_chart_rows' "role" field (PDF
+    # export in particular). A bracket "|" character landing there used
+    # to inherit all of that: it showed up small and off-colour, and out
+    # of line with the plain black bar on every other row. So a fret row
+    # never gets one, whether it's the very first line of a bracketed
+    # group (a pickup's fret numbers) or one reappearing after a "//".
+    import grammar
+    from render import render_chart_rows, ROLE_FRET
+    for line in (
+        "[3G 2F# {Riff3 = G - - - | D 4 - - | A - 4 5 | E - - -}]x4",
+        "[7B 4G# 3G 5D // 7B 4G# 5A]x4",
+    ):
+        rows = render_chart_rows(grammar.parse_items(line))
+        assert any(r["role"] == ROLE_FRET for r in rows)   # sanity: the case applies
+        for r in rows:
+            if r["role"] == ROLE_FRET:
+                assert "|" not in r["text"]
 
 
 def test_a_lick_only_group_gets_a_bracket_not_empty_brackets():

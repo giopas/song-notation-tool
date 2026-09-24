@@ -321,9 +321,24 @@ def _apply_group_brackets(rows, run_ranges):
     if not spans:
         return rows
     for s, e, rep in spans:
-        width = max((len(rows[i]["text"]) for i in range(s, e + 1)), default=0)
-        mid = s + (e - s) // 2
-        for i in range(s, e + 1):
+        # A fret row is set as a superscript figure over the row below it
+        # — its own colour, a smaller size, and tighter line spacing, in
+        # every renderer that draws one — not a line in its own right.
+        # Giving it a bracket segment fought that styling instead of
+        # sitting inside it: a stray mark in the fret colour, at fret
+        # size, out of step with the bar around it. A broken group can
+        # have more than one — every line it breaks onto gets its own —
+        # so every row in the span is checked, not just the first.
+        idxs = [i for i in range(s, e + 1) if rows[i]["role"] != ROLE_FRET]
+        if not idxs:
+            idxs = list(range(s, e + 1))
+        # Centred on the rows that actually carry the bar; rounded down
+        # on a tie so a two-line break puts "(xN)" on the first line, not
+        # the last — landing there reads as "this last chord repeats"
+        # instead of "this whole phrase does".
+        mid = idxs[(len(idxs) - 1) // 2]
+        width = max((len(rows[i]["text"]) for i in idxs), default=0)
+        for i in idxs:
             pad = " " * (width - len(rows[i]["text"]))
             tail = "  |" + (f" (x{rep})" if i == mid else "")
             rows[i]["text"] += pad + tail

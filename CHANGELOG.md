@@ -33,13 +33,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   every line it printed on, with the `(xN)` once, roughly centred on the
   bracket rather than glued to any single line:
   ```
-    3  2                        |
+    3  2
     G  F#                       |
-           Riff3 |G|---------|  | (x4)
-                 |D|-4-------|  |
+           Riff3 |G|---------|  |
+                 |D|-4-------|  | (x4)
                  |A|---4-5-4-|  |
                  |E|---------|  |
   ```
+  A fret row — the small `3  2` above the chord letters it belongs to —
+  never gets a bracket segment of its own: it's set as a superscript
+  over the row beneath it (its own colour and size in the PDF, in
+  particular), not a line in its own right, and a bracket mark there
+  used to show up small, off-colour, and out of line with the plain bar
+  everywhere else. The bracket starts at the chord row under it instead.
   A group that fits on one line — plain chords, with no lick and no
   `//` — is unaffected and still prints as the single bracketed line it
   always has: `[5A 7D]x2`.

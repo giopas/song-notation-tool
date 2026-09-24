@@ -69,10 +69,10 @@ group prints on, carries the repeat instead of any inline `[...](xN)`
 text:
 
 ```
-  3  2                        |
+  3  2
   G  F#                       |
-         Riff3 |G|---------|  | (x4)
-               |D|-4-------|  |
+         Riff3 |G|---------|  |
+               |D|-4-------|  | (x4)
                |A|---4-5-4-|  |
                |E|---------|  |
 ```
@@ -80,7 +80,10 @@ text:
 The bracket is the point: `(x4)` sitting on its own column, next to a
 bar that runs the full height of the chords *and* the tab, reads as
 "this whole thing, four times" — not "the last note repeats", which is
-what text tacked onto one line would say instead.
+what text tacked onto one line would say instead. The small `3  2`
+above `G  F#` doesn't get its own segment of the bar — a fret number
+prints as a superscript over its chord, not as a line of its own, so
+the bracket starts at the chord row underneath it.
 
 A group also isn't limited to one line for another reason: a `//`
 inside it still breaks the line, exactly as it would outside any
@@ -91,9 +94,9 @@ group, and gets the same bracket treatment:
 ```
 
 ```
-  7  4   3  5  |
+  7  4   3  5
   B  G#  G  D  | (x4)
-  7  4   5     |
+  7  4   5
   B  G#  A     |
 ```
 

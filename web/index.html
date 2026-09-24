@@ -409,6 +409,7 @@
             <tr><td>Lick (inline tab)</td><td><code>{ }</code> with one <code>|</code>-separated line per string: its name, then its frets. Prints as blue tab; the <code>{ tab }</code> button inserts an empty grid for this section's instrument</td><td><code>{G 5 7 5 | D - - 3}</code></td></tr>
             <tr><td>Named lick</td><td><code>name =</code> at the front of a lick; prints the name in front of its tab. The <code>{ name = tab }</code> button fills a name in</td><td><code>{Riff1 = G 5 7 5 | D - - 3}</code></td></tr>
             <tr><td>Recall a lick</td><td>The name in braces — <em>not</em> <code>=</code>, which is for sections. Plays the lick again, with an optional repeat</td><td><code>{Riff1}</code> <code>{Riff1}x3</code></td></tr>
+            <tr><td>Group with a lick</td><td>A group isn't just bare chords — wrap chords and a lick together and the whole phrase repeats, tab and all</td><td><code>[3B 2F# {Riff3 = G - - | D 4 -}]x4</code></td></tr>
             <tr><td>Riff reference</td><td>Bare identifier (not a chord name)</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
             <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
             <tr><td>Transpose shift</td><td><code>+N</code> or <code>-N</code> as its own word after a riff or section reference (after its repeat, if it has one)</td><td><code>riff1 +2</code> <code>=verse1 -1</code> <code>riff1 x2 +3</code></td></tr>

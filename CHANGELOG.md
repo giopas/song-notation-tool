@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.26.3] — 2026-09-24
+
+### Fixed
+- **A lick nested inside a `[ ]xN` group printed its bare name instead of
+  its tab.** `[3B 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4`
+  — a chord pickup and a named riff repeated together — used to collapse
+  the whole group down to `[3B 2F# Riff3](x4)` on export and in both live
+  previews, silently dropping the tab the lick exists to preserve. A lick
+  inside a group (or a lick reference, once resolved) now stacks its tab
+  under the group's column exactly as a top-level lick does, with the
+  group's own chords and repeat count staying on the symbol row above —
+  `[3B 2F#](x4)`. A group that's nothing but a lick, with no chords to
+  show in brackets, puts its `(xN)` next to the lick's name instead, the
+  same place a bare `{Riff1}x4` would put it. The no-`doc` page-estimate
+  heuristic (used before a section has a document to render against) was
+  fixed the same way, so a repeated riff inside a group can no longer be
+  undercounted and split across a page the real render wouldn't have hit.
+  See [Chart Line Syntax → Groups and repeats](wiki/Chart-Line-Syntax.md#groups-and-repeats).
+
+### Added
+- Notation reference: a **Group with a lick** row, so the in-app reference
+  and its parse-every-example test cover the combination.
+- `tests/test_grammar.py` and `tests/test_render.py`: a group holding both
+  chords and a named lick, a group holding nothing but a lick, and a group
+  with more than one lick.
+
 ### Documentation
 - **New screenshots from a clean session** (a throwaway `--dir`, so no
   personal songs or paths): eight of them, now named by subject —

@@ -98,11 +98,24 @@ def _symbol_str(item: dict) -> str:
         # only (there's no fret row to align a bracketed run against), so
         # dropping them would silently lose "3A 12D" down to "A D" — which
         # is exactly what an expanded x2 reference looks like.
-        inner = " ".join(_fret_str(x) + _symbol_str(x) for x in item["items"])
-        s = f"[{inner}]"
-        if item.get("repeat", 1) != 1:
-            s += f"(x{item['repeat']})"
-        return s
+        #
+        # A lick nested in the group is the exception: it prints its own
+        # tab, stacked under this column (see _group_lick_lines /
+        # _render_one_row), so naming it again here would either repeat it
+        # or — worse — replace its tab with a bare name, which is exactly
+        # the notation a lick exists to avoid losing.
+        visible = [x for x in item["items"] if x.get("kind") != "lick"]
+        inner = " ".join(_fret_str(x) + _symbol_str(x) for x in visible)
+        rep = item.get("repeat", 1)
+        if inner:
+            s = f"[{inner}]"
+            if rep != 1:
+                s += f"(x{rep})"
+            return s
+        # A group that's nothing but a lick (or licks) has no chords to
+        # show in brackets — the repeat rides on the lick's own tab
+        # instead, the same as a bare "{Riff1}x4".
+        return f"(x{rep})" if rep != 1 else ""
     if k == "lick":
         # A named lick prints its name over its tab, so the same figure
         # recalled later as "{Riff1}" is recognisable as the thing you
@@ -158,6 +171,38 @@ def _gutter_width(label: str, indent: int) -> int:
     """Width of the left column: a label's own gutter, or the plain body
     indent when there's no label. Matches render_chart_row exactly."""
     return max(len(label) + 2, 4) if label else indent
+
+
+def _group_lick_lines(item: dict):
+    """Every lick's tab found inside a group, in order, recursing into
+    nested groups. A group renders as a single column (see _symbol_str),
+    so its licks stack one after another rather than sitting side by side
+    the way top-level licks in the same row do."""
+    out = []
+    for sub in item.get("items", []):
+        if sub.get("kind") == "lick":
+            lines = _lick_lines(sub)
+            if not lines:
+                continue
+            name = sub.get("name", "") or ""
+            if name:
+                head = name + " "
+                lines = [head + lines[0]] + [" " * len(head) + ln for ln in lines[1:]]
+            out.extend(lines)
+        elif sub.get("kind") == "group":
+            out.extend(_group_lick_lines(sub))
+    return out
+
+
+def _column_lick_height(it: dict) -> int:
+    """How many extra lines this one item (in one row column) contributes
+    from lick tabs — a bare lick's own height, or a group's nested licks
+    stacked (summed, not maxed — see _group_lick_lines)."""
+    if it.get("kind") == "lick":
+        return len(it.get("lines", []))
+    if it.get("kind") == "group":
+        return sum(_column_lick_height(x) for x in it.get("items", []))
+    return 0
 
 
 # How far one ">" pushes a line in. Wide enough to read as deliberate at a
@@ -265,18 +310,41 @@ def _render_one_row(items, label: str, indent: int):
 
     # A lick occupies the same column as any other item, but stacks its
     # string lines underneath the chord row — so it reads where it's
-    # played, in among the chords, rather than in a separate grid.
-    licks = [_lick_lines(it) if it.get("kind") == "lick" else [] for it in items]
+    # played, in among the chords, rather than in a separate grid. A
+    # group's nested lick(s) share its column the same way.
+    def _licks_for(it):
+        if it.get("kind") == "lick":
+            return _lick_lines(it)
+        if it.get("kind") == "group":
+            return _group_lick_lines(it)
+        return []
+    licks = [_licks_for(it) for it in items]
 
     # A named lick's name goes on the tab itself, in front of its first
     # string line, rather than on the chord row above it: on a row of its
     # own the name read as a separate line of the chart, one line away
     # from the notes it names. The other string lines are indented by the
     # same amount, so the tab stays a grid.
+    #
+    # A group's tab lines already carry their own name (from
+    # _group_lick_lines), so only a bare lick gets this treatment — a
+    # group's bracketed text (its chords, and its own repeat count, when
+    # it has one to show) stays on the symbol row rather than being
+    # folded into the tab.
     for i, (it, lk) in enumerate(zip(items, licks)):
-        if lk and symbols[i]:
+        if lk and it.get("kind") == "lick" and symbols[i]:
             head = symbols[i] + " "
             licks[i] = [head + lk[0]] + [" " * len(head) + ln for ln in lk[1:]]
+            symbols[i] = ""
+        elif (lk and it.get("kind") == "group" and symbols[i]
+              and not any(x.get("kind") != "lick" for x in it.get("items", []))):
+            # A lick-only group has nothing left in brackets (_symbol_str
+            # already dropped the brackets in that case, see there) — its
+            # "(xN)" rides on the tab instead, on the same line as the
+            # lick's own name, exactly where "{Riff1}x4" would put it.
+            # A group that also has chords keeps its bracketed text on
+            # the symbol row, in its own column above the tab.
+            licks[i] = [lk[0] + " " + symbols[i]] + lk[1:]
             symbols[i] = ""
     n_lick_rows = max((len(l) for l in licks), default=0)
 
@@ -853,8 +921,8 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
                 # lines the tallest lick in each block needs
                 for _level, run in split_on_line_breaks(chart_items) or [(0, [])]:
                     lines += 2
-                    lines += max((len(it.get("lines", [])) for it in run
-                                  if it.get("kind") == "lick"), default=0)
+                    lines += max((_column_lick_height(it) for it in run),
+                                 default=0)
 
     if render_mode in ("tab", "both"):
         measures = [it for it in items if it.get("kind") == "measure"]

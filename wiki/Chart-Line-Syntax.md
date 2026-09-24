@@ -54,6 +54,30 @@ its name. A single chord can't carry a repeat on its own — wrap it,
 | a riff or section reference | `riff1 x3`, `=verse1 x2` — **with** the space | `riff1 +2`, `=verse1 -1` |
 | a plain chord | not allowed — `[Am]x3` | not allowed |
 
+A group isn't limited to bare chords — wrap a whole phrase, lick
+included, and the group repeats all of it:
+
+```
+3B 2F# [3B 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4
+```
+
+The lick still prints its own tab (see **Licks**, below) — it doesn't
+collapse down to its bare name just because it's inside brackets. The
+group's repeat sits with the chords, above the tab:
+
+```
+  3  2
+  B  F#  [3B 2F#](x4)
+         Riff3 |G|---------|
+               |D|-4-------|
+               |A|---4-5-4-|
+               |E|---------|
+```
+
+A group that's nothing but a lick — `[{Riff3 = …}]x4` — has no chords
+left to put in brackets, so the `(x4)` sits next to the lick's name on
+the tab instead, exactly where a bare `{Riff3}x4` would put it.
+
 ## Annotations
 
 Any of the four quote characters works — `"`, and the curly `“ ” ‘ ’`
@@ -275,6 +299,15 @@ name (and repeat) in front of them — `Riff1 (x3) |G|…`. So editing the
 lick updates every place that plays it, exactly as a section reference
 does — and there is no separate library to keep in step: the name lives
 on the lick where you wrote it.
+
+A lick doesn't have to stand alone to get a repeat — wrap it together
+with whatever comes before it and repeat the group instead (see
+**Groups and repeats**, above) when it's the *pairing* that repeats,
+not just the riff:
+
+```
+[3B 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4
+```
 
 **Braces recall a lick; `=` recalls a section.** `{Riff1}` plays the
 lick named Riff1. `=Riff1` looks for a *section* called Riff1, and when

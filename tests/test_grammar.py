@@ -72,6 +72,18 @@ def test_block_ref_with_repeat():
     assert items == [make_block_ref("riff1", repeat=3)]
 
 
+def test_group_can_wrap_chords_and_a_named_lick_together():
+    # "play this chord, then this riff, four times" — the whole point of
+    # a group repeat is to cover a run that isn't just bare chords.
+    line = "3B 2F# [3B 2F# {Riff3 = G - - | D 4 - | A - 4 | E - -}]x4"
+    items = parse_items(line)
+    group = items[2]
+    assert group["kind"] == "group" and group["repeat"] == 4
+    assert [it["kind"] for it in group["items"]] == ["token", "token", "lick"]
+    assert group["items"][2]["name"] == "Riff3"
+    assert unparse(items) == line
+
+
 def test_block_ref_with_repeat_and_shift():
     items = parse_items("riff1 x3 +2")
     assert items == [make_block_ref("riff1", repeat=3, transpose=2)]

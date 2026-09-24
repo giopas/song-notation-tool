@@ -429,6 +429,51 @@ def test_a_row_without_a_lick_has_no_extra_lines():
     assert len(render_chart_row(grammar.parse_items("5A 7D"))) == 2
 
 
+def test_a_lick_inside_a_group_still_prints_its_tab():
+    # A group repeat wraps a whole phrase — chords and a riff together —
+    # not just bare chords. Nesting a lick inside [ ]xN used to collapse
+    # it down to its bare name ("[3B 2F# Riff3](x4)"); the tab itself,
+    # the reason the lick was written out at all, has to survive that.
+    import grammar
+    from render import render_chart_row
+    line = "3B 2F# [3B 2F# {Riff3 = G - - - | D 4 - - | A - 4 5 | E - - -}]x4"
+    rows = render_chart_row(grammar.parse_items(line))
+    text = "\n".join(rows)
+    assert "[3B 2F#](x4)" in text
+    assert "Riff3 |G|-------|" in text   # tab actually printed, not just the name
+    assert "|D|-4-----|" in text
+    assert "|A|---4-5-|" in text
+    assert "|E|-------|" in text
+    # the group's own chords stay on the symbol row, above the tab
+    sym_line = next(r for r in rows if "[3B 2F#]" in r)
+    tab_line = next(r for r in rows if "|G|" in r)
+    assert rows.index(sym_line) < rows.index(tab_line)
+
+
+def test_a_lick_only_group_rides_its_repeat_on_the_tab():
+    # No chords to show in brackets, so "(x4)" reads next to the lick's
+    # own name instead of sitting in an empty "[](x4)".
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("[{Riff3 = G 5 | D 3}]x4"))
+    text = "\n".join(rows)
+    assert "[]" not in text
+    assert "Riff3" in text and "(x4)" in text
+    name_line = next(r for r in rows if "Riff3" in r)
+    assert "(x4)" in name_line
+
+
+def test_group_with_two_licks_stacks_them_in_its_own_column():
+    import grammar
+    from render import render_chart_row
+    line = "[{Riff1 = G 5} {Riff2 = D 3}]x2"
+    rows = render_chart_row(grammar.parse_items(line))
+    riff1_row = next(i for i, r in enumerate(rows) if "Riff1" in r)
+    riff2_row = next(i for i, r in enumerate(rows) if "Riff2" in r)
+    # stacked one under the other, not side by side on the same line
+    assert riff2_row == riff1_row + 1
+
+
 def test_licks_of_different_heights_share_the_row():
     import grammar
     from render import render_chart_row
@@ -458,6 +503,18 @@ def test_lick_lines_are_counted_in_the_page_estimate():
     plain = {"render": "chart", "items": grammar.parse_items("C G")}
     with_lick = {"render": "chart", "items": grammar.parse_items("C {G 5 | D 3}")}
     assert estimate_section_lines(with_lick) == estimate_section_lines(plain) + 2
+
+
+def test_lick_inside_a_group_is_counted_in_the_page_estimate_too():
+    # Same heuristic (no doc, so no real render) has to see a lick that's
+    # nested inside a [ ]xN group, or the export's keep-a-section-whole
+    # pagination undercounts a repeated riff and splits it across pages.
+    import grammar
+    from render import estimate_section_lines
+    plain = {"render": "chart", "items": grammar.parse_items("C G")}
+    grouped = {"render": "chart",
+               "items": grammar.parse_items("C [G {R = G 5 | D 3}]x4")}
+    assert estimate_section_lines(grouped) == estimate_section_lines(plain) + 2
 
 
 # ==============================================================================

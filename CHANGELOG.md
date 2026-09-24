@@ -17,12 +17,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   inside a group (or a lick reference, once resolved) now stacks its tab
   under the group's column exactly as a top-level lick does, with the
   group's own chords and repeat count staying on the symbol row above —
-  `[3B 2F#](x4)`. A group that's nothing but a lick, with no chords to
-  show in brackets, puts its `(xN)` next to the lick's name instead, the
-  same place a bare `{Riff1}x4` would put it. The no-`doc` page-estimate
-  heuristic (used before a section has a document to render against) was
-  fixed the same way, so a repeated riff inside a group can no longer be
-  undercounted and split across a page the real render wouldn't have hit.
+  `[3B 2F#](x4)`.
+- **The repeat count on a chords-plus-lick group read as if only the
+  chords repeated.** `[3B 2F#](x4)` on the symbol row, then a bare
+  `Riff3` on the tab below it, looked like a repeated pickup followed by
+  a riff played once — the `(x4)` never reached the riff it also applies
+  to. The count now prints twice: once on the chords, and again next to
+  the lick's own name — `Riff3 (x4) |G|…` — so the two read as one
+  repeated phrase without having to trace the bracket back up to the
+  chords. A group that's nothing but a lick, with no chords to show in
+  brackets, still prints the count only once, next to the lick's name,
+  the same place a bare `{Riff1}x4` would put it.
+- The no-`doc` page-estimate heuristic (used before a section has a
+  document to render against) was fixed the same way as the two above,
+  so a repeated riff inside a group can no longer be undercounted and
+  split across a page the real render wouldn't have hit.
   See [Chart Line Syntax → Groups and repeats](wiki/Chart-Line-Syntax.md#groups-and-repeats).
 
 ### Added

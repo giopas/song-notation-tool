@@ -440,7 +440,9 @@ def test_a_lick_inside_a_group_still_prints_its_tab():
     rows = render_chart_row(grammar.parse_items(line))
     text = "\n".join(rows)
     assert "[3B 2F#](x4)" in text
-    assert "Riff3 |G|-------|" in text   # tab actually printed, not just the name
+    # the repeat is echoed onto the riff's own name, not just left on the
+    # chords above it — "(x4)" belongs to the chords AND the riff together
+    assert "Riff3 (x4) |G|-------|" in text   # tab actually printed, not just the name
     assert "|D|-4-----|" in text
     assert "|A|---4-5-|" in text
     assert "|E|-------|" in text

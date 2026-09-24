@@ -63,20 +63,22 @@ included, and the group repeats all of it:
 
 The lick still prints its own tab (see **Licks**, below) — it doesn't
 collapse down to its bare name just because it's inside brackets. The
-group's repeat sits with the chords, above the tab:
+group's repeat sits with the chords, above the tab — and is echoed
+next to the lick's own name too, so it doesn't read as a repeated
+pickup followed by a riff played once:
 
 ```
   3  2
   B  F#  [3B 2F#](x4)
-         Riff3 |G|---------|
-               |D|-4-------|
-               |A|---4-5-4-|
-               |E|---------|
+         Riff3 (x4) |G|---------|
+                    |D|-4-------|
+                    |A|---4-5-4-|
+                    |E|---------|
 ```
 
 A group that's nothing but a lick — `[{Riff3 = …}]x4` — has no chords
-left to put in brackets, so the `(x4)` sits next to the lick's name on
-the tab instead, exactly where a bare `{Riff3}x4` would put it.
+left to put in brackets, so the `(x4)` prints only once, next to the
+lick's name on the tab, exactly where a bare `{Riff3}x4` would put it.
 
 ## Annotations
 

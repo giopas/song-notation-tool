@@ -113,9 +113,10 @@ def _symbol_str(item: dict) -> str:
                 s += f"(x{rep})"
             return s
         # A group that's nothing but a lick (or licks) has no chords to
-        # show in brackets — the repeat rides on the lick's own tab
-        # instead, the same as a bare "{Riff1}x4".
-        return f"(x{rep})" if rep != 1 else ""
+        # show in brackets — its repeat prints next to the lick's own
+        # name instead (see _group_lick_lines), so there's nothing to
+        # put on the symbol row at all.
+        return ""
     if k == "lick":
         # A named lick prints its name over its tab, so the same figure
         # recalled later as "{Riff1}" is recognisable as the thing you
@@ -177,8 +178,17 @@ def _group_lick_lines(item: dict):
     """Every lick's tab found inside a group, in order, recursing into
     nested groups. A group renders as a single column (see _symbol_str),
     so its licks stack one after another rather than sitting side by side
-    the way top-level licks in the same row do."""
+    the way top-level licks in the same row do.
+
+    A group's own "(xN)" is echoed onto each of its direct licks' name
+    line, not just left up on the chords row: "[3G 2F#](x4)" above and a
+    bare "Riff3" below used to read as two different things — a repeated
+    pickup, then a riff played once — when they're the same repeated
+    phrase. Repeating the count keeps that legible without following the
+    bracket back up to the chords."""
     out = []
+    rep = item.get("repeat", 1)
+    tag = f" (x{rep})" if rep != 1 else ""
     for sub in item.get("items", []):
         if sub.get("kind") == "lick":
             lines = _lick_lines(sub)
@@ -186,7 +196,7 @@ def _group_lick_lines(item: dict):
                 continue
             name = sub.get("name", "") or ""
             if name:
-                head = name + " "
+                head = name + tag + " "
                 lines = [head + lines[0]] + [" " * len(head) + ln for ln in lines[1:]]
             out.extend(lines)
         elif sub.get("kind") == "group":
@@ -326,25 +336,14 @@ def _render_one_row(items, label: str, indent: int):
     # from the notes it names. The other string lines are indented by the
     # same amount, so the tab stays a grid.
     #
-    # A group's tab lines already carry their own name (from
-    # _group_lick_lines), so only a bare lick gets this treatment — a
-    # group's bracketed text (its chords, and its own repeat count, when
-    # it has one to show) stays on the symbol row rather than being
-    # folded into the tab.
+    # A group's tab lines already carry their own name and repeat count
+    # (from _group_lick_lines), so only a bare lick gets this treatment —
+    # a group's bracketed chords, when it has any, stay on the symbol row
+    # rather than being folded into the tab.
     for i, (it, lk) in enumerate(zip(items, licks)):
         if lk and it.get("kind") == "lick" and symbols[i]:
             head = symbols[i] + " "
             licks[i] = [head + lk[0]] + [" " * len(head) + ln for ln in lk[1:]]
-            symbols[i] = ""
-        elif (lk and it.get("kind") == "group" and symbols[i]
-              and not any(x.get("kind") != "lick" for x in it.get("items", []))):
-            # A lick-only group has nothing left in brackets (_symbol_str
-            # already dropped the brackets in that case, see there) — its
-            # "(xN)" rides on the tab instead, on the same line as the
-            # lick's own name, exactly where "{Riff1}x4" would put it.
-            # A group that also has chords keeps its bracketed text on
-            # the symbol row, in its own column above the tab.
-            licks[i] = [lk[0] + " " + symbols[i]] + lk[1:]
             symbols[i] = ""
     n_lick_rows = max((len(l) for l in licks), default=0)
 

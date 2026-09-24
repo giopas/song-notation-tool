@@ -80,6 +80,28 @@ A group that's nothing but a lick — `[{Riff3 = …}]x4` — has no chords
 left to put in brackets, so the `(x4)` prints only once, next to the
 lick's name on the tab, exactly where a bare `{Riff3}x4` would put it.
 
+A group also isn't limited to one line. Put a `//` inside it — a phrase
+you'd otherwise write over two lines — and the group still breaks there:
+
+```
+[7B 4G# 3G 5D // 7B 4G# 5A]x4
+```
+
+```
+  7  4   3  5
+  B  G#  G  D
+  7  4   5
+  B  G#  A (x4)
+```
+
+Each line still gets its own columns, exactly as `//` at the top level
+does (see **Breaking a section over several lines**, below) — the group
+boundary doesn't change that. The repeat prints once, after the last
+thing on the last line, rather than on brackets that would otherwise
+have to span two rows of text. The same happens when a *reference*
+expands into a repeat — `=verse1 x4` where Verse 1 itself has a `//` —
+since a repeated reference resolves to this same kind of group.
+
 ## Annotations
 
 Any of the four quote characters works — `"`, and the curly `“ ” ‘ ’`

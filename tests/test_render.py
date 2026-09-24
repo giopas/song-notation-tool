@@ -326,6 +326,62 @@ def test_group_symbol_row_keeps_fret_numbers():
     assert "3A 12D" in "\n".join(rows)
 
 
+def test_a_line_break_inside_a_group_actually_breaks_the_line():
+    # [A B // C D]x4 used to collapse the "//" into literal text inside
+    # the brackets instead of starting a new line — the group swallowed
+    # the break the same way it used to swallow a lick's tab.
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("[7B 4G# 3G 5D // 7B 4G# 5A]x4"))
+    assert len(rows) == 4                      # two fret+symbol pairs, not one
+    assert "//" not in "\n".join(rows)
+    assert "7  4   3  5" in rows[0]
+    assert "B  G#  G  D" in rows[1]
+    assert "7  4   5" in rows[2]
+    assert "B  G#  A (x4)" in rows[3]           # repeat rides on the last line
+
+
+def test_group_with_no_break_still_collapses_to_one_bracketed_line():
+    # A group without its own "//" is unaffected by the flatten step —
+    # it still renders as the single bracketed column it always did.
+    import grammar
+    from render import render_chart_row
+    rows = render_chart_row(grammar.parse_items("[5A 7D]x2"))
+    assert rows == ["  [5A 7D](x2)"]
+
+
+def test_repeated_section_reference_with_a_break_also_breaks_the_line():
+    # The pre-existing bug in _expanded(): a repeated section/riff
+    # reference expands into the same "group" item a literal [ ]xN does,
+    # so it inherited the exact same swallowed-"//" bug.
+    import model, grammar
+    from render import resolve_references, chart_body_lines
+
+    doc = model.new_document(title="T")
+    target = model.new_section("verse1", "Verse 1", "Verse",
+                                instrument="Bass (4-string)")
+    target["items"] = grammar.parse_items("7B 4G# 3G 5D // 7B 4G# 5A")
+    ref_items = [model.make_section_ref("verse1", repeat=4)]
+    doc["sections"] = [target, model.new_section("s2", "Verse 1 (ref)", "Verse")]
+
+    resolved = resolve_references(ref_items, doc)
+    lines = chart_body_lines(resolved, label="Verse1ref")
+    assert len(lines) == 4
+    assert "//" not in "\n".join(lines)
+    assert lines[-1].endswith("(x4)")
+
+
+def test_broken_group_line_count_matches_the_page_estimate_heuristic():
+    # estimate_section_lines' no-doc heuristic has to flatten the same
+    # way real rendering does, or a section with a broken group inside a
+    # repeat is undercounted and risks a mid-phrase page split.
+    import grammar
+    from render import estimate_section_lines, chart_body_lines
+    items = grammar.parse_items("[7B 4G# 3G 5D // 7B 4G# 5A]x4")
+    sec = {"render": "chart", "items": items}
+    assert estimate_section_lines(sec) == 1 + len(chart_body_lines(items)) + 1
+
+
 def test_unlabelled_chart_row_uses_the_export_body_indent():
     """A chart section and a free-text section under the same header must
     start in the same column; they were 4 and 2 apart."""

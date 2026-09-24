@@ -84,6 +84,20 @@ def test_group_can_wrap_chords_and_a_named_lick_together():
     assert unparse(items) == line
 
 
+def test_group_can_hold_a_line_break():
+    # A group repeat can wrap a two-line phrase, not just a single run —
+    # parsing (and round-tripping) this has always worked; it's the
+    # render that used to swallow the "//" (see tests/test_render.py).
+    line = "[7B 4G# 3G 5D // 7B 4G# 5A]x4"
+    items = parse_items(line)
+    group = items[0]
+    assert group["kind"] == "group" and group["repeat"] == 4
+    kinds = [it["kind"] for it in group["items"]]
+    assert kinds.count("mark") == 1
+    assert group["items"][4] == {"kind": "mark", "mark": "line_break"}
+    assert unparse(items) == line
+
+
 def test_block_ref_with_repeat_and_shift():
     items = parse_items("riff1 x3 +2")
     assert items == [make_block_ref("riff1", repeat=3, transpose=2)]

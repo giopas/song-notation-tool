@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [0.26.3] — 2026-09-24
+## [0.26.3] — 2026-09-25
 
 ### Fixed
 - **A lick nested inside a `[ ]xN` group printed its bare name instead of
@@ -32,6 +32,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   document to render against) was fixed the same way as the two above,
   so a repeated riff inside a group can no longer be undercounted and
   split across a page the real render wouldn't have hit.
+- **A `//` inside a `[ ]xN` group didn't start a new line — it printed
+  as the literal text `//` inside the brackets.** `[7B 4G# 3G 5D // 7B
+  4G# 5A]x4`, a two-line phrase repeated as a whole, collapsed onto one
+  cramped line instead of breaking the way the same `//` does everywhere
+  else on a chart line. A group's own `//` now breaks it exactly like a
+  top-level one does — each line gets its own columns — with the repeat
+  count printing once, after the last thing on the last line, rather
+  than on brackets that no longer make sense once the content spans more
+  than one row. This also fixed a pre-existing instance of the same bug:
+  a repeated section or riff reference (`=verse1 x4`) expands into this
+  same kind of group, so a referenced section with its own `//` had
+  always collapsed the same way.
   See [Chart Line Syntax → Groups and repeats](wiki/Chart-Line-Syntax.md#groups-and-repeats).
 
 ### Added

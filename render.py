@@ -240,6 +240,42 @@ def split_on_line_breaks(items):
     return runs
 
 
+def _has_line_break(items) -> bool:
+    return any(x.get("kind") == "mark" and x.get("mark") == "line_break"
+               for x in (items or []))
+
+
+def _flatten_group_line_breaks(items):
+    """A `[ ]xN` group is written as one line — that's the whole point of
+    the brackets — but a repeated *section* or *riff* reference expands
+    into that same "group" item (see _expanded), and either one can carry
+    its own internal `//`. Collapsing a break like that into literal text
+    inside the brackets ("A B // C D") is wrong twice over: it doesn't
+    print as a break, and it hides the very phrasing the break was
+    written for.
+
+    So a group that contains a break is unwrapped here, before line
+    splitting: its own breaks become real ones, and its repeat count
+    rides as a trailing "(xN)" on the last line it produces — the same
+    place a repeated free-text section's count already goes (see
+    chart_body_rows) — rather than on brackets that no longer make sense
+    once the content spans more than one line. A group with no break of
+    its own is left alone; it still renders as the single bracketed
+    column _symbol_str builds."""
+    out = []
+    for it in (items or []):
+        if it.get("kind") == "group" and _has_line_break(it.get("items")):
+            inner = _flatten_group_line_breaks(it.get("items", []))
+            rep = it.get("repeat", 1)
+            if inner and rep != 1:
+                inner = inner[:-1] + [dict(inner[-1],
+                                            _group_repeat_suffix=f"(x{rep})")]
+            out.extend(inner)
+            continue
+        out.append(it)
+    return out
+
+
 def render_chart_row(items, label: str = "", indent: int = BODY_INDENT):
     """
     Render one section's chart items as column-aligned text lines: fret
@@ -291,6 +327,7 @@ def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):
     if not items:
         return [_row(label.rstrip(), ROLE_SYM)] if label else []
 
+    items = _flatten_group_line_breaks(items)
     runs = split_on_line_breaks(items)
     if len(runs) != 1:
         # Continuation blocks indent to the label's gutter, so every line
@@ -317,6 +354,16 @@ def _render_one_row(items, label: str, indent: int):
 
     frets = [_fret_str(it) for it in items]
     symbols = [_symbol_str(it) for it in items]
+
+    # A flattened group's repeat count (see _flatten_group_line_breaks)
+    # rides in on whichever item ended up last, tagged rather than typed
+    # into the symbol text, so it lands after whatever that item already
+    # prints — a chord's own fret+symbol, a mark's text, or (below) a
+    # lick's name once its tab line is built.
+    for i, it in enumerate(items):
+        suffix = it.get("_group_repeat_suffix")
+        if suffix:
+            symbols[i] = f"{symbols[i]} {suffix}" if symbols[i] else suffix
 
     # A lick occupies the same column as any other item, but stacks its
     # string lines underneath the chord row — so it reads where it's
@@ -917,8 +964,13 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
                 lines += chart_lines_drawn
             else:
                 # one fret + symbol pair per block, plus however many string
-                # lines the tallest lick in each block needs
-                for _level, run in split_on_line_breaks(chart_items) or [(0, [])]:
+                # lines the tallest lick in each block needs. Flatten first
+                # — a group's own "//" turns into real line breaks here
+                # too (see _flatten_group_line_breaks), or an unresolved
+                # repeated riff/section would count as the one collapsed
+                # line it no longer renders as.
+                flat = _flatten_group_line_breaks(chart_items)
+                for _level, run in split_on_line_breaks(flat) or [(0, [])]:
                     lines += 2
                     lines += max((_column_lick_height(it) for it in run),
                                  default=0)

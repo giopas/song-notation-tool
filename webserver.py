@@ -488,6 +488,14 @@ def _parse_chart_line(line: str, doc: dict = None, items=None):
             "roles": [r["role"] for r in rows],
             "spans": [r.get("spans") or [] for r in rows],
             "fret_row": has_fret_row,
+            # A group's repeat bracket, for a front end that draws it as
+            # a real line instead of the "|"/"(xN)" text baked into
+            # "rendered" (which TXT export and the desktop app read
+            # as-is, having no vector graphics of their own) — see
+            # export.py's draw_bracket_runs, the PDF's equivalent.
+            "brackets": [{"start": s, "end": e, "col": col, "rep": rep,
+                          "label_row": label_row}
+                         for s, e, col, rep, label_row in render_mod.bracket_runs(rows)],
         }
     except grammar.ParseError as exc:
         return {"ok": False, "error": str(exc)}

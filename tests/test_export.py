@@ -583,6 +583,39 @@ def test_the_pdf_prints_a_lick_in_blue_and_a_rest_in_grey():
     assert f"{REST_RGB[0]:.3f} {REST_RGB[1]:.3f} {REST_RGB[2]:.3f} rg" in text
 
 
+def test_the_repeat_bracket_is_a_real_line_not_stacked_text():
+    """A group's repeat bracket used to be a "|" character repeated on
+    every row it covered - fine down a tall lick's tab, where the rows
+    sit close enough to read as one bar, but on a short two-line break
+    the two "|" characters just sat there, unconnected, with nothing
+    between them. It's drawn as one real vector line now (see
+    export.py's draw_bracket_runs), so a broken group with no lick in
+    it - this one has none, so any "|" text run below can only be a
+    leftover from the old approach - has no "|" glyph in the page at
+    all, just the line itself and one "(xN)" label."""
+    import re
+    import zlib
+    import export, grammar, model
+
+    doc = model.new_document(title="T")
+    sec = model.new_section("s1", "Refrain", "Refrain", instrument="Bass (4-string)")
+    sec["items"] = grammar.parse_items("[7B 4G# 3G 5D // 7B 4G# 5A]x4")
+    doc["sections"] = [sec]
+
+    pdf = export.build_pdf(doc)
+    stream = zlib.decompress(re.search(rb"stream\r?\n(.*?)endstream", pdf, re.S).group(1))
+
+    # No stray "|" text glyph - the bracket isn't drawn as characters.
+    runs = re.findall(rb"\((.*?)\) Tj", stream)
+    assert b"|" not in runs
+
+    # The count still prints, once, as plain text.
+    assert runs.count(rb"\(x4\)") == 1
+
+    # A real black vertical line is drawn instead.
+    assert re.search(rb"0\.00 G [\d.]+ w [\d.]+ [\d.]+ m [\d.]+ [\d.]+ l S", stream)
+
+
 def test_black_and_white_printing_has_no_blue_in_it():
     import zlib
     import export, grammar, model
@@ -738,6 +771,27 @@ def test_the_first_row_is_only_flagged_as_frets_when_it_is_frets():
     opens_on_frets = webserver._parse_chart_line("5A 5D // 8F 8C")
     assert opens_on_frets["roles"][0] == render.ROLE_FRET
     assert opens_on_frets["fret_row"] is True
+
+
+def test_the_api_sends_bracket_runs_for_the_browser_to_draw_a_real_line():
+    """The web preview draws a group's repeat bracket the same way the
+    PDF does — a real line, not stacked "|" characters (see app.js'
+    applyBracketRuns) — which needs the run's row range, its column, the
+    repeat count, and which row carries the "(xN)" label; parse_line has
+    to hand all four over, not just the "roles"/"spans" a plain
+    lick/rest already needed."""
+    import webserver, render
+
+    result = webserver._parse_chart_line("[7B 4G# 3G 5D // 7B 4G# 5A]x4")
+    assert result["roles"] == [render.ROLE_FRET, render.ROLE_SYM,
+                                render.ROLE_FRET, render.ROLE_SYM]
+    assert result["brackets"] == [
+        {"start": 0, "end": 3, "col": 15, "rep": 4, "label_row": 1},
+    ]
+
+    # A line with no group in it at all sends no brackets — the common
+    # case costs the browser nothing extra to check for.
+    assert webserver._parse_chart_line("5A 7D")["brackets"] == []
 
 
 def test_fret_numbers_print_small_raised_and_in_their_own_colour():

@@ -741,6 +741,14 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             while (j < n and text[j] != " "
                    and span_role(spans, j, base) == role):
                 j += 1
+            # A group's repeat bracket is drawn as a real line afterwards
+            # (see draw_bracket_runs) — the text it rides in on ("|",
+            # "(xN)") is there for the renderers with no vector graphics
+            # of their own (TXT export, the desktop app), and would only
+            # double up with the line here.
+            if role == render.ROLE_BRACKET:
+                i = j
+                continue
             color(*role_rgb(role))
             if role == render.ROLE_LICK and "|" in text[i:j]:
                 draw_tab_run(x, y, text, i, j, role_rgb(role))
@@ -809,6 +817,28 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
 
     def vline(x, y1, y2, width=0.4, gray=PDF_COLUMN_RULE_GRAY):
         cur_ln.append(f"{gray:.2f} G {width} w {x:.1f} {y1:.1f} m {x:.1f} {y2:.1f} l S")
+
+    def draw_bracket_runs(chart_rows, row_ys):
+        """The real line render.py's "|" text stands in for, drawn once a
+        section's rows are all placed. A solid black rule down the rows a
+        group's repeat spans, with "(xN)" once, vertically centred on it
+        — drawn as vector graphics rather than a character on each row,
+        so it reads as one continuous mark even across a short two-line
+        break, where separate "|" characters didn't connect at all.
+
+        `row_ys` is each row's own y (the baseline draw_chart_row /
+        draw_fret_row placed it at), collected by the caller as it drew
+        `chart_rows` — the same list this runs over.
+        """
+        for start_idx, end_idx, pipe_col, rep, _label_idx in render.bracket_runs(chart_rows):
+            bx = body_x() + pipe_col * CHAR_W
+            y_top = row_ys[start_idx] + MONO_SZ * 0.78
+            y_bot = row_ys[end_idx] - MONO_SZ * 0.18
+            vline(bx, y_top, y_bot, width=max(0.6, 0.08 * MONO_SZ), gray=0.0)
+            if rep:
+                color(0, 0, 0)
+                txt(bx + CHAR_W * 1.3, (y_top + y_bot) / 2 - MONO_SZ * 0.32,
+                    f"(x{rep})", sz=MONO_SZ)
 
     gathered_at, gathered = render.gathered_lyrics(doc)
     side = gathered_at == "side" and NCOLS >= 2
@@ -1063,13 +1093,16 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             # every section's words start at the same x and read as a column.
             lyric_x = body_x() + lyric_col * CHAR_W
             lyric_cy = cy
+            row_ys = []
             for row in chart_rows:
+                row_ys.append(cy)
                 if row.get("role") == render.ROLE_FRET:
                     draw_fret_row(body_x(), cy, row["text"])
                     cy -= FRET_LINE_H
                 else:
                     draw_chart_row(body_x(), cy, row)
                     cy -= LINE_H
+            draw_bracket_runs(chart_rows, row_ys)
             if beside:
                 color(0.15, 0.15, 0.15)
                 for ln in lyric_lines:

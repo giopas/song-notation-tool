@@ -417,11 +417,23 @@ button {
    section card, which is most of what made the cards look padded out. The
    rows keep `pre` because column alignment is the whole point of them. */
 .sec-preview {
-  font-family: var(--mono); overflow-x: auto;
+  font-family: var(--mono); overflow-x: auto; position: relative;
   margin-top: 6px; color: var(--fg); font-size: 13px; line-height: 1.5;
 }
 .sec-preview:empty { margin-top: 0; }
 .sec-preview-fret, .sec-preview-sym, .sec-preview-more { white-space: pre; }
+/* A group's repeat bracket (see applyBracketRuns in app.js): a real line
+   down the rows it spans, positioned in pixels measured from the rows
+   themselves rather than character columns, so it crosses a fret row —
+   set at its own smaller size, on tighter line spacing (below) — without
+   a kink where the two meet. `left` is still a character column, in
+   ch units against this element's own 13px font, which lines it up with
+   the "|" column on a normal (non-fret) row. */
+.sec-bracket-line { position: absolute; width: 2px; background: var(--fg); }
+.sec-bracket-label {
+  position: absolute; transform: translateY(-50%);
+  color: var(--fg); white-space: nowrap;
+}
 /* Everything after the first fret/symbol pair: a lick's string lines, and
    the continuation lines of a section broken with //. Chords by default —
    but a continuation block has fret numbers of its own, and those are
@@ -653,12 +665,9 @@ button {
    same two colours the PDF uses, so the preview and the paper agree. */
 .sec-preview-more.sec-row-lick { color: var(--blue); }
 .tok-rest { color: var(--lbl-gray); }
-
-/* A group's repeat bracket ("|", "(xN)") is drawn over rows of every
-   other role — most often a lick's blue tab — and has to read as plain,
-   default-coloured text regardless, the same way it's forced back to
-   black in the PDF: it marks the phrase, not the tab underneath it. */
-.tok-bracket { color: var(--fg); }
+/* No .tok-bracket rule: paintRow skips a "bracket"-tagged span entirely
+   (see there) rather than printing it in any colour — it's drawn as a
+   real line by applyBracketRuns instead. */
 
 
 /* Split lyrics into sections — one row per section: the name on the left,

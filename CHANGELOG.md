@@ -29,9 +29,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   of a chord line, both put the count somewhere a reader could mistake
   for "this one note repeats" rather than "this whole phrase repeats".
   A group whose content spans more than one printed row — a lick's tab,
-  a `//`, or both — now gets a bracket instead: a `|` down the right of
-  every line it printed on, with the `(xN)` once, roughly centred on the
-  bracket rather than glued to any single line:
+  a `//`, or both — now gets a bracket marking the whole span instead,
+  with the `(xN)` once, centred on it rather than glued to any single
+  line. The PDF and the web app's live preview draw it as a real line:
+  ```
+    3  2
+    G  F#                       │
+           Riff3 |G|---------|  │
+                 |D|-4-------|  │ (x4)
+                 |A|---4-5-4-|  │
+                 |E|---------|  │
+  ```
+  TXT export and the desktop app have no vector graphics of their own,
+  so there the bracket is still the character-based version this
+  started as: a `|` down the right of every line the group printed,
+  with `(xN)` on the one nearest the middle:
   ```
     3  2
     G  F#                       |
@@ -45,7 +57,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   over the row beneath it (its own colour and size in the PDF, in
   particular), not a line in its own right, and a bracket mark there
   used to show up small, off-colour, and out of line with the plain bar
-  everywhere else. The bracket starts at the chord row under it instead.
+  everywhere else. The bracket starts at the chord row under it instead
+  — and in the PDF and web preview, the real line still runs the whole
+  way through the fret row's own gap rather than breaking there.
   The bracket itself is always plain, default-coloured text too, even on
   a lick's own tab row — it used to pick up the tab's blue just from
   sitting on the same line, which read as part of the tab rather than as

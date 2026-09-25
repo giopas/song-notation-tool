@@ -593,13 +593,65 @@ function paintRow(el, row) {
     const from = Math.max(start, pos), to = Math.min(end, text.length);
     if (to <= from) return;
     if (from > pos) el.appendChild(document.createTextNode(text.slice(pos, from)));
-    const mark = document.createElement("span");
-    mark.className = "tok-" + role;
-    mark.textContent = text.slice(from, to);
-    el.appendChild(mark);
+    // A group's repeat bracket is drawn afterwards as a real border, by
+    // applyBracketRuns — the "|"/"(xN)" text this span marks is only
+    // there for a front end with no vector graphics of its own (TXT
+    // export, the desktop app), and would only double up with it here.
+    if (role !== "bracket") {
+      const mark = document.createElement("span");
+      mark.className = "tok-" + role;
+      mark.textContent = text.slice(from, to);
+      el.appendChild(mark);
+    }
     pos = to;
   });
   if (pos < text.length) el.appendChild(document.createTextNode(text.slice(pos)));
+}
+
+/**
+ * The real line a group's repeat bracket is drawn as, in place of the
+ * "|"/"(xN)" characters paintRow leaves out for a "bracket"-tagged span
+ * (see there) — mirrors export.py's draw_bracket_runs, the PDF's
+ * equivalent, including why: a fret row is set smaller, in its own
+ * colour, on tighter line spacing (see .sec-preview-fret in the CSS),
+ * not a line in its own right, so measuring this in pixels rather than
+ * character columns is what lets the line cross one without a kink —
+ * character-column math would have to fight that row's own font-size
+ * override to land in the same place.
+ *
+ * `container` is the rows' common positioned ancestor (.sec-preview).
+ * `rowEls[i]` must be the element row index i was painted into — the
+ * caller builds that list in the same order the server's row indices
+ * count in (an optional fret row, then the symbol row, then any extra
+ * rows). `brackets` is parseResult.brackets as the server sent it, one
+ * entry per group: {start, end, col, rep, label_row}.
+ */
+function applyBracketRuns(container, rowEls, brackets) {
+  [...container.querySelectorAll(":scope > .sec-bracket-line, :scope > .sec-bracket-label")]
+    .forEach((el) => el.remove());
+  (brackets || []).forEach(({ start, end, col, rep }) => {
+    const first = rowEls[start], last = rowEls[end];
+    if (!first || !last) return;
+    const top = first.offsetTop, bottom = last.offsetTop + last.offsetHeight;
+    const line = document.createElement("div");
+    line.className = "sec-bracket-line";
+    line.style.left = col + "ch";
+    line.style.top = top + "px";
+    line.style.height = Math.max(0, bottom - top) + "px";
+    container.appendChild(line);
+    if (rep) {
+      // Centered on the run's full span, like the PDF's draw_bracket_runs
+      // (its (y_top + y_bot) / 2) - not the "(xN)"-carrying row's own
+      // center, which sits off-center whenever the run has more rows
+      // below that row than above it (or vice versa).
+      const label = document.createElement("span");
+      label.className = "sec-bracket-label";
+      label.textContent = `(x${rep})`;
+      label.style.left = `calc(${col}ch + 8px)`;
+      label.style.top = ((top + bottom) / 2) + "px";
+      container.appendChild(label);
+    }
+  });
 }
 
 /**
@@ -660,6 +712,8 @@ function updateSectionPreview(node, sec, parseResult) {
   }
   errEl.classList.add("hidden");
 
+  const previewBox = node.querySelector(".sec-preview");
+
   if (rendered && rendered.length) {
     // A row is 1..N lines now: an optional fret row, the symbol row, and
     // one line per string for any lick. The first two elements are reused
@@ -672,16 +726,24 @@ function updateSectionPreview(node, sec, parseResult) {
     paintRow(symRow, hasFret ? row(1) : row(0));
     setExtraPreviewRows(node, rendered.slice(hasFret ? 2 : 1)
       .map((_, i) => row(i + (hasFret ? 2 : 1))));
+    // rowEls[i] is whatever row index i was just painted into, in the
+    // same order the server counted rows in — applyBracketRuns measures
+    // these to draw a group's repeat bracket as a real line.
+    const rowEls = [...(hasFret ? [fretRow] : []), symRow,
+                    ...node.querySelectorAll(".sec-preview-more")];
+    applyBracketRuns(previewBox, rowEls, parseResult && parseResult.brackets);
     emptyEl.classList.add("hidden");
   } else if (!items.length && !measureItems(sec).length) {
     fretRow.textContent = "";
     symRow.textContent = "";
     setExtraPreviewRows(node, []);
+    applyBracketRuns(previewBox, [], []);
     emptyEl.classList.remove("hidden");
   } else if (rendered) {
     fretRow.textContent = "";
     symRow.textContent = "";
     setExtraPreviewRows(node, []);
+    applyBracketRuns(previewBox, [], []);
     emptyEl.classList.add("hidden");
   }
 }

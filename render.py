@@ -351,7 +351,70 @@ def _apply_group_brackets(rows, run_ranges):
             tail = "  |" + (f" (x{rep})" if i == mid else "")
             rows[i]["text"] += pad + tail
             rows[i]["spans"].append((start, len(rows[i]["text"]), ROLE_BRACKET))
+            if i == mid:
+                rows[i]["bracket_label"] = True
+        # A renderer with real vector graphics (PDF export, the web
+        # preview) draws this bracket as one solid line rather than a
+        # "|" character repeated on each row — see export.py's
+        # draw_bracket_runs — which needs the run's full row range even
+        # where a fret row breaks the "|" text itself (excluded above,
+        # but still inside the bracket). `marker` is a fresh object each
+        # time, so two different groups' spans can never be mistaken for
+        # the same run just because their (start, end) happen to match —
+        # rows tagged with it are compared by identity, not value.
+        marker = object()
+        for i in range(s, e + 1):
+            rows[i]["bracket_run"] = marker
+            rows[i]["bracket_rep"] = rep
     return rows
+
+
+def bracket_runs(rows):
+    """One entry per group _apply_group_brackets tagged, as
+    (start_idx, end_idx, pipe_col, rep, label_idx) — for a renderer with
+    real vector graphics (PDF export, the web preview) that draws the
+    bracket as one line instead of the "|"/"(xN)" text TXT export and the
+    desktop app read straight off `rows[i]["text"]`.
+
+    start_idx/end_idx is the row range the bracket covers (inclusive) —
+    a fret row included, even though it carries no "|" of its own (see
+    _apply_group_brackets). pipe_col is the character column every
+    bracketed row's "|" lines up at. rep is the repeat count, and
+    label_idx the one row index the "(xN)" text sits on — `rows[i]`'s
+    own "bracket_label" flag, not a recomputed guess — a drawing front
+    end that only wants that once, not once per row.
+
+    Rows are grouped by identity of the "bracket_run" marker
+    _apply_group_brackets stamped on them, not by scanning for rows next
+    to each other that each carry a bracket span — a group broken over
+    two lines has a bare fret row in between carrying neither, which
+    would otherwise read as the run having ended.
+    """
+    order, rows_by_marker = [], {}
+    for i, row in enumerate(rows):
+        marker = row.get("bracket_run")
+        if marker is None:
+            continue
+        if marker not in rows_by_marker:
+            rows_by_marker[marker] = []
+            order.append(marker)
+        rows_by_marker[marker].append(i)
+    runs = []
+    for marker in order:
+        idxs = rows_by_marker[marker]
+        s, e = idxs[0], idxs[-1]
+        rep = rows[s].get("bracket_rep")
+        pipe_col, label_idx = None, None
+        for k in idxs:
+            spans = rows[k].get("spans") or []
+            sp = next((x for x in spans if x[2] == ROLE_BRACKET), None)
+            if sp and pipe_col is None:
+                pipe_col = rows[k]["text"].index("|", sp[0])
+            if rows[k].get("bracket_label"):
+                label_idx = k
+        if pipe_col is not None:
+            runs.append((s, e, pipe_col, rep, label_idx))
+    return runs
 
 
 def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):

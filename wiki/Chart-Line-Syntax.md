@@ -70,20 +70,27 @@ text:
 
 ```
   3  2
-  G  F#                       |
-         Riff3 |G|---------|  |
-               |D|-4-------|  | (x4)
-               |A|---4-5-4-|  |
-               |E|---------|  |
+  G  F#                       │
+         Riff3 |G|---------|  │
+               |D|-4-------|  │ (x4)
+               |A|---4-5-4-|  │
+               |E|---------|  │
 ```
 
-The bracket is the point: `(x4)` sitting on its own column, next to a
-bar that runs the full height of the chords *and* the tab, reads as
-"this whole thing, four times" — not "the last note repeats", which is
-what text tacked onto one line would say instead. The small `3  2`
-above `G  F#` doesn't get its own segment of the bar — a fret number
-prints as a superscript over its chord, not as a line of its own, so
-the bracket starts at the chord row underneath it.
+The bracket is the point: `(x4)` centred against a bar that runs the
+full height of the chords *and* the tab reads as "this whole thing,
+four times" — not "the last note repeats", which is what text tacked
+onto one line would say instead. The small `3  2` above `G  F#`
+doesn't get its own segment of the bar — a fret number prints as a
+superscript over its chord, not as a line of its own, so the bracket
+starts at the chord row underneath it.
+
+The PDF and the web app's live preview draw this bracket as one real
+line, so it reads as continuous even across a fret row's superscript
+gap. TXT export and the desktop app have no vector graphics of their
+own, so there it's still the character-based version above — a `|`
+printed down the right of every eligible row, with `(xN)` on the one
+nearest the middle. A fret row never gets a `|` of its own either way.
 
 A group also isn't limited to one line for another reason: a `//`
 inside it still breaks the line, exactly as it would outside any
@@ -92,6 +99,17 @@ group, and gets the same bracket treatment:
 ```
 [7B 4G# 3G 5D // 7B 4G# 5A]x4
 ```
+
+In the PDF and the web preview:
+
+```
+  7  4   3  5
+  B  G#  G  D  │
+  7  4   5     │ (x4)
+  B  G#  A     │
+```
+
+In TXT export and the desktop app:
 
 ```
   7  4   3  5

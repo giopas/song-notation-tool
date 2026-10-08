@@ -7,21 +7,35 @@ the Claude project as `claude/WORKPLAN.md`.
 
 ## Where we are
 
-- Released on GitHub: v0.26.2. v0.26.3 is on `main` on GitHub but its tag
-  (created locally on 8 October 2026) is not pushed yet, and it has no
-  GitHub release.
-- `fix/v0.26.4` was merged into `main` locally and is not pushed. It ships
-  as part of v0.27.0, so there is no separate v0.26.4.
-- Ready on `feat/v0.27.0`: the app icon (option C, fret number over
-  chord, chosen 8 October). Waiting for merge, tag and push.
+- Released: v0.27.0 (the app icon), pushed on 8 October 2026 together
+  with the v0.26.3 tag. The housekeeping planned as v0.26.4 shipped in
+  v0.27.0.
 - Test suite: 367 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
 Work items, in order:
 
-1. Push the v0.26.3 tag and publish its GitHub release from the changelog.
-2. Merge, tag and push v0.27.0 (the icon), and publish its release.
+1. GitHub releases for v0.26.3 and v0.27.0, each with its changelog
+   section as the body (if not done yet).
+2. Plain-language pass (`feat/v0.27.1`), done before the packages so the
+   install sections written for them start in the same voice. A complete
+   review and rewrite with the `humanizer` skill of:
+   - `README.md`, top to bottom (about 530 lines);
+   - every page in `wiki/`;
+   - the text the app shows, where it needs it: the help strip, "Start
+     here" panel, tooltips and dialogs in `song_writer.py`, the `title=`
+     hints, help and notation reference in `web/`, and the `cli.py` and
+     `webserver.py` command-line help;
+   - `CONTRIBUTING.md` and the issue templates.
+
+   Rules for the pass: facts do not change, only the wording; anything
+   that looks wrong is checked against the code and the changelog, and
+   fixed there or reported, never invented. Button and menu names in the
+   docs must match the app after the pass. Past `CHANGELOG.md` entries
+   and the `DESIGN_v0_...md` files are history and stay as written. The
+   writing style in `DEVELOPMENT.md` is the target. Tests that look for a
+   user-visible string are updated with it.
 3. One writer for files. TXT and PDF bytes come from `export.py`, but the
    files are written in three places (`cli.py`, `webserver.py`,
    `song_writer.py`). Move the writing into one function.
@@ -68,6 +82,8 @@ Manual checks waiting for giopas (each stays here until reported back):
 - Windows and Linux: never tried live. Built and unit-tested only.
 - v0.27.0: the icon in the desktop app's window and Dock, in the native
   window, and as the favicon in a browser tab.
+- After item 2: a read-through of the README and the wiki, and a look at
+  the app's help texts, to confirm they sound like you.
 - After item 8: each package installed and started on a real system
   (macOS Apple silicon, macOS Intel, Windows, Linux).
 

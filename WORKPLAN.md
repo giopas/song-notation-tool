@@ -32,6 +32,39 @@ Work items, in order:
    every export: errors block it, warnings are shown.
 6. Golden-file tests: one anonymised song per layout feature, compared
    byte for byte (now possible since `build_pdf` takes a date).
+7. App icon (`feat/v0.27.0`). A logo for the app, chosen by giopas from a
+   few drafts, as in Swiss Knife 2.8.1: an SVG source, PNG sizes for the
+   web front end and the README, `packaging/icons/icon.icns` (macOS) and
+   `icon.ico` (Windows). Used as the window icon, the favicon of the web
+   front end, the README header and the wiki Home page. A test checks
+   that every icon file exists and that the build spec points to them.
+8. Standalone packages (`feat/v0.28.0`), built the way Swiss Knife 2.8
+   does it:
+   - a PyInstaller spec (`packaging/songnotation.spec`) and
+     `packaging/make_archive.py`, which names the files
+     `Song-Notation-Tool-<version>-<os>-<arch>.<ext>`;
+   - a `release.yml` workflow that runs on a version tag and builds on
+     macOS Apple silicon, macOS Intel, Windows and Linux, runs the tests,
+     smoke-tests each bundle (`--smoke`), and attaches the files and
+     `SHA256SUMS` to the GitHub release;
+   - macOS: a `.app` in a `.dmg` (and a `.zip`); Windows: an Inno Setup
+     installer and a `.zip`, with the installer tested by a silent
+     install, start and uninstall in the workflow; Linux: a `.tar.gz`
+     with a `.desktop` launcher;
+   - README and wiki: an install section per system, including the
+     unsigned-app warning and how to get past it;
+   - running from sources keeps working exactly as today.
+
+   To decide before building item 8:
+   - Which front end the package starts: the native window
+     (`webserver.py` with pywebview, as Swiss Knife does) or the Tkinter
+     desktop app (`song_writer.py`). Suggested: the native window.
+   - Whether to add an update check with *Update and restart*, as in Swiss
+     Knife 2.8.0. Suggested: not in the first package release.
+   - Signing and notarisation. Suggested: none, as decided for Swiss Knife
+     on 8 October, with the first-run warning documented.
+   - Linux format. Suggested: `.tar.gz` only, no AppImage unless someone
+     asks.
 
 Manual checks waiting for giopas (each stays here until reported back):
 
@@ -39,6 +72,8 @@ Manual checks waiting for giopas (each stays here until reported back):
 - Desktop app (Tkinter) and native window (pywebview) on the Mac after
   v0.26.4.
 - Windows and Linux: never tried live. Built and unit-tested only.
+- After item 8: each package installed and started on a real system
+  (macOS Apple silicon, macOS Intel, Windows, Linux).
 
 ## Release history
 
@@ -80,7 +115,7 @@ and readable on stage without the handwritten sheet.
 | 8 Oct 2026 | The PDF footer keeps the print date. `build_pdf` takes an optional date so tests compare bytes. |
 | 8 Oct 2026 | The `.sng` song file is saved in place, atomically, and renamed on Save without overwriting another song. Exports and imports never overwrite an existing file. |
 | 8 Oct 2026 | The interface is English only for now. No translation checks in releases. |
-| 8 Oct 2026 | Runs from source. No installer, packages or update check. |
+| 8 Oct 2026 | Standalone packages for macOS, Windows and Linux and an app icon are planned (items 7 and 8). Running from sources stays supported. |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

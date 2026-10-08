@@ -16,10 +16,10 @@
     </div>
     <div id="topbar-right">
       <button id="btn-help" class="icon-btn" title="How this works">?</button>
-      <button id="btn-notation-ref" class="btn subtle" title="Show all available chart-line notations">Notation ⌘</button>
+      <button id="btn-notation-ref" class="btn subtle" title="Everything you can type on a chart line">Notation ⌘</button>
       <button id="btn-transpose" class="btn" title="Transpose the whole song or one section, without rewriting what you typed">Transpose ↕</button>
-      <button id="btn-lyrics" class="btn" title="Paste, import or mark up lyrics, and hand each marked block to its section">Lyrics 📝</button>
-      <button id="btn-chords" class="btn" title="Chord shapes — the voicings you had to work out, printed once at the top or the bottom of the chart">Chords 🎸</button>
+      <button id="btn-lyrics" class="btn" title="Paste, import or mark up lyrics, and give each marked block to its section">Lyrics 📝</button>
+      <button id="btn-chords" class="btn" title="Chord shapes: the voicings you had to work out, printed once at the start or the end of the chart">Chords 🎸</button>
       <button id="btn-preview-toggle" class="btn">Preview</button>
       <button id="btn-save" class="btn">Save</button>
       <div class="dropdown">
@@ -31,7 +31,7 @@
           <button data-fmt="print">Print…</button>
         </div>
       </div>
-      <button id="btn-close" class="btn subtle" title="Save this song, then close the window (or stop the server if you're in a browser tab).">⏻ Save &amp; Close</button>
+      <button id="btn-close" class="btn subtle" title="Save this song, then close the window (or stop the server in a browser tab)">⏻ Save &amp; Close</button>
     </div>
   </header>
 
@@ -39,56 +39,53 @@
   <section id="help-strip" class="hidden">
     <h3>How this works</h3>
     <ul>
-      <li><strong>A song is a list of sections</strong> (Intro, Verse, Chorus…), each with a
-        name, an instrument, a repeat count, and one chart line.</li>
-      <li><strong>The chart line</strong> is typed, not clicked: chord/note symbols in order,
-        separated by spaces — e.g. <code>B F# G E</code>. Add a fret number right after a
-        symbol with no space to show it too — e.g. <code>5A</code> means "fret 5 on note A".</li>
-      <li><strong>Repeats</strong>: put <code>(x3)</code> after a section's repeat field, or
-        wrap part of a line in brackets with a repeat — <code>[5A 7D]x2</code> plays that pair
-        twice before continuing.</li>
-      <li><strong>Riffs</strong>: a block referenced by name in more than one section — edit it
-        once, every section using it updates. (Manage riffs from the desktop app for now.)</li>
-      <li><strong>Transpose</strong> shifts every chord/fret in a section (or the whole song)
-        by semitones, without rewriting what you typed — safe to undo by transposing back.</li>
-      <li><strong>Rest</strong>: type <code>rest</code> in a chart line to mark a measure where
-        you don't play — shows as "rest" in the chart and export.</li>
-      <li><strong>Tab grid</strong>: switch a section's render mode to "Tab" or "Both" (dropdown
-        in the section header) to show an editable tablature grid. Add measures with the
-        "+ Measure" button and type fret numbers into the cells.</li>
-      <li><strong>Long sections</strong>: put <code>//</code> where you want the
-        chart to break to a new line, and each line aligns its own columns.
-        <code>//&gt;</code> breaks <em>and</em> indents, so a phrase can sit
-        inside the one above it.</li>
-      <li><strong>Named licks</strong>: give a lick a name —
-        <code>{Riff1 = G 5 7 5 | D - - 3}</code> — and recall it anywhere else
-        in the song as <code>{Riff1}</code>, with a repeat if you like:
-        <code>{Riff1}x3</code>. Edit the lick once and every place that plays
-        it follows, the same way a section reference does.</li>
-      <li><strong>Lyrics</strong>: paste the words, import a .txt file, or search
-        for them online (nothing is fetched for you). Mark the sheet up with
-        <code>=== Verse 1 ===</code> lines — drag the section chips in the Lyrics
-        dialog — and "Split by markers" hands each block to its section. Markers
-        never print, and the words are never aligned to the chart. Whether and
-        where they print — all together at the start, the end or down a left
-        column, with each section, or not at all — is set in
-        <strong>⚙ Layout</strong>, bottom left.</li>
-      <li><strong>⚙ Layout</strong> (bottom left) holds every print setting:
-        size, columns, colour, section names, lyrics, licks, chord shapes.</li>
-      <li><strong>Chord shapes</strong>: the <strong>Chords</strong> button keeps a
-        list of voicings (<code>x32010</code> is C), printed as diagrams at the
-        start or the end of the chart.</li>
-      <li><strong>Licks</strong>: write a short tab figure inline with
-        <code>{G 5 7 5 | D - - 3}</code> — one line per string, printed in among
-        the chords at the point it's played.</li>
-      <li><strong>Free text</strong>: switch a section's render mode to "Free" for a plain
-        text box instead of a chart line — anything you type there is kept and exported
-        verbatim, for the bits this notation doesn't cover.</li>
-      <li><strong>The buttons beside the chart line</strong> drop notation at the cursor —
-        rests, repeat barlines, endings, groups, annotations — so you don't have to
-        remember the syntax.</li>
-      <li>A parse error in a chart line never clears what you typed — it's shown inline in red
-        under the field, and the last valid render stays visible above it.</li>
+      <li>A song is a list of sections (Intro, Verse, Chorus…). Each has a name, an
+        instrument, a repeat count and one chart line.</li>
+      <li>You type the chart line: chord or note symbols in order, separated by spaces,
+        such as <code>B F# G E</code>. Put a fret number right before a symbol, with no
+        space, to show it too: <code>5A</code> means fret 5 on A.</li>
+      <li>Repeats: set how many times a section plays in the number box in its header,
+        or put part of a line in brackets with a repeat. <code>[5A 7D]x2</code> plays
+        the pair twice, then carries on.</li>
+      <li>Riffs: a block used by name in more than one section. Edit it once and every
+        section that uses it changes. (Riffs are managed in the desktop app for now.)</li>
+      <li><strong>Transpose ↕</strong> shifts every chord and fret in a section, or the
+        whole song, by semitones without rewriting what you typed. Transposing back
+        undoes it.</li>
+      <li>Rests: type <code>rest</code> in a chart line for a measure you do not play.
+        It shows as "rest" in the chart and the export.</li>
+      <li>Tab grid: set a section's render mode to Tab or Both (the menu in the section
+        header) to get a tablature grid you can edit. Add measures with
+        <strong>+ Measure</strong> and type fret numbers into the cells.</li>
+      <li>Long sections: put <code>//</code> where the chart should start a new line.
+        Each line lines up its own columns. <code>//&gt;</code> starts a new line and
+        indents it, so a phrase can sit inside the one above.</li>
+      <li>Licks: write a short tab figure inline with <code>{G 5 7 5 | D - - 3}</code>,
+        one part per string. It prints among the chords, where it is played.</li>
+      <li>Named licks: give a lick a name, <code>{Riff1 = G 5 7 5 | D - - 3}</code>,
+        and play it again anywhere in the song as <code>{Riff1}</code>, with a repeat if
+        you like: <code>{Riff1}x3</code>. Edit the lick once and every place that plays
+        it follows, as with a section reference.</li>
+      <li><strong>Lyrics 📝</strong>: paste the words, import a .txt file, or search for
+        them online (nothing is fetched for you). Mark the sheet with
+        <code>=== Verse 1 ===</code> lines by dragging the section chips in the Lyrics
+        dialog, and <strong>Split by markers</strong> gives each block to its section.
+        Markers never print, and the words are never lined up with the chart. Whether
+        and where they print (all together at the start, at the end or down a left
+        column, with each section, or not at all) is set in <strong>⚙ Layout</strong>,
+        bottom left.</li>
+      <li><strong>⚙ Layout</strong> (bottom left) holds every print setting: size,
+        columns, colour, section names, lyrics, licks and chord shapes.</li>
+      <li><strong>Chords 🎸</strong> keeps a list of voicings (<code>x32010</code> is C)
+        and prints them as diagrams at the start or the end of the chart.</li>
+      <li>Free text: set a section's render mode to Free for a plain text box instead of
+        a chart line. What you type there is kept and exported exactly as typed, for
+        whatever this notation does not cover.</li>
+      <li>The buttons beside the chart line put notation in at the cursor (rests, repeat
+        barlines, endings, groups, annotations), so you do not have to remember how to
+        write it.</li>
+      <li>A parse error never clears what you typed. It shows in red under the field, and
+        the last good chart stays visible above it.</li>
     </ul>
   </section>
 
@@ -112,10 +109,10 @@
           <button id="btn-reveal-songs" class="btn subtle hidden"
                   title="Open this folder in Finder">Reveal</button>
           <button id="btn-songs-folder" class="btn subtle hidden"
-                  title="Choose a different folder for your songs — and move them there, if you want">Change…</button>
+                  title="Choose a different folder for your songs, and move them there if you want">Change…</button>
         </div>
         <span class="songs-folder-hint hidden">Changing and moving the folder
-          works in the app's own window. In a browser tab, run with
+          works in the app's own window. In a browser tab, start the server with
           <code>--dir</code> to use a different folder.</span>
       </div>
 
@@ -135,24 +132,24 @@
     <div id="layout-panel" class="layout-panel hidden" role="dialog"
          aria-label="Layout settings">
       <div class="layout-panel-head">
-        <span>Layout — how this song prints</span>
+        <span>Layout: how this song prints</span>
         <button id="layout-close" class="icon-btn" title="Close (Esc)">×</button>
       </div>
 
       <div class="layout-group">
         <div class="layout-group-title">Page</div>
         <label>Size <select id="meta-scale"></select></label>
-        <p class="layout-hint">Fit to page grows the type to fill the paper; fit to one page shrinks it if that's what it takes to get the whole song on one sheet.</p>
+        <p class="layout-hint">Fit to page enlarges the type to fill the paper. Fit to one page shrinks it as far as needed to get the whole song on one sheet.</p>
         <label>Columns <select id="meta-columns"></select></label>
-        <p class="layout-hint" id="layout-columns-hint">Two columns halve the height a chart needs, and the fit spends that on bigger type. Auto only splits the page when it helps.</p>
+        <p class="layout-hint" id="layout-columns-hint">Two columns halve the height a chart needs, and the fit uses the space for bigger type. Auto only splits the page when that helps.</p>
         <label>Colour <select id="meta-color"></select></label>
-        <p class="layout-hint">Colour tells section types apart at a glance; the notes stay black either way.</p>
+        <p class="layout-hint">Colour tells section types apart at a glance. The notes stay black either way.</p>
       </div>
 
       <div class="layout-group">
         <div class="layout-group-title">Sections</div>
         <label>Section names <select id="meta-layout"></select></label>
-        <p class="layout-hint">A band above each section, or a column down its left — the column fits far more on a page.</p>
+        <p class="layout-hint">A band above each section, or a column down its left. The column fits far more on a page.</p>
       </div>
 
       <div class="layout-group">
@@ -164,9 +161,9 @@
       <div class="layout-group">
         <div class="layout-group-title">Licks &amp; chords</div>
         <label>Recalled licks <select id="meta-lick-refs"></select></label>
-        <p class="layout-hint">{Riff1} as its tab again, or just its name and count — "Riff1 (x3)".</p>
+        <p class="layout-hint">{Riff1} printed as its tab again, or only its name and count: "Riff1 (x3)".</p>
         <label>Chord shapes <select id="meta-chord-sheet"></select></label>
-        <p class="layout-hint">Shapes are edited from Chords 🎸 in the toolbar.</p>
+        <p class="layout-hint">Edit the shapes with Chords 🎸 in the toolbar.</p>
       </div>
     </div>
 
@@ -174,7 +171,7 @@
       <!-- First-launch / empty state -->
       <section id="start-here" class="hidden">
         <h2>Start here</h2>
-        <p>Nothing open yet. Pick one:</p>
+        <p>Nothing is open yet. Pick one:</p>
         <div id="start-actions">
           <button id="start-new" class="btn accent">New song</button>
           <button id="start-example" class="btn">Open example</button>
@@ -197,12 +194,12 @@
 
         <div id="section-list"></div>
 
-        <button id="btn-add-section" class="btn subtle" title="Insert a new section (Verse, Chorus…) at the end, empty and ready to fill in.">+ Add section</button>
+        <button id="btn-add-section" class="btn subtle" title="Add an empty section (Verse, Chorus…) at the end">+ Add section</button>
       </section>
 
       <section id="preview-pane" class="hidden">
         <div id="preview-header">
-          <span>Preview — how this will look exported</span>
+          <span>Preview: how the export will look</span>
           <button id="btn-preview-close" class="icon-btn" title="Close preview">×</button>
         </div>
         <pre id="preview-text"></pre>
@@ -273,9 +270,9 @@
            "=== Verse 1 ===" marker where that section's words start. -->
       <div id="lyrics-chips" class="lyrics-chips"></div>
       <p class="modal-hint lyrics-marker-hint hidden" id="lyrics-marker-hint">
-        Drag a section into the sheet — or click it — to mark where its words
+        Drag a section into the sheet, or click it, to mark where its words
         begin. Markers show here and never print. <strong>Split by markers</strong>
-        then hands each block to its section.
+        then gives each block to its section.
       </p>
       <!-- The overlay behind the textarea draws the marker lines in colour:
            a textarea can't style its own content, and the alternative (a
@@ -298,21 +295,21 @@
           <button id="lyrics-import" class="btn subtle">Import from file…</button>
           <button id="lyrics-search" class="btn subtle">Search online ↗</button>
           <button id="lyrics-add-section" class="btn subtle hidden"
-                  title="Create a section from here — it appears in the editor behind this dialog, and a marker for it is dropped at the cursor.">+ Section…</button>
+                  title="Create a section from here. It appears in the editor behind this dialog, and its marker goes in at the cursor.">+ Section…</button>
           <button id="lyrics-apply-markers" class="btn subtle hidden"
-                  title="Hand each marked block to the section it names. Sections the sheet doesn't name are left exactly as they are.">Split by markers</button>
+                  title="Give each marked block to the section it names. Sections the sheet does not name are left as they are.">Split by markers</button>
           <button id="lyrics-split" class="btn subtle hidden"
-                  title="No markers? Split this sheet on blank lines instead and choose which section gets which block.">Split on blank lines…</button>
+                  title="For a sheet without markers: split it at blank lines and choose which section gets which block.">Split on blank lines…</button>
           <input id="lyrics-file-input" type="file" accept=".txt,text/plain" class="hidden">
         </div>
         <button id="lyrics-close" class="btn accent">Done</button>
       </div>
-      <p class="modal-hint">A reference layer, never aligned to the chart automatically.
-        Where the words print — all together at the start, the end or down a
-        left-hand column, with each section, or not at all — is set in
-        <strong>⚙ Layout</strong> at the bottom left. "Search online ↗" asks for the
-        song title and artist, then opens a DuckDuckGo search in a new tab; nothing is
-        fetched or pasted in for you.</p>
+      <p class="modal-hint">The words are kept for reference and never lined up with
+        the chart automatically. Where they print (all together at the start, at the end
+        or down a left-hand column, with each section, or not at all) is set in
+        <strong>⚙ Layout</strong> at the bottom left. <strong>Search online ↗</strong>
+        asks for the song title and artist, then opens a DuckDuckGo search in a new tab.
+        Nothing is fetched or pasted in for you.</p>
     </div>
   </div>
 
@@ -327,9 +324,9 @@
       </div>
       <p id="folder-summary" class="folder-summary"></p>
       <p id="folder-clashes" class="modal-hint folder-clashes hidden"></p>
-      <p class="modal-hint">Only song files (<code>.sng</code>) move; anything else in the
-        folder stays put. A song that already exists in the new folder is never
-        overwritten, and the old folder isn't deleted.</p>
+      <p class="modal-hint">Only song files (<code>.sng</code>) move, and anything else in
+        the folder stays where it is. A song that already exists in the new folder is
+        never overwritten, and the old folder is not deleted.</p>
       <div class="modal-actions" style="justify-content: space-between;">
         <button id="folder-cancel" class="btn subtle">Cancel</button>
         <div>
@@ -346,11 +343,11 @@
     <div class="modal modal-wide">
       <h3>Chord shapes</h3>
       <p class="modal-hint" style="margin-top:0">
-        A fret per string, lowest string first — the way a chord chart writes it:
-        <code>x32010</code> is C, <code>320003</code> is G. Frets past the ninth need
-        spaces: <code>x 0 12 12 12 x</code>. Use <code>x</code> for a string you don't
-        sound. They print as a block of diagrams, once, wherever
-        <strong>⚙ Layout → Chord shapes</strong> (bottom left) says.
+        One fret per string, lowest string first, as a chord chart writes it:
+        <code>x32010</code> is C, <code>320003</code> is G. Frets above 9 need
+        spaces: <code>x 0 12 12 12 x</code>. Use <code>x</code> for a string you do not
+        play. The shapes print once, as a block of diagrams, where
+        <strong>⚙ Layout</strong> → Chord shapes (bottom left) says.
       </p>
       <p id="chords-transposed" class="modal-hint chord-transposed hidden"></p>
       <div id="chords-rows" class="chord-rows"></div>
@@ -359,7 +356,7 @@
         <div>
           <button id="chords-add" class="btn subtle">+ Chord</button>
           <button id="chords-from-chart" class="btn subtle"
-                  title="Add a row for every chord the chart plays that has no shape yet — as printed, so after any transpose. Guitar sections only, if the song has any.">+ From chart</button>
+                  title="Add a row for every chord the chart plays that has no shape yet, as printed (so after any transpose). Only guitar sections count, if the song has any.">+ From chart</button>
           <label class="chord-where">Print
             <select id="chords-where"></select>
           </label>
@@ -376,7 +373,7 @@
       <h3>Split lyrics into sections</h3>
       <p class="modal-hint" style="margin-top:0">
         One row per section, one block per row. The same block can go to as many
-        sections as sing it — a chorus is written once and played three times.
+        sections as sing it, so a chorus written once can be played three times.
       </p>
       <div id="lyrics-split-rows" class="split-rows"></div>
       <p class="modal-hint">Whether and where the words print is set in
@@ -385,43 +382,43 @@
         <button id="lyrics-split-cancel" class="btn subtle">Cancel</button>
         <button id="lyrics-split-apply" class="btn accent">Assign</button>
       </div>
-      <p class="modal-hint">The whole-song sheet is kept exactly as it is — add a
-        section later and its blocks are still here to give it one. It stops printing
-        on its own, though, so the same words don't land on the chart twice.</p>
+      <p class="modal-hint">The whole-song sheet is kept as it is, so a section you add
+        later can still be given one of its blocks. The sheet itself stops printing,
+        so the same words do not appear on the chart twice.</p>
     </div>
   </div>
 
   <!-- Notation reference modal -->
   <div id="notation-ref-backdrop" class="modal-backdrop hidden">
     <div class="modal modal-wide">
-      <h3>Notation Reference</h3>
+      <h3>Notation reference</h3>
       <p class="modal-hint" style="margin-top:0">Everything you can type in a chart line, at a glance.</p>
 
       <div class="notation-ref-body">
         <table class="notation-ref-table">
           <thead><tr><th>What</th><th>Syntax</th><th>Example</th></tr></thead>
           <tbody>
-            <tr><td>Chord / note</td><td>Symbol, optionally with quality suffix</td><td><code>B</code> <code>F#</code> <code>Am7</code> <code>C/G</code></td></tr>
-            <tr><td>Fret + note</td><td>Fret number (0–24) directly before symbol</td><td><code>5A</code> <code>7D</code> <code>10G</code> <code>0E</code></td></tr>
-            <tr><td>Group / repeat</td><td>Wrap in <code>[ ]</code> with <code>xN</code> after bracket</td><td><code>[5A 7D]x2</code> <code>[C G]x4</code></td></tr>
-            <tr><td>Standalone repeat</td><td><code>xN</code> after a riff or section reference — with a space: <code>riff1x3</code> would be a riff <em>named</em> riff1x3. A single chord repeats as a group</td><td><code>riff1 x3</code> <code>=verse1 x2</code> <code>[Am]x3</code></td></tr>
+            <tr><td>Chord / note</td><td>Symbol, with an optional quality suffix</td><td><code>B</code> <code>F#</code> <code>Am7</code> <code>C/G</code></td></tr>
+            <tr><td>Fret + note</td><td>Fret number (0 to 24) directly before the symbol</td><td><code>5A</code> <code>7D</code> <code>10G</code> <code>0E</code></td></tr>
+            <tr><td>Group / repeat</td><td>Put it in <code>[ ]</code> with <code>xN</code> after the bracket</td><td><code>[5A 7D]x2</code> <code>[C G]x4</code></td></tr>
+            <tr><td>Standalone repeat</td><td><code>xN</code> after a riff or section reference, with a space: <code>riff1x3</code> would be a riff named riff1x3. A single chord repeats as a group</td><td><code>riff1 x3</code> <code>=verse1 x2</code> <code>[Am]x3</code></td></tr>
             <tr><td>Annotation</td><td>Double-quoted text, or the Annotation field under the section</td><td><code>"keep it simple"</code></td></tr>
             <tr><td>Line break</td><td><code>//</code> anywhere on the line</td><td><code>5A 5D // 8F 5D</code></td></tr>
-            <tr><td>Line break, indented</td><td><code>//&gt;</code> — one <code>&gt;</code> per step of indent</td><td><code>5A //&gt; 8F //&gt;&gt; 5D</code></td></tr>
+            <tr><td>Line break, indented</td><td><code>//&gt;</code>, one <code>&gt;</code> per step of indent</td><td><code>5A //&gt; 8F //&gt;&gt; 5D</code></td></tr>
             <tr><td>Lick (inline tab)</td><td><code>{ }</code> with one <code>|</code>-separated line per string: its name, then its frets. Prints as blue tab; the <code>{ tab }</code> button inserts an empty grid for this section's instrument</td><td><code>{G 5 7 5 | D - - 3}</code></td></tr>
             <tr><td>Named lick</td><td><code>name =</code> at the front of a lick; prints the name in front of its tab. The <code>{ name = tab }</code> button fills a name in</td><td><code>{Riff1 = G 5 7 5 | D - - 3}</code></td></tr>
-            <tr><td>Recall a lick</td><td>The name in braces — <em>not</em> <code>=</code>, which is for sections. Plays the lick again, with an optional repeat</td><td><code>{Riff1}</code> <code>{Riff1}x3</code></td></tr>
-            <tr><td>Group with a lick</td><td>A group isn't just bare chords — wrap chords and a lick together and the whole phrase repeats, tab and all</td><td><code>[3B 2F# {Riff3 = G - - | D 4 -}]x4</code></td></tr>
-            <tr><td>Riff reference</td><td>Bare identifier (not a chord name)</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
+            <tr><td>Recall a lick</td><td>The name in braces (not <code>=</code>, which is for sections). Plays the lick again, with an optional repeat</td><td><code>{Riff1}</code> <code>{Riff1}x3</code></td></tr>
+            <tr><td>Group with a lick</td><td>A group can hold more than chords: put chords and a lick together and the whole phrase repeats, tab included</td><td><code>[3B 2F# {Riff3 = G - - | D 4 -}]x4</code></td></tr>
+            <tr><td>Riff reference</td><td>A plain name that is not a chord</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
             <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
             <tr><td>Transpose shift</td><td><code>+N</code> or <code>-N</code> as its own word after a riff or section reference (after its repeat, if it has one)</td><td><code>riff1 +2</code> <code>=verse1 -1</code> <code>riff1 x2 +3</code></td></tr>
           </tbody>
         </table>
 
         <h4>Breaking a section over several lines</h4>
-        <p>A long section reads better grouped into the phrases you'd write out
-          by hand. <code>//</code> anywhere on the chart line starts a new line
-          at that point:</p>
+        <p>A long section reads better split into the phrases you would write by
+          hand. <code>//</code> anywhere on the chart line starts a new line
+          there:</p>
         <p><code>5A 5D // 8F 5D 7E // 5A 5A 8F</code></p>
         <p>prints as</p>
         <pre>  5  5
@@ -430,13 +427,12 @@
   F  D  E
   5  5  8
   A  A  F</pre>
-        <p>Each line aligns its own columns — that's the point of breaking,
-          rather than having one grid stretch across the whole section. It's
-          purely a layout mark: it plays nothing, and the chart line itself
-          stays a single line you can edit.</p>
-        <p>Add <code>&gt;</code> to push that line in — <code>//&gt;</code> for one
-          step, <code>//&gt;&gt;</code> for two — so a phrase can sit visibly
-          inside the one above it:</p>
+        <p>Each line lines up its own columns, so one grid does not stretch across
+          the whole section. The break only affects layout: it plays nothing, and
+          the chart line itself stays one line you can edit.</p>
+        <p>Add <code>&gt;</code> to indent the line, <code>//&gt;</code> for one
+          step and <code>//&gt;&gt;</code> for two, so a phrase can sit inside the
+          one above it:</p>
         <p><code>5A 5D //&gt; 8F 5D 7E // 5A 5A 8F</code></p>
         <pre>  5  5
   A  D
@@ -445,96 +441,93 @@
   5  5  8
   A  A  F</pre>
 
-        <h4>Licks — a bit of tab, in among the chords</h4>
-        <p>Some things aren't a chord. When you want to remember the actual
-          notes of a short figure, write it in braces at the point it's
-          played:</p>
+        <h4>Licks: a bit of tab among the chords</h4>
+        <p>Some things are not chords. To remember the actual notes of a short
+          figure, write it in braces where it is played:</p>
         <p><code>C {G 5 7 5 | D - - 3} G Am</code></p>
-        <p>Each <code>|</code>-separated line is one string — its name, then its
-          frets. Positions line up by column across the lines, so a fret on
-          <code>G</code> at the third position sounds with whatever is third on
-          <code>D</code>; <code>-</code> means that string isn't played there, and
-          <code>x</code> means muted. Write as many lines as the figure needs.</p>
-        <p>It prints as tab — one row per string, the string named in a box at
-          the left — sitting under its own column in the chart row, so it stays
-          where it belongs in the sequence rather than being exiled to a separate
-          grid:</p>
+        <p>Each part between <code>|</code> is one string: its name, then its
+          frets. Positions line up by column across the strings, so a fret third on
+          <code>G</code> sounds with whatever is third on <code>D</code>.
+          <code>-</code> means the string is not played there, and <code>x</code>
+          means muted. Write as many strings as the figure needs.</p>
+        <p>It prints as tab, one row per string with the string name in a box on
+          the left, under its own column in the chart row. That keeps it in its
+          place in the sequence instead of in a separate grid:</p>
         <pre>|G|-5-7-5-|
 |D|-----3-|</pre>
-        <p>On screen and in a colour PDF a lick is <strong>blue</strong>: it isn't a
-          chord symbol and shouldn't read as one at a glance. The
-          <code>{ tab }</code> button beside the chart line inserts an empty
-          one — every string of that section's instrument, six positions wide —
-          so you type frets over dashes instead of deleting an example first.
-          A <code>G: 5 7 5</code> spelling works too if the colon reads better to
-          you. Transposing a section moves a lick's frets with it — same strings,
-          shifted positions.</p>
+        <p>On screen and in a colour PDF a lick is blue, so it is not mistaken for
+          a chord symbol at a glance. The <code>{ tab }</code> button beside the
+          chart line inserts an empty one (every string of the section's
+          instrument, six positions wide), so you type frets over dashes instead of
+          deleting an example first. <code>G: 5 7 5</code>, with a colon, works too
+          if you find it easier to read. Transposing a section moves a lick's frets
+          with it: same strings, shifted positions.</p>
 
         <h4>Marks</h4>
-        <p class="modal-hint" style="margin-top:0">These are the standard sheet-music
-          symbols, written out as plain text you can type. They exist so a repeated part
-          is written once and pointed at, instead of copied out again — which is what
-          keeps a song on one page.</p>
+        <p class="modal-hint" style="margin-top:0">These are the usual sheet-music
+          symbols, written as plain text you can type. They let you write a repeated
+          part once and point back to it instead of copying it out again, which is how
+          a song stays on one page.</p>
         <table class="notation-ref-table">
           <thead><tr><th>Type</th><th>Name</th><th>What it tells the player</th></tr></thead>
           <tbody>
             <tr><td><code>|:</code></td><td>Repeat-open</td>
                 <td>Start of a repeated stretch. Opens the section that <code>:|</code> closes.</td></tr>
             <tr><td><code>:|</code></td><td>Repeat-close</td>
-                <td>End of a repeated stretch — go back to the last <code>|:</code> (or to the
-                    start of the song if there isn't one) and play it through once more.</td></tr>
+                <td>End of a repeated stretch: go back to the last <code>|:</code> (or to the
+                    start of the song if there is none) and play it through once more.</td></tr>
             <tr><td><code>|1.</code></td><td>1st ending</td>
-                <td>Play this the <em>first</em> time through the repeat, then go back.
+                <td>Play this the first time through the repeat, then go back.
                     Everything after the mark belongs to the ending, up to the next one.</td></tr>
             <tr><td><code>|2.</code></td><td>2nd ending</td>
-                <td>Skip the 1st ending on the way through the second time and play this
-                    instead, then carry on. The usual "two different last bars" case.</td></tr>
+                <td>The second time through, skip the 1st ending and play this instead,
+                    then carry on. Use it when the last bars differ between the passes.</td></tr>
             <tr><td><code>//</code></td><td>Line break</td>
-                <td>Layout only — start a new line here. Plays nothing.</td></tr>
+                <td>Layout only: start a new line here. Plays nothing.</td></tr>
             <tr><td><code>//&gt;</code></td><td>Line break, indented</td>
                 <td>As above, with the new line pushed in one step per <code>&gt;</code>.</td></tr>
             <tr><td><code>%</code></td><td>Simile</td>
-                <td>Play this bar exactly like the previous one. Saves rewriting a
-                    groove that doesn't change.</td></tr>
+                <td>Play this bar exactly like the previous one, so a groove that does not
+                    change is written only once.</td></tr>
             <tr><td><code>rest</code></td><td>Rest / tacet</td>
-                <td>Don't play here — silence for this measure. Worth writing down: an
-                    intentional gap and a forgotten bar look the same otherwise.</td></tr>
+                <td>Do not play here: silence for this measure. Worth writing down, because
+                    otherwise a planned gap and a forgotten bar look the same.</td></tr>
             <tr><td><code>segno</code></td><td>Segno (𝄋)</td>
-                <td>A named place-marker. On its own it does nothing; it's the point
+                <td>A place marker. On its own it does nothing; it is the point
                     <code>ds</code> sends you back to. Italian for "sign".</td></tr>
             <tr><td><code>coda</code></td><td>Coda (𝄌)</td>
-                <td>Marks the tail end — the separate final passage you jump to after
+                <td>Marks the ending: the separate final passage you jump to after
                     the last repeat, instead of playing the section out as written.
                     Italian for "tail".</td></tr>
-            <tr><td><code>dc</code></td><td>D.C. — <em>da capo</em></td>
+            <tr><td><code>dc</code></td><td>D.C. (<em>da capo</em>)</td>
                 <td>"From the top": go back to the very beginning of the song and play
                     through again from there.</td></tr>
-            <tr><td><code>ds</code></td><td>D.S. — <em>dal segno</em></td>
-                <td>"From the sign": go back to the <code>segno</code> mark — not to the
-                    start — and play on from there. Use it when the repeat begins
-                    partway in, after an intro you don't play twice.</td></tr>
+            <tr><td><code>ds</code></td><td>D.S. (<em>dal segno</em>)</td>
+                <td>"From the sign": go back to the <code>segno</code> mark, not to the
+                    start, and play on from there. Use it when the repeat begins
+                    partway in, after an intro you do not play twice.</td></tr>
           </tbody>
         </table>
 
-        <p class="modal-hint"><strong>The common shape:</strong> a song ends
-          <code>ds</code> (or <code>dc</code>), you play back through from the
-          <code>segno</code>, and on that second pass you break off at
-          <code>coda</code> for the real ending. Written out in full that's three
-          near-identical pages; with these marks it's three words.</p>
+        <p class="modal-hint">The usual shape: a song ends with <code>ds</code> (or
+          <code>dc</code>), you play back through from the <code>segno</code>, and on
+          that second pass you break off at <code>coda</code> for the real ending.
+          Written out in full that is three almost identical pages; with these marks it
+          is three words.</p>
 
-        <p class="modal-hint">None of these change the notes — they only change the
-          <em>order</em> you play them in. The buttons beside each chart line insert
-          any of them at the cursor, so you never have to remember the exact spelling.</p>
+        <p class="modal-hint">None of these change the notes, only the order you play
+          them in. The buttons beside each chart line insert any of them at the cursor,
+          so you do not have to remember the spelling.</p>
 
         <h4>Render modes</h4>
-        <p><strong>Chart</strong> — chord/note symbols in a row (the chart line).<br>
-           <strong>Tab</strong> — editable tablature grid (fret numbers on strings).<br>
-           <strong>Both</strong> — chart line above, tab grid below.<br>
-           <strong>Free</strong> — a plain multi-line text box instead. Nothing in it is
-           parsed, transposed, or validated; it's printed in the TXT/PDF export exactly
-           as typed. Use it for a section the notation above doesn't cover.</p>
-        <p class="modal-hint">Switch with the dropdown in each section's header. The tab grid
-           has its own "+ Measure" button and beats-per-measure selector.</p>
+        <p>Chart: chord and note symbols in a row (the chart line).<br>
+           Tab: a tablature grid you can edit (fret numbers on strings).<br>
+           Both: the chart line above, the tab grid below.<br>
+           Free: a plain text box instead. Nothing in it is parsed, transposed or
+           checked, and the TXT and PDF exports print it exactly as typed. Use it for a
+           section the notation above does not cover.</p>
+        <p class="modal-hint">Switch with the menu in each section's header. The tab grid
+           has its own <strong>+ Measure</strong> button and a beats-per-measure menu.</p>
       </div>
 
       <div class="modal-actions">
@@ -549,10 +542,10 @@
       <div class="section-head">
         <span class="drag-handle" title="Section order">⠿</span>
         <input class="sec-name" type="text" title="Section name, e.g. Verse 1">
-        <select class="sec-type" title="Section type — controls the accent color"></select>
+        <select class="sec-type" title="Section type, which sets its colour"></select>
         <select class="sec-instrument" title="Instrument / tuning for this section"></select>
-        <input class="sec-repeat" type="number" min="1" title="How many times this section is played consecutively">
-        <select class="sec-render" title="Render mode: Chart (chords/notes), Tab (tablature grid), Both, or Free text (anything you like, kept verbatim)">
+        <input class="sec-repeat" type="number" min="1" title="How many times this section is played in a row">
+        <select class="sec-render" title="Render mode: Chart (chords and notes), Tab (tablature grid), Both, or Free (any text, kept as typed)">
           <option value="chart">Chart</option>
           <option value="tab">Tab</option>
           <option value="both">Both</option>
@@ -560,43 +553,43 @@
         </select>
         <button class="btn icon-btn sec-up" title="Move up">↑</button>
         <button class="btn icon-btn sec-down" title="Move down">↓</button>
-        <button class="btn icon-btn sec-dup" title="Duplicate as reference — same as this section rather than a copy">⧉</button>
+        <button class="btn icon-btn sec-dup" title="Duplicate as reference: points to this section instead of copying it">⧉</button>
         <button class="btn icon-btn sec-del" title="Delete section">🗑</button>
       </div>
       <div class="sec-line-row">
         <input class="sec-chart-line" type="text" placeholder="Type the chart line, e.g. B F# G E   or  [C D]x2 G"
-               title="Chord/fret symbols in order, space separated. Add a fret directly after a symbol (5A). Wrap and repeat with [ ]xN.">
+               title="Chord and fret symbols in order, separated by spaces. Put a fret right before a symbol (5A). Group and repeat with [ ]xN.">
         <!-- Quick-insert palette: every button drops its notation at the
              caret, so the chart line stays typed text you can still edit
              by hand. data-ins is the literal text; data-caret is how far
              back from the end to leave the caret (e.g. inside [ ] or " "). -->
         <div class="sec-insert-strip" title="Insert notation at the cursor">
-          <button type="button" class="ins-btn" data-ins="//" title="Line break — start a new line here in the export, print and preview">//</button>
-          <button type="button" class="ins-btn" data-ins="//&gt;" title="Line break, indented — start a new line pushed in one step. Add more &gt; for deeper.">//&gt;</button>
-          <button type="button" class="ins-btn" data-ins="rest" title="Rest / tacet — a measure you don't play">rest</button>
-          <button type="button" class="ins-btn" data-ins="%" title="Simile — play like the previous bar">%</button>
+          <button type="button" class="ins-btn" data-ins="//" title="Line break: start a new line here in the export, print and preview">//</button>
+          <button type="button" class="ins-btn" data-ins="//&gt;" title="Line break, indented: start a new line, indented one step. Add more &gt; to indent further.">//&gt;</button>
+          <button type="button" class="ins-btn" data-ins="rest" title="Rest / tacet: a measure you do not play">rest</button>
+          <button type="button" class="ins-btn" data-ins="%" title="Simile: play like the previous bar">%</button>
           <button type="button" class="ins-btn" data-ins="|:" title="Repeat-open barline">|:</button>
           <button type="button" class="ins-btn" data-ins=":|" title="Repeat-close barline">:|</button>
           <button type="button" class="ins-btn" data-ins="|1." title="1st ending">|1.</button>
           <button type="button" class="ins-btn" data-ins="|2." title="2nd ending">|2.</button>
           <button type="button" class="ins-btn" data-ins="x2" title="Repeat the item before the cursor twice">x2</button>
-          <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat — caret lands inside the brackets">[ ]x2</button>
+          <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat; the cursor lands inside the brackets">[ ]x2</button>
           <button type="button" class="ins-btn" data-ins="&quot;&quot;" data-caret="1" title="Free annotation in quotes">&quot;&quot;</button>
-          <button type="button" class="ins-btn" data-ins-lick="6" title="A lick: a short tab figure printed in among the chords. Inserts an empty grid — every string of this section's instrument, six positions wide — for you to type frets over.">{ tab }</button>
-          <button type="button" class="ins-btn" data-ins-lick-named="6" title="The same, but named: the lick prints with its name over it and can be recalled anywhere else in the song as {Riff1}, the way a section reference works.">{ name = tab }</button>
+          <button type="button" class="ins-btn" data-ins-lick="6" title="A lick: a short tab figure printed among the chords. Inserts an empty grid (every string of this section's instrument, six positions wide) to type frets over.">{ tab }</button>
+          <button type="button" class="ins-btn" data-ins-lick-named="6" title="The same, with a name: the lick prints with its name in front and can be played again anywhere in the song as {Riff1}, like a section reference.">{ name = tab }</button>
           <!-- Every lick already named in this song, one button each:
                inserts the reference rather than the notes. Filled in by
                renderLickChips(). -->
           <span class="sec-lick-refs"></span>
           <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
           <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
-          <button type="button" class="ins-btn" data-ins="dc" title="D.C. — repeat from the beginning">dc</button>
-          <button type="button" class="ins-btn" data-ins="ds" title="D.S. — repeat from the segno">ds</button>
+          <button type="button" class="ins-btn" data-ins="dc" title="D.C.: repeat from the beginning">dc</button>
+          <button type="button" class="ins-btn" data-ins="ds" title="D.S.: repeat from the segno">ds</button>
         </div>
       </div>
       <textarea class="sec-free-text hidden" rows="6" spellcheck="false"
-                placeholder="Free text — anything you like, kept exactly as typed and printed as-is in the export."
-                title="This section is free text: nothing here is parsed, transposed, or validated."></textarea>
+                placeholder="Free text: anything you like, kept and exported exactly as typed."
+                title="This section is free text: nothing here is parsed, transposed or checked."></textarea>
       <div class="sec-preview">
         <div class="sec-preview-fret"></div>
         <div class="sec-preview-sym"></div>
@@ -606,10 +599,10 @@
            displayed it — so once set it could never be seen or removed.
            One visible field, in every render mode. -->
       <input class="sec-annotation" type="text"
-             placeholder="Annotation (optional) — printed in quotes under this section"
+             placeholder="Annotation (optional), printed in quotes under this section"
              title="A free note printed under this section in the export. Clear it to remove it.">
       <div class="sec-error hidden"></div>
-      <div class="sec-empty-hint hidden">This section has no measures yet — type a chart line above to start entering notes.</div>
+      <div class="sec-empty-hint hidden">This section has no measures yet. Type a chart line above to start.</div>
       <div class="sec-tab-grid hidden">
         <div class="tab-grid-toolbar">
           <button class="btn subtle tab-add-measure" title="Add a measure to this section's tab grid">+ Measure</button>

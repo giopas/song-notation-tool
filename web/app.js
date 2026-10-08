@@ -211,11 +211,11 @@ async function openExampleSong() {
 //  to look instead of a row of dropdowns that kept growing.
 // ---------------------------------------------------------------------------
 const LYRICS_HINTS = {
-  none: "Nothing prints. The words stay in the Lyrics dialog as reference.",
+  none: "Nothing prints. The words stay in the Lyrics dialog for reference.",
   start: "Every section's words in one block before the chart, each under its section's name.",
   end: "Every section's words in one block after the chart, each under its section's name.",
-  side: "Every section's words down a column on the left, the chart in one column beside them. Columns steps aside.",
-  beside: "Each section's words in a column to the right of its own chart: what you play during them. Nothing is aligned chord-to-syllable.",
+  side: "Every section's words down a column on the left, with the chart in one column beside them. This sets the columns, so Columns is greyed out.",
+  beside: "Each section's words in a column to the right of its own chart, next to what you play under them. Chords are not lined up with syllables.",
   below: "Each section's words printed under its own chart.",
 };
 
@@ -241,7 +241,7 @@ function refreshLayoutPanel() {
   cols.disabled = side;
   document.getElementById("layout-columns-hint").textContent = side
     ? "Set by the lyrics: their column on the left, one chart column beside it."
-    : "Two columns halve the height a chart needs, and the fit spends that on bigger type. Auto only splits the page when it helps.";
+    : "Two columns halve the height a chart needs, and the fit uses the space for bigger type. Auto only splits the page when that helps.";
 
   const bits = [optionLabel("meta-scale")];
   if (!side) bits.push(optionLabel("meta-columns").replace(/\s*\(.*\)$/, ""));
@@ -800,7 +800,7 @@ function rebuildTabGrid(node, sec) {
 
   if (!measures.length) {
     body.innerHTML = '<p style="color:var(--lbl-gray);font-size:12px;font-style:italic;margin:4px 0;">' +
-      'No measures yet — click "+ Measure" to add one.</p>';
+      'No measures yet. Click "+ Measure" to add one.</p>';
     return;
   }
 
@@ -1032,7 +1032,7 @@ async function saveCurrent() {
   const saved = (res && res.filename) || currentFilename;
   const renamed = saved !== currentFilename;
   currentFilename = saved;
-  toast(renamed ? `Saved — the file is now "${saved}"` : `Saved ${saved}`);
+  toast(renamed ? `Saved. The file is now "${saved}"` : `Saved ${saved}`);
   refreshSongList();
 }
 
@@ -1053,7 +1053,7 @@ async function saveAndClose() {
     // The server may tear down before this response makes it back —
     // that's expected, not a failure.
   }
-  setTimeout(() => showClosedOverlay("Closed — you can close this window now."), 600);
+  setTimeout(() => showClosedOverlay("Closed. You can close this window now."), 600);
 }
 
 function showClosedOverlay(message) {
@@ -1079,7 +1079,7 @@ async function printCurrent() {
   if (api && api.print_document) {
     const res = await api.print_document(currentDoc, "portrait");
     toast(res && res.ok
-      ? "Opened in your PDF viewer — print from there"
+      ? "Opened in your PDF viewer. Print from there."
       : `Print failed: ${(res && res.error) || "unknown error"}`);
     return;
   }
@@ -1095,9 +1095,9 @@ async function printCurrent() {
   const url = URL.createObjectURL(await res.blob());
   const win = window.open(url, "_blank");
   if (!win) {
-    toast("Allow pop-ups to print, or export the PDF and print that");
+    toast("Allow pop-ups to print, or export the PDF and print that.");
   } else {
-    toast("Opened in a new tab — print from there");
+    toast("Opened in a new tab. Print from there.");
   }
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
@@ -1158,7 +1158,7 @@ async function exportCurrent(kind) {
   a.href = dlUrl; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(dlUrl);
-  toast(`Downloaded ${filename} — check your browser's downloads folder`);
+  toast(`Downloaded ${filename}. It is in your browser's downloads folder.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1212,7 +1212,7 @@ async function changeSongsFolder() {
   const cl = document.getElementById("folder-clashes");
   cl.classList.toggle("hidden", !clashes.length);
   cl.textContent = clashes.length
-    ? `Staying where they are — a song with the same name is already there: ${clashes.join(", ")}`
+    ? `Staying where they are, because a song with the same name is already in the new folder: ${clashes.join(", ")}`
     : "";
   const moveBtn = document.getElementById("folder-move");
   moveBtn.textContent = n ? `Move ${n} song${n === 1 ? "" : "s"}` : "Use this folder";
@@ -1253,7 +1253,7 @@ async function applySongsFolder(move) {
   const skipped = res.skipped || [];
   toast(move
     ? `Moved ${moved.length} song${moved.length === 1 ? "" : "s"} to ${res.path}`
-      + (skipped.length ? ` — ${skipped.length} left where they were` : "")
+      + (skipped.length ? `; ${skipped.length} left where they were` : "")
     : `Songs folder is now ${res.path}`);
 }
 
@@ -1331,7 +1331,7 @@ function applyTranspose() {
   closeTransposeModal();
   schedulePreviewUpdate();
   const label = scope === "__song__" ? "whole song" : "section";
-  toast(`Transposed ${label} by ${n > 0 ? "+" : ""}${n} semitone(s) — remember to Save`);
+  toast(`Transposed ${label} by ${n > 0 ? "+" : ""}${n} semitone(s). Remember to save.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1381,8 +1381,8 @@ function renderLyricsChips() {
       });
       b.addEventListener("click", () => insertMarkerAtCursor(label));
     } else {
-      b.title = hasLyrics ? "Has lyrics — click to edit"
-        : "No lyrics yet — click to add";
+      b.title = hasLyrics ? "Has lyrics. Click to edit."
+        : "No lyrics yet. Click to add.";
       b.addEventListener("click", () => {
         document.getElementById("lyrics-scope").value = value;
         loadLyricsForScope();
@@ -1473,7 +1473,7 @@ function refreshLyricsOverlay() {
 async function applyLyricMarkers() {
   const text = lyricsBox().value;
   if (!hasMarkers(text)) {
-    toast("No === Section === markers in the sheet yet — drag a section in.");
+    toast("No === Section === markers in the sheet yet. Drag a section in.");
     return;
   }
   currentDoc.lyrics_text = text;
@@ -1525,7 +1525,7 @@ async function applyLyricMarkers() {
   document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml(true);
   document.getElementById("lyrics-scope").value = "__song__";
   loadLyricsForScope();
-  toast(`Lyrics assigned to ${assigned} section(s) — remember to Save`);
+  toast(`Lyrics assigned to ${assigned} section(s). Remember to save.`);
 }
 
 /** The section a marker name refers to: case, spaces, dashes and
@@ -1626,7 +1626,7 @@ function renderChordRows() {
   if (!chords.length) {
     const empty = document.createElement("p");
     empty.className = "modal-hint";
-    empty.textContent = "No shapes yet — \u201c+ Chord\u201d adds one.";
+    empty.textContent = "No shapes yet. \u201c+ Chord\u201d adds one.";
     box.appendChild(empty);
   }
   chords.forEach((chord, i) => box.appendChild(chordRow(chord, i)));
@@ -1663,7 +1663,7 @@ function chordRow(chord, index) {
   shape.className = "chord-shape";
   shape.placeholder = "x32010";
   shape.value = chord.shape_text || "";
-  shape.title = "One fret per string, lowest string first. x means don't sound it.";
+  shape.title = "One fret per string, lowest string first. x means the string is not played.";
 
   const err = document.createElement("span");
   err.className = "chord-error";
@@ -1699,7 +1699,7 @@ function chordRow(chord, index) {
   note.className = "chord-note";
   note.placeholder = "note (optional)";
   note.value = chord.note || "";
-  note.title = "A word printed under the diagram — \u201cbarre\u201d, \u201cthumb\u201d, whatever you need to remember";
+  note.title = "A word printed under the diagram, such as \u201cbarre\u201d or \u201cthumb\u201d: whatever you need to remember";
   note.addEventListener("input", () => { chord.note = note.value; renderChordPreview(); });
 
   const del = document.createElement("button");
@@ -1735,8 +1735,8 @@ function renderChordCoverageNow() {
     head.textContent = n
       ? `The song is transposed ${n > 0 ? "+" : ""}${n}. Shapes are stored as `
         + "you typed them and print moved with it: an open shape goes to the "
-        + "open shape of the new chord, or its barre if there isn't one; a "
-        + "barre slides."
+        + "open shape of the new chord, or to its barre if there is none, and "
+        + "a barre slides."
       : "";
     const how = { open: "open shape", barre: "barre", moved: "moved",
                   capo: "slid, open strings too" };
@@ -1780,8 +1780,8 @@ async function addChordsFromChart() {
   }
   renderChordRows();
   toast((cov.transpose
-    ? `Added ${missing.length} chord(s), as they read before the transpose — type a shape for each`
-    : `Added ${missing.length} chord(s) — type a shape for each`));
+    ? `Added ${missing.length} chord(s), as they read before the transpose. Type a shape for each.`
+    : `Added ${missing.length} chord(s). Type a shape for each.`));
 }
 
 function renderChordPreview() {
@@ -1862,13 +1862,13 @@ function splitRow(sec, choice) {
     o.value = value; o.textContent = label;
     sel.appendChild(o);
   };
-  opt("", "— no lyrics —");
+  opt("", "(no lyrics)");
   // Words this section already holds that aren't in the sheet came from
   // somewhere else — a hand-typed line, an older split. Offer to leave
   // them alone rather than quietly overwriting them.
   const held = (sec.lyrics_text || "").trim();
   const heldIsBlock = splitBlocks.some((b) => b.trim() === held);
-  if (held && !heldIsBlock) opt(KEEP, "— keep what's here —");
+  if (held && !heldIsBlock) opt(KEEP, "(keep what's here)");
   splitBlocks.forEach((b, i) => opt(String(i), blockLabel(b, i)));
 
   sel.value = choice === null || choice === undefined ? "" : String(choice);
@@ -1879,7 +1879,7 @@ function splitRow(sec, choice) {
 
 async function splitLyricsIntoSections() {
   const text = document.getElementById("lyrics-textarea").value;
-  if (!text.trim()) { toast("Nothing to split — paste some lyrics first."); return; }
+  if (!text.trim()) { toast("Nothing to split. Paste some lyrics first."); return; }
   if (!currentDoc.sections.length) { toast("Add a section first"); return; }
   // Whatever is in the box is the sheet being split, typed or pasted a
   // moment ago and not yet written back to the document.
@@ -1893,7 +1893,7 @@ async function splitLyricsIntoSections() {
     return;
   }
   splitBlocks = result.blocks || [];
-  if (!splitBlocks.length) { toast("Nothing to split — paste some lyrics first."); return; }
+  if (!splitBlocks.length) { toast("Nothing to split. Paste some lyrics first."); return; }
 
   // What a section already holds wins over a fresh guess: re-opening this
   // shouldn't propose undoing the corrections made last time.
@@ -1946,7 +1946,7 @@ function applyLyricsSplit() {
   document.getElementById("lyrics-scope").innerHTML = scopeOptionsHtml(true);
   document.getElementById("lyrics-scope").value = "__song__";
   loadLyricsForScope();
-  toast(`Lyrics assigned to ${assigned} section(s) — remember to Save`);
+  toast(`Lyrics assigned to ${assigned} section(s). Remember to save.`);
 }
 
 function openSearchLyricsModal() {
@@ -1984,7 +1984,7 @@ function openInBrowser(url) {
   }
   const win = window.open(url, "_blank", "noopener");
   if (!win) {
-    toast("Your browser blocked the new tab — allow pop-ups for this page, or copy the link.");
+    toast("Your browser blocked the new tab. Allow pop-ups for this page, or copy the link.");
   }
 }
 function importLyricsFile(file) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-webserver.py — Song Notation Tool local web server.
+webserver.py: the Song Notation Tool local web server.
 
 A thin stdlib http.server layer over the same pure engine the Tkinter
 app and the CLI use (model / grammar / render / transpose / songmap /
@@ -878,7 +878,7 @@ def _venv_python(root: str):
                 return cand, None
             err = (proc.stderr or b"").decode("utf-8", "replace").strip()
             last = err.splitlines()[-1] if err else f"exit {proc.returncode}"
-            reason = f"{os.path.relpath(cand, root)} can't import webview — {last}"
+            reason = f"{os.path.relpath(cand, root)} can't import webview: {last}"
             if os.environ.get("SNT_DEBUG_LAUNCH") and err:
                 print(err)
             break                   # one interpreter per venv is enough
@@ -928,16 +928,16 @@ def main(argv=None):
                               "~/Documents/Song Notation Tool)")
     parser.add_argument("--host", default="localhost",
                          help="Bind address (use 0.0.0.0 to reach it from "
-                              "other devices on the network — default: localhost)")
+                              "other devices on the network; default: localhost)")
     parser.add_argument("--port", type=int, default=8420)
     parser.add_argument("--browser", action="store_true",
                          help="Open in your default browser tab instead of a "
                               "native window (also used automatically when "
                               "pywebview isn't installed)")
     parser.add_argument("--no-open", action="store_true",
-                         help="Don't open anything automatically — just start "
-                              "the server (e.g. when only serving other "
-                              "devices on the network)")
+                         help="Don't open anything, just start the server "
+                              "(e.g. when you only serve other devices on "
+                              "the network)")
     args = parser.parse_args(argv)
 
     # Songs are the user's data, so they live under the user's home by
@@ -1016,7 +1016,7 @@ def main(argv=None):
         webview.start(**_webview_icon_kwargs(webview))
         httpd.shutdown()
         httpd.server_close()
-        print("Window closed — bye!")
+        print("Window closed. Bye!")
         return
 
     # ── Browser mode (also the fallback when pywebview isn't installed):

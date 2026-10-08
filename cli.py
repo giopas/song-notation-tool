@@ -128,7 +128,7 @@ def cmd_lint(args):
                   file=sys.stderr)
             ok = False
             continue
-        print(f"[{sec.get('name')}] OK — {line!r}" if line else
+        print(f"[{sec.get('name')}] OK: {line!r}" if line else
               f"[{sec.get('name')}] (empty chart)")
     # Chord shapes against the chords the chart plays. Warnings, not
     # failures: plenty of chords need no diagram, and a lint that fails a
@@ -148,7 +148,7 @@ def cmd_lint(args):
 def build_parser():
     p = argparse.ArgumentParser(
         prog="cli.py",
-        description="Song Notation Tool — headless conversion/export.",
+        description="Song Notation Tool: convert and export songs from the command line.",
         epilog=f"Song Notation Tool v{APP_VERSION}",
     )
     sub = p.add_subparsers(dest="command", required=True)
@@ -167,7 +167,7 @@ def build_parser():
                          help="Convert one .sng file to TXT or PDF")
     pc.add_argument("-i", "--input", required=True, help="Path to a .sng file")
     pc.add_argument("-o", "--output", help="Output path "
-                     "(default: '<Artist> - <Title>.<ext>' in the current dir)")
+                     "(default: '<Artist> - <Title>.<ext>' in the current folder)")
     pc.set_defaults(func=cmd_convert)
 
     pb = sub.add_parser("batch", parents=[common],
@@ -175,7 +175,7 @@ def build_parser():
     pb.add_argument("-i", "--input-dir", required=True,
                      help="Folder to scan for *.sng files")
     pb.add_argument("--out-dir", help="Write exports here instead of "
-                     "alongside each .sng (created if missing)")
+                     "next to each .sng (created if missing)")
     pb.set_defaults(func=cmd_batch)
 
     pl = sub.add_parser("lint", help="Parse every section's chart line and "

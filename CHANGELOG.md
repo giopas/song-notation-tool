@@ -6,7 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.27.0] — 2026-10-08
+
+The app gets its own icon, the first step toward standalone packages for
+macOS, Windows and Linux. The icon is a fret number over a chord between
+a bar line and a repeat sign, the way the charts are written by hand. This
+version also carries the housekeeping from adopting the working
+agreements (`DEVELOPMENT.md`, `WORKPLAN.md`).
+
+### Added
+- An app icon: `web/logo/icon.svg` is the source, with PNG sizes for the
+  web front end and the README, and `packaging/icons/` holding the
+  `.icns` (macOS), `.ico` (Windows) and PNG files the packages will use.
+  The text in the SVG is drawn as shapes, so it looks the same without
+  any font installed.
+- The icon in the desktop app's window and Dock or taskbar entry, as the
+  web front end's favicon and header mark, at the top of the README and
+  on the wiki Home page. In the native window, pywebview shows it on
+  Linux only; on macOS and Windows the packaged app will carry it.
+- `WORKPLAN.md`, the living plan with the decisions in force.
+
 ### Changed
+- `DEVELOPMENT.md` is now the working agreement: roles, branches,
+  Conventional Commits, testing, documentation, writing style, releasing.
 - `export.build_pdf()` takes an optional `date` for the footer. It still
   defaults to today, so printed charts look the same, but the same song
   and the same date now give a byte-identical PDF, and the tests check

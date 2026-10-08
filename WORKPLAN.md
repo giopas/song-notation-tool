@@ -7,19 +7,21 @@ the Claude project as `claude/WORKPLAN.md`.
 
 ## Where we are
 
-- Released: v0.26.2 (tagged and pushed). v0.26.3 is on `main` on GitHub and
-  in the changelog, but its tag was only created on 8 October 2026 and is
-  not pushed yet. No GitHub release exists for it.
-- In progress: `fix/v0.26.4`. Repository hygiene and a deterministic PDF,
-  from adopting the working agreements (see the changelog `[Unreleased]`).
-- Test suite: 362 tests, all passing (`python3 -m pytest -q`).
+- Released on GitHub: v0.26.2. v0.26.3 is on `main` on GitHub but its tag
+  (created locally on 8 October 2026) is not pushed yet, and it has no
+  GitHub release.
+- `fix/v0.26.4` was merged into `main` locally and is not pushed. It ships
+  as part of v0.27.0, so there is no separate v0.26.4.
+- Ready on `feat/v0.27.0`: the app icon (option C, fret number over
+  chord, chosen 8 October). Waiting for merge, tag and push.
+- Test suite: 367 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
 Work items, in order:
 
 1. Push the v0.26.3 tag and publish its GitHub release from the changelog.
-2. Finish v0.26.4: merge, tag, push, release.
+2. Merge, tag and push v0.27.0 (the icon), and publish its release.
 3. One writer for files. TXT and PDF bytes come from `export.py`, but the
    files are written in three places (`cli.py`, `webserver.py`,
    `song_writer.py`). Move the writing into one function.
@@ -32,12 +34,8 @@ Work items, in order:
    every export: errors block it, warnings are shown.
 6. Golden-file tests: one anonymised song per layout feature, compared
    byte for byte (now possible since `build_pdf` takes a date).
-7. App icon (`feat/v0.27.0`). A logo for the app, chosen by giopas from a
-   few drafts, as in Swiss Knife 2.8.1: an SVG source, PNG sizes for the
-   web front end and the README, `packaging/icons/icon.icns` (macOS) and
-   `icon.ico` (Windows). Used as the window icon, the favicon of the web
-   front end, the README header and the wiki Home page. A test checks
-   that every icon file exists and that the build spec points to them.
+7. App icon: done in v0.27.0 (option C). Live check of how it looks in
+   the Dock, the taskbar and a browser tab is on the manual list below.
 8. Standalone packages (`feat/v0.28.0`), built the way Swiss Knife 2.8
    does it:
    - a PyInstaller spec (`packaging/songnotation.spec`) and
@@ -66,8 +64,10 @@ Manual checks waiting for giopas (each stays here until reported back):
 
 - v0.26.3 repeat bracket in a printed PDF and in the web preview.
 - Desktop app (Tkinter) and native window (pywebview) on the Mac after
-  v0.26.4.
+  v0.27.0.
 - Windows and Linux: never tried live. Built and unit-tested only.
+- v0.27.0: the icon in the desktop app's window and Dock, in the native
+  window, and as the favicon in a browser tab.
 - After item 8: each package installed and started on a real system
   (macOS Apple silicon, macOS Intel, Windows, Linux).
 
@@ -111,7 +111,8 @@ and readable on stage without the handwritten sheet.
 | 8 Oct 2026 | The PDF footer keeps the print date. `build_pdf` takes an optional date so tests compare bytes. |
 | 8 Oct 2026 | The `.sng` song file is saved in place, atomically, and renamed on Save without overwriting another song. Exports and imports never overwrite an existing file. |
 | 8 Oct 2026 | The interface is English only for now. No translation checks in releases. |
-| 8 Oct 2026 | Standalone packages for macOS, Windows and Linux and an app icon are planned (items 7 and 8). Running from sources stays supported. |
+| 8 Oct 2026 | Standalone packages for macOS, Windows and Linux are planned (item 8). Running from sources stays supported. |
+| 8 Oct 2026 | App icon: option C, a fret number over a chord between a bar line and a repeat sign. Source `web/logo/icon.svg`. |
 | 8 Oct 2026 | The package opens the native window (`webserver.py` with pywebview). The Tkinter desktop app stays available from sources. |
 | 8 Oct 2026 | Packages get an update check with *Update and restart*, as in Swiss Knife. It is optional and disclosed, and sends nothing about the user. |
 | 8 Oct 2026 | The apps are not signed or notarised. The README and wiki explain the first-run warning. |

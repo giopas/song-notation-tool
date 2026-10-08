@@ -35,6 +35,7 @@ serves that, not by difficulty.
 
 | **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.27.0** | **An app icon** — a fret number over a chord, as the charts are written by hand; SVG, PNG, `.icns` and `.ico`, shown in the window, the web front end, the README and the wiki. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.26.0** | **Song files named after the song** — `Artist - Title.sng`, renamed on Save when either changes, never overwriting another song; Open example song always gives a fresh example; atomic saves. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.25.0** | **Change and move the songs folder** — pick a new folder from the app's window and move your songs there (only `.sng` files, nothing overwritten, old folder kept), or just point the app at it. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.24.0** | **Lyric placement and a Layout menu** — six places the words can go (none; all together at the start, the end or down a left column; with each section beside or under its chart), chosen once per song; every print setting moved into ⚙ Layout at the bottom left. See [CHANGELOG.md](CHANGELOG.md). |

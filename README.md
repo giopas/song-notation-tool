@@ -491,8 +491,9 @@ repository, so it can't drift from the code it documents.
 
 ## 🛠️ Development
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for how sessions on this project are
-run, `DESIGN_v0_16.md` for the data model, chart grammar, and
+See [DEVELOPMENT.md](DEVELOPMENT.md) for how work on this project is
+done (branches, commits, tests, releases), [WORKPLAN.md](WORKPLAN.md) for
+the current plan and the decisions in force, `DESIGN_v0_16.md` for the data model, chart grammar, and
 transposition rules, and `DESIGN_v0_17.md` for the song map / riff
 library / chart editor bar this release is built on.
 

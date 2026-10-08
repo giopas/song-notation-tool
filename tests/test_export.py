@@ -1066,3 +1066,24 @@ def test_pdf_places_every_tab_mark_on_the_column_grid():
     assert b"|A|-4-4---4-|" not in runs and b"|G|---------|" not in runs
     assert runs.count(b"4") == 3                      # each fret on its own
     assert b" l S" in stream                          # dash runs as rules
+
+
+# ==============================================================================
+# Deterministic output: the same song and the same date give the same bytes
+# ==============================================================================
+
+def test_pdf_is_byte_identical_for_the_same_song_and_date():
+    import datetime
+    from export import build_pdf
+    day = datetime.date(2026, 1, 2)
+    first = build_pdf(_doc_with_one_section(), date=day)
+    second = build_pdf(_doc_with_one_section(), date=day)
+    assert first == second
+    assert build_pdf(_doc_with_one_section(), date=datetime.date(2026, 1, 3)) != first
+
+
+def test_pdf_footer_date_defaults_to_today():
+    import datetime
+    from export import build_pdf
+    today = datetime.date.today()
+    assert build_pdf(_doc_with_one_section()) == build_pdf(_doc_with_one_section(), date=today)

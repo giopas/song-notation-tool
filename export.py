@@ -365,13 +365,19 @@ def resolve_columns(doc: dict, instruments=None, orient: str = "portrait") -> in
         return _auto_columns(doc, instruments, orient)
 
 
-def build_pdf(doc: dict, instruments=None, orient: str = "portrait") -> bytes:
-    """Render `doc` to PDF bytes at whatever scale its settings ask for."""
+def build_pdf(doc: dict, instruments=None, orient: str = "portrait",
+              date=None) -> bytes:
+    """Render `doc` to PDF bytes at whatever scale its settings ask for.
+
+    `date` is the day printed in the footer (a `datetime.date`); it
+    defaults to today. Passing it makes the output byte-identical for the
+    same song, which is what the golden-file tests rely on.
+    """
     if instruments is None:
         instruments = _all_instruments(doc)
     columns = resolve_columns(doc, instruments, orient)
     scale = resolve_scale(doc, instruments, orient, columns=columns)
-    return _build_pdf(doc, instruments, orient, scale, columns)[0]
+    return _build_pdf(doc, instruments, orient, scale, columns, date=date)[0]
 
 
 def _gutter_label(sec: dict) -> str:
@@ -600,7 +606,7 @@ def _chord_sheet_lines(doc: dict, width: int = DEFAULT_TXT_WIDTH) -> list:
 # ==============================================================================
 
 def _build_pdf(doc: dict, instruments, orient: str, scale: float,
-                columns=None):
+                columns=None, date=None):
     """Render the chart at `scale` and return (pdf_bytes, page_count).
 
     Everything that sets the size of the type — line height, font sizes,
@@ -639,7 +645,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     meta = _meta(doc)
     artist = (meta.get("artist") or "").strip()
     title = (meta.get("title") or "").strip()
-    doc_date = datetime.date.today().strftime("%Y-%m-%d")
+    doc_date = (date or datetime.date.today()).strftime("%Y-%m-%d")
 
     pages = []
     cur_ln = []

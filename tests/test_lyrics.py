@@ -134,7 +134,7 @@ scribbled note to self
 === Intro ===
 
 === Verse 1 ===
-I woke up in the third state
+I woke up in the glass harbour
 nothing moved but the light
 
 === Chorus 1 ===

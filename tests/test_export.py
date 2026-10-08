@@ -8,7 +8,7 @@ import export
 
 
 def _doc_with_one_section():
-    doc = model.new_document(title="Third State", artist="20Minutes",
+    doc = model.new_document(title="Glass Harbour", artist="The Placeholders",
                               key="B", time="4/4", bpm="")
     sec = model.new_section("intro", "Intro", "Intro",
                              instrument="Bass (4-string)")
@@ -35,8 +35,8 @@ def test_build_song_lines_reads_meta_from_doc_not_a_ui():
     doc = _doc_with_one_section()
     lines = export.build_song_lines(doc)
     text = "\n".join(lines)
-    assert "THIRD STATE" in text
-    assert "20Minutes" in text
+    assert "GLASS HARBOUR" in text
+    assert "The Placeholders" in text
     assert "Key: B" in text
     assert "  Intro" in text
     assert "Bass (4-string)" in text
@@ -82,9 +82,9 @@ def test_build_pdf_orientation_changes_page_size():
 def test_default_export_name_uses_artist_and_title():
     from constants import default_export_name
     doc = _doc_with_one_section()
-    assert default_export_name(doc, "txt") == "20Minutes_-_Third_State.txt"
+    assert default_export_name(doc, "txt") == "The_Placeholders_-_Glass_Harbour.txt"
     doc["meta"]["artist"] = ""
-    assert default_export_name(doc, ".pdf") == "Third_State.pdf"
+    assert default_export_name(doc, ".pdf") == "Glass_Harbour.pdf"
 
 
 # ==============================================================================
@@ -847,11 +847,11 @@ def test_a_fret_row_takes_less_than_a_full_line():
 
 def _sung_doc(layout="beside"):
     import grammar
-    doc = model.new_document(title="Third State", artist="20Minutes")
+    doc = model.new_document(title="Glass Harbour", artist="The Placeholders")
     doc["lyrics_layout"] = layout
     sec = model.new_section("v1", "Verse 1", "Verse")
     sec["items"] = grammar.parse_items("5A 5D 8F 5C")
-    sec["lyrics_text"] = "=== Verse 1 ===\nI woke up in the third state\nnothing moved"
+    sec["lyrics_text"] = "=== Verse 1 ===\nI woke up in the glass harbour\nnothing moved"
     sec["print_lyrics"] = True
     doc["sections"].append(sec)
     return doc
@@ -862,7 +862,7 @@ def test_lyrics_print_beside_the_chart():
     it: the first lyric line sits level with the top of the block, and
     every line of the column starts in the same place."""
     lines = export.build_song_lines(_sung_doc())
-    first = next(ln for ln in lines if "I woke up in the third state" in ln)
+    first = next(ln for ln in lines if "I woke up in the glass harbour" in ln)
     second = next(ln for ln in lines if "nothing moved" in ln)
     assert first.index("I woke") == second.index("nothing")
     assert second.strip().startswith("A ")   # the chart is on the same line
@@ -872,7 +872,7 @@ def test_lyrics_below_is_still_available():
     lines = export.build_song_lines(_sung_doc("below"))
     chart = next(ln for ln in lines if ln.strip().startswith("A "))
     assert "I woke up" not in chart
-    assert any(ln.strip() == "I woke up in the third state" for ln in lines)
+    assert any(ln.strip() == "I woke up in the glass harbour" for ln in lines)
 
 
 def test_section_markers_never_reach_the_page():
@@ -886,7 +886,7 @@ def test_beside_lyrics_do_not_stretch_the_page_width():
     see them, or the PDF scales to a width that doesn't exist."""
     doc = _sung_doc()
     longest = max(len(ln) for ln in export._body_lines_for_width(doc, None))
-    assert longest >= len("I woke up in the third state")
+    assert longest >= len("I woke up in the glass harbour")
 
 
 def test_chord_sheet_prints_where_it_is_asked_for():

@@ -1,4 +1,6 @@
-# 🎸 Song Notation Tool
+<p align="center"><img src="web/logo/icon-256.png" width="128" height="128" alt=""></p>
+
+# Song Notation Tool
 
 > **⚠️ DRAFT / DEMO — Vibecoded Prototype**
 > This is an early-stage personal project built through iterative AI-assisted ("vibecoded") development. It is functional but rough around the edges. Use it, break it, and feel free to suggest improvements!

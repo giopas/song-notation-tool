@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/giopas/song-notation-tool/main/web/logo/icon-256.png" width="96" height="96" alt="">
+
 # Song Notation Tool — Wiki
 
 A typed version of the one-page stage chart the author writes by hand

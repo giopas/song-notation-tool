@@ -1,72 +1,70 @@
-# Chart Line Syntax
+# Chart line syntax
 
-The chart line is the entire editing surface for a `render:"chart"`
-section (the desktop app's editor bar, or the browser's chart-line
-field for a section). It's whitespace-separated, parsed by
-`grammar.py`, and every construct below round-trips: parse it, unparse
-it, and you get the same line back (`grammar.unparse(grammar.parse_items(line)) == line`,
-modulo whitespace).
+For a `render:"chart"` section, the chart line is all there is to edit:
+the desktop app's editor bar, or a section's chart-line field in the
+browser. Words are separated by spaces and parsed by `grammar.py`. Every
+form below comes back unchanged when you parse it and write it out again
+(`grammar.unparse(grammar.parse_items(line)) == line`, apart from
+whitespace).
 
 ## Symbols and frets
 
-A bare word is a chord/note symbol:
+A plain word is a chord or note symbol:
 
 ```
 B F# G E
 ```
 
-Put a fret number directly in front of a symbol, no space, to record
+Put a fret number right in front of a symbol, with no space, to record
 which fret plays it:
 
 ```
 5A 7D 10G
 ```
 
-— fret 5 on note A, fret 7 on note D, fret 10 on note G. A leading zero
-isn't allowed (`05A` is an error — write `5A`); the maximum fret is 24.
+That is fret 5 on A, fret 7 on D and fret 10 on G. A leading zero is not
+allowed (`05A` is an error; write `5A`), and the highest fret is 24.
 
-A symbol can carry a quality suffix — `m`, `maj7`, `sus4`, `/G`, and so
-on are all valid: `Am`, `F#m7`, `C/G`.
+A symbol can have a quality suffix such as `m`, `maj7`, `sus4` or `/G`:
+`Am`, `F#m7`, `C/G`.
 
 ## Groups and repeats
 
-Wrap part of a line in `[ ]` and it becomes a group; put `xN` right
-after the closing bracket (no space) to repeat it:
+Put part of a line in `[ ]` to make a group, and put `xN` right after the
+closing bracket (no space) to repeat it:
 
 ```
 [5A 7D]x2
 ```
 
-plays that pair twice before continuing to whatever comes next on the
-line. A space before the `xN` is fine too.
+plays the pair twice, then carries on with the rest of the line. A space
+before the `xN` works too.
 
-A repeat also works after a riff or a section reference — but there it
-**needs the space**: `riff1 x3`, `=verse1 x2`. Glued on, it becomes part
-of the name, so `riff1x3` looks for a riff *called* "riff1x3", and when
-there isn't one it prints the bare name instead of an error. A lick
-takes either form, `{Riff1}x3` or `{Riff1} x3`, since the brace ends
-its name. A single chord can't carry a repeat on its own — wrap it,
-`[Am]x3`.
+A repeat also works after a riff or a section reference, but there it
+needs the space: `riff1 x3`, `=verse1 x2`. Without the space it becomes
+part of the name, so `riff1x3` looks for a riff called "riff1x3", and if
+there is none it prints the name as it is instead of showing an error. A
+lick takes either form, `{Riff1}x3` or `{Riff1} x3`, because the brace
+ends its name. A single chord cannot carry a repeat by itself; put it in
+a group, `[Am]x3`.
 
 | After | Repeat | Transpose shift |
 |---|---|---|
 | a group `[…]` or a lick `{…}` | `[5A 7D]x2` or `[5A 7D] x2` | not allowed |
-| a riff or section reference | `riff1 x3`, `=verse1 x2` — **with** the space | `riff1 +2`, `=verse1 -1` |
-| a plain chord | not allowed — `[Am]x3` | not allowed |
+| a riff or section reference | `riff1 x3`, `=verse1 x2`, with the space | `riff1 +2`, `=verse1 -1` |
+| a plain chord | not allowed; use `[Am]x3` | not allowed |
 
-A group isn't limited to bare chords on one line — wrap a whole phrase,
-lick or line break included, and the group repeats all of it:
+A group can hold more than chords on one line. Wrap a whole phrase,
+including a lick or a line break, and the group repeats all of it:
 
 ```
 [3G 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4
 ```
 
-A plain group of chords still prints as the single bracketed line
-above — `[5A 7D]x2` — but a lick needs rows of its own for its tab, so
-a group holding one is printed in full rather than collapsed down to
-the lick's bare name. A right-hand bracket, spanning every row the
-group prints on, carries the repeat instead of any inline `[...](xN)`
-text:
+A group of plain chords still prints on one bracketed line, `[5A 7D]x2`.
+A lick needs rows of its own for its tab, so a group that holds one is
+printed in full, and a bracket on the right, running down every row the
+group prints on, carries the repeat:
 
 ```
   3  2
@@ -77,24 +75,20 @@ text:
                |E|---------|  │
 ```
 
-The bracket is the point: `(x4)` centred against a bar that runs the
-full height of the chords *and* the tab reads as "this whole thing,
-four times" — not "the last note repeats", which is what text tacked
-onto one line would say instead. The small `3  2` above `G  F#`
-doesn't get its own segment of the bar — a fret number prints as a
-superscript over its chord, not as a line of its own, so the bracket
-starts at the chord row underneath it.
+With `(x4)` centred against a bar that covers the chords and the tab, the
+whole phrase reads as played four times. Text at the end of one line would
+look as if only the last note repeats. The small `3  2` above `G  F#` gets
+no part of the bar: a fret number prints as a superscript over its chord,
+not as a line of its own, so the bracket starts at the chord row below it.
 
-The PDF and the web app's live preview draw this bracket as one real
-line, so it reads as continuous even across a fret row's superscript
-gap. TXT export and the desktop app have no vector graphics of their
-own, so there it's still the character-based version above — a `|`
-printed down the right of every eligible row, with `(xN)` on the one
-nearest the middle. A fret row never gets a `|` of its own either way.
+The PDF and the web app's live preview draw the bracket as one solid line,
+so it stays continuous across the gap of a fret row. TXT export and the
+desktop app have no vector drawing, so there it is the character version
+above: a `|` down the right of each row it covers, with `(xN)` on the row
+nearest the middle. A fret row never gets a `|` in either version.
 
-A group also isn't limited to one line for another reason: a `//`
-inside it still breaks the line, exactly as it would outside any
-group, and gets the same bracket treatment:
+A `//` inside a group also breaks the line, as it does outside a group,
+and gets the same bracket:
 
 ```
 [7B 4G# 3G 5D // 7B 4G# 5A]x4
@@ -118,99 +112,95 @@ In TXT export and the desktop app:
   B  G#  A     |
 ```
 
-Each line still gets its own columns (see **Breaking a section over
-several lines**, below) — the group boundary doesn't change that. The
-same happens when a *reference* expands into a repeat — `=verse1 x4`
-where Verse 1 itself has a `//` — since a repeated reference resolves
-to this same kind of group.
+Each line still lines up its own columns (see
+[Breaking a section over several lines](#breaking-a-section-over-several-lines)),
+whether or not it is in a group. The same happens when a reference
+expands into a repeat, such as `=verse1 x4` where Verse 1 has a `//`,
+because a repeated reference becomes this same kind of group.
 
 ## Annotations
 
-Any of the four quote characters works — `"`, and the curly `“ ” ‘ ’`
-that macOS and every word processor substitute for a typed one. A
-double-quoted string anywhere on the line is dropped from the
-playable items and kept separately as the section's annotation (shown
-in italics under the chart row):
+Any of the four quote characters works: `"`, and the curly `“ ” ‘ ’` that
+macOS and word processors put in place of a typed one. A quoted string
+anywhere on the line is taken out of the playable items and kept as the
+section's annotation, shown in italics under the chart row:
 
 ```
 G D "keep it simple" Em C
 ```
 
-Since v0.20 every section card also has a visible **Annotation** field,
-in every render mode. Typing `"…"` on the chart line fills that field;
-clearing the field removes the annotation. Before that the annotation
-could be set but never seen or removed — `unparse()` correctly leaves it
-out of the line, and nothing displayed it.
+Every section card also has an Annotation field, in every render mode.
+Typing `"…"` on the chart line fills that field, and clearing the field
+removes the annotation.
 
 ## Riffs (block references)
 
-A bare identifier that isn't a chord/note symbol is a reference to a
-named riff (a `block` in the document, managed in the desktop app's
-Riffs strip below the song map):
+A plain word that is not a chord or note symbol refers to a named riff (a
+`block` in the document, managed in the desktop app's Riffs strip below
+the song map):
 
 ```
 riff1 x3
 ```
 
-Editing the riff's own content updates every section that references
-it — there's only one copy of the data. A riff name can't look like a
-token (e.g. `A1` is rejected as a riff name, since it would be
-ambiguous with fret 1 on note A — see `model.validate_block_name`).
+Editing the riff changes every section that uses it, because there is
+only one copy. A riff name cannot look like a chord token: `A1` is refused
+as a riff name, because it would read as fret 1 on A (see
+`model.validate_block_name`).
 
 ## Section references
 
-`=sectionname` refers back to another section instead of repeating its
-content — "same as Verse 1" rather than a byte-for-byte copy:
+`=sectionname` points back to another section instead of repeating its
+content, the way you would write "same as Verse 1":
 
 ```
 =verse1 x2
 =verse1 x2 all
 ```
 
-`all` (only valid after a section reference) means "repeat everything
-in that section," as opposed to just its chart line. The desktop app's
-Duplicate-as-reference (Ctrl/Cmd+D) inserts one of these for you.
+`all` (only after a section reference) repeats everything in that section,
+not only its chart line. **Duplicate as reference** (Ctrl/Cmd+D) in the
+desktop app inserts one for you.
 
-### Names on screen, ids in the file (v0.20)
+### Names on screen, ids in the file
 
-A section's **id** is minted once and never changes; its **name** can be
-renamed freely. References are stored by id, so renaming a section never
-breaks anything pointing at it — but an id is meaningless to read, and a
-section created as "Chorus" and later renamed keeps the id `chorus1`.
+A section gets an id once, and the id never changes. Its name can change
+as often as you like. References are stored by id, so renaming a section
+never breaks anything that points to it. An id is not meant to be read,
+though: a section created as "Chorus" and renamed later keeps the id
+`chorus1`.
 
-So the chart line is a *view*: a reference is spelled with its target's
-current name wherever it's shown, and whatever you type — `=Interlude`
-or `=chorus1` — is stored as the id. Renaming a section updates every
-reference to it on screen without touching a stored reference.
+So the chart line shows a reference by its target's current name, and
+whatever you type, `=Interlude` or `=chorus1`, is stored as the id.
+Renaming a section updates every reference to it on screen without
+changing what is stored.
 
-Matching is case-insensitive, and spaces and dashes are interchangeable
-with underscores, so a section called "Verse 2" displays and resolves as
-`=Verse_2`. A name that can't be written as a reference (punctuation, or
-two sections sharing it) falls back to the id, which is never ambiguous.
+Matching ignores case, and spaces and dashes count as underscores, so a
+section called "Verse 2" shows and resolves as `=Verse_2`. A name that
+cannot be written as a reference (punctuation, or two sections with the
+same name) falls back to the id, which is never ambiguous.
 
-### References are expanded when rendered (v0.20)
+### References are expanded when rendered
 
-The pointer stays in the data — that's what makes "edit it once, every
-user updates" work — but the preview and the TXT/PDF exports show the
-*notes*, not `=Interlude`. A repeat expands into a bracketed group
-(`[3A 12D](x2)`), a `+N`/`-N` shift expands transposed, and a reference
-to a **free-text** section prints that section's text. Anything that
-can't be resolved — a missing target, or a cycle — is left as a
-reference rather than silently dropping the section's content.
+The data keeps the pointer, which is how "edit it once, every use
+changes" works, but the preview and the TXT and PDF exports show the
+notes instead of `=Interlude`. A repeat expands into a bracketed group
+(`[3A 12D](x2)`), a `+N` or `-N` shift expands transposed, and a reference
+to a free-text section prints that section's text. A reference that
+cannot be resolved (a missing target, or a loop) is left as a reference,
+so the section's content is never dropped without notice.
 
-Expansion is live in the editor too: changing a section — its chart
-line, its free text, its render mode, or its name — refreshes every
-section card that references it, so a `//` added to Chorus_1 shows up
-on Chorus_2 straight away. Those cards are rendered from the stored
-reference (an id) rather than from the text in the line field, so a
-rename can't leave a card showing a dangling `=Old_Name`.
+The editor expands references live too. Changing a section's chart line,
+free text, render mode or name redraws every card that refers to it, so a
+`//` added to Chorus_1 shows on Chorus_2 at once. Those cards are drawn
+from the stored reference (an id) and not from the text in the line field,
+so a rename cannot leave a card showing an outdated `=Old_Name`.
 
 ## Transpose shift
 
-A `+N` or `-N`, as its own word after a riff or section reference,
-shifts that reference's resolved chords by N semitones without touching
-the referenced riff/section itself. With a repeat, the shift comes
-after it:
+A `+N` or `-N`, as its own word after a riff or section reference, shifts
+that reference's chords by N semitones without changing the riff or
+section itself. With a repeat, the shift comes after it:
 
 ```
 riff1 +2
@@ -218,13 +208,13 @@ riff1 +2
 riff1 x2 +3
 ```
 
-A shift isn't valid after a group or a lick — to move a group, put it in
+A shift is not allowed after a group or a lick. To move a group, put it in
 a riff and shift the reference, or transpose the whole section.
 
 ## Breaking a section over several lines
 
-A long section reads better grouped into the phrases you'd write out by
-hand. `//` anywhere on the chart line starts a new line at that point:
+A long section reads better split into the phrases you would write by
+hand. `//` anywhere on the chart line starts a new line there:
 
 ```
 5A 5D // 8F 5D 7E // 5A 8F 5D 7E // 5A 5A 8F
@@ -243,13 +233,13 @@ renders as
   A  A  F
 ```
 
-Each block aligns its own columns — that's the point of breaking, rather
-than having one grid stretch across the whole section. In the desktop
-song map, where the section name sits in a left gutter, the continuation
-lines stack under the first one rather than sliding back to the margin.
+Each line lines up its own columns, so one grid does not stretch across
+the whole section. In the desktop song map, where the section name sits in
+a left gutter, the extra lines stack under the first one instead of going
+back to the margin.
 
-Adding `>` pushes that line in — `//>` for one step, `//>>` for two — so
-a phrase can sit visibly inside the one above it:
+Adding `>` indents the line: `//>` for one step, `//>>` for two, so a
+phrase can sit inside the one above it:
 
 ```
 5A 5D //> 8F 5D 7E // 5A 5A 8F
@@ -264,37 +254,34 @@ a phrase can sit visibly inside the one above it:
   A  A  F
 ```
 
-The indent is relative to wherever the line would otherwise start, so it
-reads the same in the export and in the desktop song map, where lines
-already sit in the section-name gutter. One step is
-`render.INDENT_STEP` characters.
+The indent counts from wherever the line would otherwise start, so it
+looks the same in the export and in the desktop song map, where lines
+already sit in the section-name gutter. One step is `render.INDENT_STEP`
+characters.
 
-It's purely a layout mark: it plays nothing, it's stored as a
-`line_break` mark like any other, and the chart line itself stays a
-single line you can edit. `//` rather than a bare `/` because a slash
-already lives inside chord symbols (`C/G`) — as a whole word a single
-slash would be unambiguous, but doubling it keeps it obvious which is
-meant.
+The break only affects layout. It plays nothing, it is stored as a
+`line_break` mark like any other, and the chart line itself stays one line
+you can edit. It is `//` and not `/` because a slash already appears inside
+chord symbols (`C/G`). A single slash as a word of its own would still be
+clear, but the double one makes it obvious which is meant.
 
-## Licks — a bit of tab, in among the chords
+## Licks: a bit of tab among the chords
 
-Some things aren't a chord. When you want to remember the actual notes of
-a short figure, write it in braces at the point it's played:
+Some things are not chords. To remember the actual notes of a short
+figure, write it in braces where it is played:
 
 ```
 C {G 5 7 5 | D - - 3} G Am
 ```
 
-Each `|`-separated line is one string — its name, then its frets.
-Positions align by column across the lines, so a fret on `G` at the third
-position sounds with whatever is third on `D`. `-` means that string
-isn't played there and `x` means muted. Write as many lines as the figure
-needs.
+Each part between `|` is one string: its name, then its frets. Positions
+line up by column across the strings, so a fret third on `G` sounds with
+whatever is third on `D`. `-` means the string is not played there, and
+`x` means muted. Write as many strings as the figure needs.
 
-A `G: 5 7 5` spelling is accepted too, if the colon reads better.
+`G: 5 7 5`, with a colon, is accepted too, if you find it easier to read.
 
-It renders as a small tab block sitting under its own column in the chart
-row:
+On screen it is a small tab block under its own column in the chart row:
 
 ```
   C           G  Am
@@ -302,83 +289,80 @@ row:
      D - - 3
 ```
 
-— so it stays where it belongs in the sequence, rather than being exiled
-to a separate tab grid.
+so it stays in its place in the sequence, and does not have to go in a
+separate tab grid.
 
-It **prints as tab**, one row per string, with the string named in its own
-little box at the left:
+It prints as tab, one row per string, with the string name in a small box
+on the left:
 
 ```
 |G|-5-7-5-|
 |D|-----3-|
 ```
 
-Every position is the same width down the whole lick, so the columns line
-up vertically and you read it the way you read a tab staff. On screen and
-in a colour PDF the lick is **blue** — it isn't a chord symbol and
-shouldn't be read as one at a glance from a stand.
+Every position has the same width down the whole lick, so the columns
+line up and you read it like a tab staff. On screen and in a colour PDF
+the lick is blue, so it is not mistaken for a chord symbol when you glance
+at it on a stand.
 
-The `{ tab }` button beside the chart line inserts an empty one: every
-string of that section's instrument, six positions wide, all dashes. Type
-frets over the dashes; delete nothing. Widen or narrow it by adding or
-removing dashes — a lick is as long as you write it.
+The **{ tab }** button beside the chart line inserts an empty lick: every
+string of the section's instrument, six positions wide, all dashes. Type
+frets over the dashes without deleting anything. Add or remove dashes to
+make it longer or shorter; a lick is as long as you write it.
 
 ### Naming a lick
 
-Put a name and an `=` at the front and the lick has a handle:
+Put a name and `=` at the front, and the lick has a name you can call:
 
 ```
 {Riff1 = G 5 7 5 | D - - 3}
 ```
 
-It prints with the name in front of the tab, on its first string line —
-`Riff1 |G|-5-7-5-|` — and anywhere else in the song `{Riff1}` plays it
-again, with a repeat if you want one:
+It prints with the name in front of the tab, on its first string line
+(`Riff1 |G|-5-7-5-|`), and `{Riff1}` anywhere else in the song plays it
+again, with a repeat if you like:
 
 ```
 Intro    {Riff1}
 Chorus   {Riff1}x3   5A 5D
 ```
 
-A reference resolves at render time to the notes themselves, with the
-name (and repeat) in front of them — `Riff1 (x3) |G|…`. So editing the
-lick updates every place that plays it, exactly as a section reference
-does — and there is no separate library to keep in step: the name lives
-on the lick where you wrote it.
+When the chart is rendered, a reference becomes the notes themselves, with
+the name (and the repeat) in front: `Riff1 (x3) |G|…`. Editing the lick
+changes every place that plays it, as with a section reference, and there
+is no separate library to keep up to date: the name lives on the lick
+where you wrote it.
 
-A lick doesn't have to stand alone to get a repeat — wrap it together
-with whatever comes before it and repeat the group instead (see
-**Groups and repeats**, above) when it's the *pairing* that repeats,
-not just the riff:
+When it is the pairing that repeats, not just the riff, put the lick in a
+group with what comes before it and repeat the group (see
+[Groups and repeats](#groups-and-repeats)):
 
 ```
 [3B 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4
 ```
 
-**Braces recall a lick; `=` recalls a section.** `{Riff1}` plays the
-lick named Riff1. `=Riff1` looks for a *section* called Riff1, and when
-there isn't one it prints as the literal text `=Riff1`. Braces define a
-lick and braces recall it.
+Braces recall a lick, and `=` recalls a section. `{Riff1}` plays the lick
+named Riff1. `=Riff1` looks for a section called Riff1, and if there is
+none it prints the text `=Riff1` as it is. Braces define a lick and braces
+recall it.
 
-If you'd rather the notes printed once — where the lick was written —
-and every recall said just `Riff1 (x3)`, set **⚙ Layout → Recalled
-licks → Name only** (`lick_refs: "name"`; the default is `"tab"`). A
-reference that doesn't find its lick keeps its braces on paper, so a
-misspelt name is visible. Either way a lick's name prints in the lick
-blue.
+If you want the notes printed only once, where the lick was written, with
+every recall showing just `Riff1 (x3)`, set **⚙ Layout** → Recalled licks
+→ Name only (`lick_refs: "name"`; the default is `"tab"`). A reference
+that finds no lick keeps its braces on paper, so a misspelt name shows. In
+both cases the lick's name prints in the lick blue.
 
-Names match loosely (`{riff1}` finds `Riff1`) and can't start like a
-chord: `A1` would read as a chord symbol on a chart line, so it's
-refused. The `{ name = tab }` button fills a free name in for you —
-`Riff1`, `Riff2`, and so on — and in the browser every lick you've
-already named appears in the palette as a button that inserts the
-reference. (A lick named while you type gets its button once the
-section card is next redrawn — after Save, for instance.)
+Names match loosely (`{riff1}` finds `Riff1`) and cannot start like a
+chord: `A1` would read as a chord symbol on a chart line, so it is
+refused. The **{ name = tab }** button fills in a free name for you
+(`Riff1`, `Riff2` and so on), and in the browser every lick you have named
+appears in the palette as a button that inserts a reference to it. A lick
+you name while typing gets its button the next time the section card is
+redrawn, after Save for instance.
 
-Transposing the section moves a lick's frets with
-it: same strings, shifted positions. A fret that would fall off either
-end of the neck is left as it was rather than silently clamped to a
-position you'd actually play.
+Transposing the section moves a lick's frets with it: same strings,
+shifted positions. A fret that would fall off either end of the neck stays
+as it was, instead of being moved to a position you would not play.
 
 ## Marks
 
@@ -386,48 +370,46 @@ position you'd actually play.
 |---|---|
 | `\|:` | repeat-open barline |
 | `:\|` | repeat-close barline |
-| `\|1.` | 1st ending (opens a numbered bracket over the run that follows, until the next ending mark or end of line) |
+| `\|1.` | 1st ending (opens a numbered bracket over what follows, up to the next ending mark or the end of the line) |
 | `\|2.` | 2nd ending |
-| `//` | line break — start a new line here (layout only; plays nothing) |
+| `//` | line break: start a new line here (layout only, plays nothing) |
 | `//>` | line break, indented one step per `>` |
-| `%` | `simile` — "play like the previous bar" |
-| `rest` | rest/tacet — "don't play this measure" |
-| `coda` | coda mark (renders a coda indicator; `render.has_coda()` checks for it) |
+| `%` | `simile`: play like the previous bar |
+| `rest` | rest or tacet: do not play this measure |
+| `coda` | coda mark (shows a coda sign; `render.has_coda()` checks for it) |
 | `segno` | segno mark |
 | `dc` | D.C. (da capo) |
 | `ds` | D.S. (dal segno) |
 
 ## Typing it without remembering it
 
-Each section's chart line has a palette of buttons beside it (v0.20):
-`rest`, `%`, `|:`, `:|`, `|1.`, `|2.`, `x2`, `[ ]x2`, `""`, `segno`,
-`coda`, `dc`, `ds`. Each drops its notation at the caret, space-separated
-from what's already there, and leaves the caret inside the brackets or
-quotes where that's the useful place for it. The insert fires the same
-`input` event typing would, so the live parse, inline errors and preview
-all behave identically — the chart line stays text you can edit by hand.
+Each section's chart line has a palette of buttons beside it: `rest`,
+`%`, `|:`, `:|`, `|1.`, `|2.`, `x2`, `[ ]x2`, `""`, `segno`, `coda`, `dc`,
+`ds`. Each one puts its notation at the cursor, separated by a space from
+what is there, and leaves the cursor inside the brackets or quotes when
+that is where you will type next. The insert sends the same `input` event
+as typing, so the live parse, the error messages and the preview behave
+exactly the same, and the chart line stays text you can edit by hand.
 
-The **Notation ⌘** panel documents every mark in full: what `segno`,
-`coda`, `dc` and `ds` actually tell a player to do, and the standard
-D.S.–segno–coda shape they combine into.
+The **Notation ⌘** panel explains every mark in full: what `segno`,
+`coda`, `dc` and `ds` tell a player to do, and the usual
+D.S., segno and coda shape they combine into.
 
-## Sections that aren't a chart line at all
+## Sections that are not a chart line
 
-A section's render mode can be **Free** (v0.20) instead of Chart / Tab /
-Both. The section becomes one plain textarea, stored verbatim as
-`free_text`; nothing in it is parsed, transposed, validated or
-column-aligned, and the exports print it exactly as typed. It's the
-escape hatch for the bits this grammar doesn't cover.
+A section's render mode can be Free instead of Chart, Tab or Both. The
+section becomes one plain text box, stored as typed in `free_text`.
+Nothing in it is parsed, transposed, checked or lined up, and the exports
+print it exactly as typed. Use it for what this grammar does not cover.
 
-Switching to Free is non-destructive — the section's `items` are left
-alone, so switching back restores the chart line exactly. (Which is why
-expanding a reference to a free section deliberately uses its *text*,
-not those dormant items.)
+Switching to Free leaves the section's `items` alone, so switching back
+restores the chart line exactly. That is also why a reference to a Free
+section uses its text and not those unused items.
 
 ## What a parse error looks like
 
-A line that doesn't parse (an unmatched `[`, an invalid fret, a repeat
-with nothing before it to repeat, `all` after something that isn't a
-section reference, and so on) never clears what you typed. The error
-shows inline, in place — the last *valid* render stays on screen above
-it — in both the desktop editor bar and the browser's chart-line field.
+A line that does not parse (an unmatched `[`, a bad fret, a repeat with
+nothing before it, `all` after something that is not a section reference,
+and so on) never clears what you typed. The error shows in place, with
+the last good render still on screen above it, in both the desktop editor
+bar and the browser's chart-line field.

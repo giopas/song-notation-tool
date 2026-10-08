@@ -293,11 +293,26 @@ class SongNotationApp(tk.Tk):
         └─────────────────────────────────────────────────────────────────── ┘
     """
 
+    def _set_window_icon(self):
+        """Use the app icon for the window and the Dock/taskbar entry.
+
+        Tk 8.6 reads PNG directly. An older Tk, or a missing file, just
+        keeps the default icon: never worth stopping the app over.
+        """
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "web", "logo", "icon-256.png")
+        try:
+            self._icon_image = tk.PhotoImage(file=path)
+            self.iconphoto(True, self._icon_image)
+        except (tk.TclError, OSError):
+            pass
+
     def __init__(self):
         super().__init__()
         self.title(APP_TITLE)
         self.geometry("1180x820")
         self.minsize(900, 600)
+        self._set_window_icon()
 
         self.current_theme = "dark"
         self.style = ttk.Style(self)

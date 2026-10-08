@@ -59,7 +59,8 @@ button {
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
 }
-#app-title { font-weight: bold; color: var(--accent); }
+#app-title { font-weight: bold; color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
+#app-logo { width: 22px; height: 22px; flex: 0 0 auto; }
 #app-version { color: var(--lbl-gray); margin-left: 8px; font-size: 12px; }
 #topbar-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 

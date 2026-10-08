@@ -87,6 +87,24 @@ from constants import (
 )
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+ICON_PNG = os.path.join(WEB_DIR, "logo", "icon-256.png")
+
+
+def _webview_icon_kwargs(webview_module) -> dict:
+    """`icon=` for webview.start(), when this pywebview accepts it.
+
+    pywebview uses it on Linux (GTK and Qt) only; on macOS and Windows the
+    packaged app's own icon is shown instead. Older versions have no such
+    parameter, so it is passed only when the signature has it.
+    """
+    import inspect
+    try:
+        params = inspect.signature(webview_module.start).parameters
+    except (TypeError, ValueError):
+        return {}
+    if "icon" in params and os.path.exists(ICON_PNG):
+        return {"icon": ICON_PNG}
+    return {}
 
 # Set by main() so /api/quit can shut down whichever mode is actually
 # running: destroy the native window if pywebview is in use, otherwise
@@ -995,7 +1013,7 @@ def main(argv=None):
             js_api=_JsApi(),
         )
         _RUNTIME["webview_window"] = window
-        webview.start()
+        webview.start(**_webview_icon_kwargs(webview))
         httpd.shutdown()
         httpd.server_close()
         print("Window closed — bye!")

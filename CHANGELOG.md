@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- `export.build_pdf()` takes an optional `date` for the footer. It still
+  defaults to today, so printed charts look the same, but the same song
+  and the same date now give a byte-identical PDF, and the tests check
+  that.
+
+### Removed
+- The assistant's codebase map (`.claude/`) and a sample PDF export are
+  no longer part of the repository. `.claude/` is now in `.gitignore`.
+
+### Fixed
+- The export and lyrics tests used a real band, song title and lyric
+  line. They now use invented names.
+
 ## [0.26.3] — 2026-09-25
 
 ### Fixed

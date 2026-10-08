@@ -54,3 +54,6 @@ examples/
 
 # Sample exports delivered into this folder by the Claude desktop session.
 Claude outputs/
+
+# Assistant working folders (codebase map, settings). Never published.
+.claude/

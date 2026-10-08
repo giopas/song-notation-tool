@@ -53,18 +53,14 @@ Work items, in order:
      with a `.desktop` launcher;
    - README and wiki: an install section per system, including the
      unsigned-app warning and how to get past it;
+   - an update check against the GitHub releases, with *Update and
+     restart*, as in Swiss Knife (`core/update.py` there);
    - running from sources keeps working exactly as today.
 
-   To decide before building item 8:
-   - Which front end the package starts: the native window
-     (`webserver.py` with pywebview, as Swiss Knife does) or the Tkinter
-     desktop app (`song_writer.py`). Suggested: the native window.
-   - Whether to add an update check with *Update and restart*, as in Swiss
-     Knife 2.8.0. Suggested: not in the first package release.
-   - Signing and notarisation. Suggested: none, as decided for Swiss Knife
-     on 8 October, with the first-run warning documented.
-   - Linux format. Suggested: `.tar.gz` only, no AppImage unless someone
-     asks.
+   Decided on 8 October (see standing decisions): the package opens the
+   native window; it has an update check with *Update and restart*, as
+   in Swiss Knife; no signing or notarisation; Linux gets `.tar.gz`
+   only, no AppImage.
 
 Manual checks waiting for giopas (each stays here until reported back):
 
@@ -116,6 +112,10 @@ and readable on stage without the handwritten sheet.
 | 8 Oct 2026 | The `.sng` song file is saved in place, atomically, and renamed on Save without overwriting another song. Exports and imports never overwrite an existing file. |
 | 8 Oct 2026 | The interface is English only for now. No translation checks in releases. |
 | 8 Oct 2026 | Standalone packages for macOS, Windows and Linux and an app icon are planned (items 7 and 8). Running from sources stays supported. |
+| 8 Oct 2026 | The package opens the native window (`webserver.py` with pywebview). The Tkinter desktop app stays available from sources. |
+| 8 Oct 2026 | Packages get an update check with *Update and restart*, as in Swiss Knife. It is optional and disclosed, and sends nothing about the user. |
+| 8 Oct 2026 | The apps are not signed or notarised. The README and wiki explain the first-run warning. |
+| 8 Oct 2026 | Linux gets a `.tar.gz` with a `.desktop` launcher. No AppImage unless someone asks. |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

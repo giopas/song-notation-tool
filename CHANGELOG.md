@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.27.1] — 2026-10-09
+
+A plain-language pass over the README, the wiki and the texts the app
+shows, so they read as written by a person and give the same facts in
+fewer words. Nothing in how the app works has changed, apart from the help
+texts below that described it wrongly.
+
+### Changed
+- `README.md` rewritten: features grouped by what you do with them, no
+  emoji headings or horizontal rules, and no version history (that stays
+  here and in the wiki where it matters).
+- Every wiki page rewritten in the same way. Version tags such as "since
+  v0.20" are gone from the pages; what the app does now is described as
+  it is.
+- The help strip, Notation reference, tooltips, dialogs and messages in
+  both front ends, the command-line help and `CONTRIBUTING.md` reworded
+  plainly, without dashes as connectors.
+
+### Fixed
+- The help (browser help strip, desktop help window and the chart line's
+  tooltip) said a fret number goes after its symbol. It goes before:
+  `5A` is fret 5 on A.
+- The browser help strip said to type `(x3)` after a section's repeat
+  field. The repeat count is the number box in the section header.
+- The desktop Lyrics dialog told you to tick a box to print the words,
+  and the Lyrics button said they are never exported. Both dated from
+  before ⚙ Layout; they now point to it.
+
 ## [0.27.0] — 2026-10-08
 
 The app gets its own icon, the first step toward standalone packages for

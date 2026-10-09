@@ -67,7 +67,8 @@ def test_front_ends_never_write_export_files_themselves():
         return re.findall(r"open\([^)]*[\"']w[b]?[\"']", src)
     assert opens_for_writing("cli.py") == []
     assert len(opens_for_writing("song_writer.py")) == 1   # the .sng save
-    assert len(opens_for_writing("webserver.py")) == 1     # SongStore's temp file
+    assert len(opens_for_writing("webserver.py")) == 2     # SongStore's temp file,
+                                                           # and --smoke's update feed
     for name in ("cli.py", "song_writer.py", "webserver.py"):
         src = open(os.path.join(ROOT, name), encoding="utf-8").read()
         assert "export_to_file(" in src

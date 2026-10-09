@@ -76,6 +76,7 @@ import lyrics as lyrics_mod
 import model
 import songmap
 import transpose
+import update
 import render as render_mod
 from examples import example_document
 from constants import (
@@ -86,7 +87,16 @@ from constants import (
     TAB_BEATS_DEFAULT, default_export_name, song_file_stem, song_file_name,
 )
 
-WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+# In the packaged app (PyInstaller) the web files sit in the bundle's data
+# folder, sys._MEIPASS; from sources they are next to this file.
+APP_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+WEB_DIR = os.path.join(APP_DIR, "web")
+DEFAULT_PORT = 8420
+
+
+def is_frozen() -> bool:
+    """True in the packaged app built with PyInstaller."""
+    return bool(getattr(sys, "frozen", False))
 ICON_PNG = os.path.join(WEB_DIR, "logo", "icon-256.png")
 
 
@@ -271,6 +281,9 @@ class _JsApi:
             return True
         except Exception:  # noqa: BLE001
             return False
+
+
+_PROJECT_URL = f"https://github.com/{update.REPO}/"
 
 
 def _shutdown():
@@ -598,6 +611,11 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path, qs = unquote(parsed.path), parse_qs(parsed.query)
         try:
+            if path == "/api/update/check":
+                # The only network call the app makes by itself; see update.py.
+                return self._send_json(update.check(
+                    force=qs.get("force", ["0"])[0] == "1"))
+
             if path == "/api/meta":
                 return self._send_json({
                     "app_version": APP_VERSION,
@@ -648,6 +666,33 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
         try:
+            if path == "/api/update/settings":
+                body = self._read_json_body()
+                update.set_enabled(bool(body.get("check", True)))
+                return self._send_json(update.status())
+
+            if path == "/api/update/install":
+                res = update.install()
+                if res.get("ok") and res.get("restart"):
+                    # Close the window (or stop the server) so the swap
+                    # script, which waits for this process, can replace the
+                    # app; then make sure the process is gone.
+                    threading.Timer(1.0, _shutdown).start()
+                    threading.Timer(3.0, lambda: os._exit(0)).start()
+                return self._send_json(res, status=HTTPStatus.OK if res.get("ok")
+                                       else HTTPStatus.BAD_REQUEST)
+
+            if path == "/api/update/open":
+                # Only the project's own pages, never a URL from the page.
+                url = str(self._read_json_body().get("url") or "")
+                if not url.startswith(_PROJECT_URL):
+                    url = _PROJECT_URL + "releases/latest"
+                try:
+                    ok = bool(webbrowser.open(url))
+                except Exception:  # noqa: BLE001
+                    ok = False
+                return self._send_json({"ok": ok, "url": url})
+
             if path == "/api/quit":
                 # "Save & Close" in the browser front end calls this after
                 # its own save PUT completes. A short delay (matching the
@@ -903,7 +948,7 @@ def _maybe_reexec_into_venv(argv):
     """If the native window is wanted but this interpreter lacks pywebview,
     re-exec under a sibling virtualenv that has it. Returns only when there
     is nothing to do."""
-    if os.environ.get("SNT_NO_REEXEC"):
+    if os.environ.get("SNT_NO_REEXEC") or is_frozen():
         return
     if "--browser" in argv or "--no-open" in argv:
         return
@@ -933,6 +978,82 @@ def _maybe_reexec_into_venv(argv):
         print(f"Could not switch interpreter ({exc}); continuing without it.")
 
 
+class _ThreadingHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
+def _make_server(host: str, port=None):
+    """The HTTP server on `port`. Without a port asked for, DEFAULT_PORT is
+    tried first and any free port after it, so a second copy of the app (or
+    another program on 8420) does not stop this one from starting."""
+    if port is not None:
+        return _ThreadingHTTPServer((host, port), Handler)
+    try:
+        return _ThreadingHTTPServer((host, DEFAULT_PORT), Handler)
+    except OSError:
+        return _ThreadingHTTPServer((host, 0), Handler)
+
+
+def smoke() -> int:
+    """Release-build check: the page, its files and the API answer, and the
+    example song exports. Prints one line per failure; returns 0 when none.
+    Uses a temporary songs folder and a local update feed, so it writes
+    nothing of the user's and never reaches the network."""
+    import json as _json
+    import tempfile
+    import urllib.request
+
+    bad = []
+    with tempfile.TemporaryDirectory(prefix="snt-smoke-") as tmp:
+        feed = os.path.join(tmp, "feed.json")
+        with open(feed, "w", encoding="utf-8") as f:
+            _json.dump({"tag_name": "v0.0.0", "assets": []}, f)
+        os.environ["SNT_UPDATE_FEED"] = feed
+        os.environ["SNT_UPDATE"] = os.path.join(tmp, "update.json")
+        Handler.store = SongStore(os.path.join(tmp, "songs"))
+        httpd = _ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{httpd.server_address[1]}"
+
+        def call(path, body=None):
+            data = None if body is None else _json.dumps(body).encode("utf-8")
+            req = urllib.request.Request(base + path, data=data,
+                                         headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return r.status, r.read()
+
+        try:
+            for path in ("/", "/app.js", "/style.css", "/logo/icon.svg",
+                         "/logo/favicon.png", "/api/meta", "/api/update/check"):
+                try:
+                    status, _ = call(path)
+                    if status != 200:
+                        bad.append(f"{path} -> {status}")
+                except Exception as exc:  # noqa: BLE001
+                    bad.append(f"{path} -> {exc}")
+            try:
+                _, raw = call("/api/songs/example", {})
+                doc = _json.loads(raw)["doc"]
+                _, pdf = call("/api/export.pdf", {"doc": doc})
+                if not pdf.startswith(b"%PDF"):
+                    bad.append("example song: the PDF export is not a PDF")
+            except Exception as exc:  # noqa: BLE001
+                bad.append(f"example song export -> {exc}")
+            if is_frozen():
+                try:
+                    import webview  # noqa: F401  (the package must carry it)
+                except Exception as exc:  # noqa: BLE001
+                    bad.append(f"pywebview missing from the package: {exc}")
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+    for b in bad:
+        print("SMOKE FAIL:", b)
+    print(f"SMOKE {'OK' if not bad else 'FAILED'}: v{APP_VERSION}")
+    return 1 if bad else 0
+
+
 def main(argv=None):
     _maybe_reexec_into_venv(list(sys.argv[1:] if argv is None else argv))
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
@@ -943,7 +1064,9 @@ def main(argv=None):
     parser.add_argument("--host", default="localhost",
                          help="Bind address (use 0.0.0.0 to reach it from "
                               "other devices on the network; default: localhost)")
-    parser.add_argument("--port", type=int, default=8420)
+    parser.add_argument("--port", type=int, default=None,
+                         help=f"Port to listen on (default: {DEFAULT_PORT}, or "
+                              "any free port if that one is taken)")
     parser.add_argument("--browser", action="store_true",
                          help="Open in your default browser tab instead of a "
                               "native window (also used automatically when "
@@ -952,7 +1075,14 @@ def main(argv=None):
                          help="Don't open anything, just start the server "
                               "(e.g. when you only serve other devices on "
                               "the network)")
+    parser.add_argument("--smoke", action="store_true",
+                         help="Start, load the page and its files, export the "
+                              "example song, then exit (used by the release build)")
     args = parser.parse_args(argv)
+    if args.smoke:
+        sys.exit(smoke())
+    if is_frozen():
+        update.cleanup_after_update()   # drop the version an update replaced
 
     # Songs are the user's data, so they live under the user's home by
     # default — not in ./songs inside the checkout, where a `git clean` or
@@ -962,8 +1092,10 @@ def main(argv=None):
         songs_dir = os.path.abspath(os.path.expanduser(args.dir))
     else:
         songs_dir = userpaths.songs_dir()
+        # The old in-repo songs/ folder only exists in a source checkout.
         legacy = os.path.join(os.path.dirname(os.path.abspath(__file__)), "songs")
-        moved, skipped = userpaths.migrate_legacy_songs(legacy, songs_dir)
+        moved, skipped = ([], []) if is_frozen() else \
+            userpaths.migrate_legacy_songs(legacy, songs_dir)
         if moved:
             print(f"Moved {len(moved)} song{'s' if len(moved) != 1 else ''} out of "
                   f"the source folder into {songs_dir}:")
@@ -977,16 +1109,12 @@ def main(argv=None):
 
     Handler.store = SongStore(songs_dir)
 
-    class ThreadingHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-        allow_reuse_address = True
-        daemon_threads = True
-
-    httpd = ThreadingHTTPServer((args.host, args.port), Handler)
+    httpd = _make_server(args.host, args.port)
     _RUNTIME["httpd"] = httpd
     # 0.0.0.0 binds every interface but isn't itself a browsable address —
     # open localhost even when serving on 0.0.0.0 for other devices.
     open_host = "localhost" if args.host == "0.0.0.0" else args.host
-    url = f"http://{open_host}:{args.port}"
+    url = f"http://{open_host}:{httpd.server_address[1]}"
 
     print(f"Song Notation Tool v{APP_VERSION}")
     print(f"Songs folder: {songs_dir}")
@@ -1020,14 +1148,29 @@ def main(argv=None):
         server_thread.start()
         print(f"Opening {url} in a native window.  Close the window (or "
               f"use the in-app Save & Close button) to quit.")
-        window = webview.create_window(
-            "Song Notation Tool", url,
-            width=1180, height=820, min_size=(900, 600),
-            resizable=True, confirm_close=True,
-            js_api=_JsApi(),
-        )
-        _RUNTIME["webview_window"] = window
-        webview.start(**_webview_icon_kwargs(webview))
+        try:
+            window = webview.create_window(
+                "Song Notation Tool", url,
+                width=1180, height=820, min_size=(900, 600),
+                resizable=True, confirm_close=True,
+                js_api=_JsApi(),
+            )
+            _RUNTIME["webview_window"] = window
+            webview.start(**_webview_icon_kwargs(webview))
+        except Exception as exc:  # noqa: BLE001
+            # No window toolkit to draw with (a Linux system without GTK or
+            # Qt WebKit, say): use the browser instead of failing.
+            _RUNTIME["webview_window"] = None
+            print(f"Could not open the native window ({type(exc).__name__}: "
+                  f"{exc}); opening your browser instead.  Ctrl+C to stop.")
+            webbrowser.open(url)
+            try:
+                server_thread.join()
+            except KeyboardInterrupt:
+                pass
+            httpd.shutdown()
+            httpd.server_close()
+            return
         httpd.shutdown()
         httpd.server_close()
         print("Window closed. Bye!")

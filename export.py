@@ -22,12 +22,14 @@ sections are included (None = all instruments present in the doc).
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import re
 import tempfile
 import zlib
 
 import chords as chords_mod
+import model
 import render
 import songmap
 import transpose
@@ -45,7 +47,28 @@ def _meta(doc):
 
 
 def _all_instruments(doc):
-    return {s.get("instrument", "") for s in doc.get("sections", [])}
+    """Every instrument the song uses: sections and their parts."""
+    out = set()
+    for s in doc.get("sections", []):
+        out.add(s.get("instrument", ""))
+        out.update(p.get("instrument", "") for p in (s.get("parts") or []))
+    return out
+
+
+def instruments_to_print(doc) -> set:
+    """The instruments that print: all of them, or the ones ⚙ Layout picks
+    (`print_instruments`). A choice that matches nothing in the song is
+    ignored, so a chart never comes out empty because of it."""
+    every = _all_instruments(doc)
+    chosen = set(doc.get("print_instruments") or []) & every
+    return chosen or every
+
+
+def _section_prints(sec, instruments) -> bool:
+    """A section prints when its own instrument or one of its parts does."""
+    if instruments is None or sec.get("instrument") in instruments:
+        return True
+    return any(p.get("instrument") in instruments for p in render.section_parts(sec))
 
 
 # ==============================================================================
@@ -59,6 +82,9 @@ def uniform_instrument(doc: dict, instruments=None):
     once, in the header, next to the key and the tempo."""
     names = {sec.get("instrument", "") for sec in doc.get("sections", [])
              if instruments is None or sec.get("instrument") in instruments}
+    names.update(p.get("instrument", "") for sec in doc.get("sections", [])
+                 for p in render.section_parts(sec)
+                 if instruments is None or p.get("instrument") in instruments)
     names.discard("")
     return next(iter(names)) if len(names) == 1 else None
 
@@ -157,9 +183,11 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
         gutter_w = max((len(_gutter_label(s)) for s in doc.get("sections", [])),
                         default=0) + 2
     for sec in doc.get("sections", []):
-        if instruments is not None and sec.get("instrument") not in instruments:
+        if not _section_prints(sec, instruments):
             continue
         pad = " " * gutter_w
+        out += [pad + r["text"]
+                for r in render.printed_part_rows(doc, sec, instruments, 0)]
         chart_lines = []
         if sec.get("render") == "free":
             out += [pad + ln for ln in (sec.get("free_text") or "").splitlines()]
@@ -217,7 +245,11 @@ def _tab_block_units(doc: dict, instruments) -> float:
          for m in songmap.measure_items(sec)),
         default=0,
     )
-    return 0.0 if not beats else STRING_LABEL_W + (3 * beats + 1) * MONO_CHAR_W
+    tok_w = max((render.tab_token_width(songmap.measure_items(sec))
+                 for sec in doc.get("sections", [])
+                 if instruments is None or sec.get("instrument") in instruments
+                 if sec.get("render", "chart") in ("tab", "both")), default=3)
+    return 0.0 if not beats else STRING_LABEL_W + (tok_w * beats + 1) * MONO_CHAR_W
 
 
 def _fit_scale(doc: dict, instruments, orient: str, columns: int = 1) -> float:
@@ -416,6 +448,14 @@ def check_document(doc: dict) -> dict:
 
     sections, errors, warnings = [], [], []
     for sec in doc.get("sections", []):
+        for part in sec.get("parts") or []:
+            try:
+                line = grammar.unparse(part.get("items") or [])
+                if line:
+                    grammar.parse_items(line)
+            except Exception as exc:  # noqa: BLE001 - reported, never fatal
+                errors.append(f"[{sec.get('name') or '?'} / "
+                              f"{part.get('instrument') or 'part'}] {exc}")
         name = sec.get("name") or "?"
         chart = songmap.chart_items(sec)
         try:
@@ -434,6 +474,17 @@ def check_document(doc: dict) -> dict:
             sections.append({"name": name, "line": line, "error": msg})
             continue
         sections.append({"name": name, "line": line, "error": None})
+    # A tab-grid cell that is not a fret (with or without a technique) is
+    # printed as typed, so it is a warning, not a reason to stop.
+    import grammar as _g
+    for sec in doc.get("sections", []):
+        bad = sorted({tok for m in songmap.measure_items(sec)
+                      for raw in (m.get("strings") or {}).values()
+                      for tok in (raw or "").split()
+                      if not _g.valid_tab_position(tok)})
+        if bad:
+            warnings.append(f"[{sec.get('name') or '?'}] tab cells that are not "
+                            f"frets: " + ", ".join(bad))
     if doc.get("chords"):
         cov = chords_mod.coverage(doc)
         if cov["missing"]:
@@ -546,7 +597,7 @@ def build_pdf(doc: dict, instruments=None, orient: str = "portrait",
     same song, which is what the golden-file tests rely on.
     """
     if instruments is None:
-        instruments = _all_instruments(doc)
+        instruments = instruments_to_print(doc)
     columns = resolve_columns(doc, instruments, orient)
     scale = resolve_scale(doc, instruments, orient, columns=columns)
     return _build_pdf(doc, instruments, orient, scale, columns, date=date)[0]
@@ -563,6 +614,8 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
     W = DEFAULT_TXT_WIDTH
     div = lambda c="=": c * W
     lines = []
+    if instruments is None:
+        instruments = instruments_to_print(doc)
 
     meta = _meta(doc)
     artist = (meta.get("artist") or "").strip()
@@ -618,8 +671,11 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
                         default=0) + 2
 
     for sec in doc.get("sections", []):
-        if instruments is not None and sec.get("instrument") not in instruments:
+        if not _section_prints(sec, instruments):
             continue
+        # The section's own line prints only for its own instrument; its
+        # parts follow it, each for theirs.
+        main_prints = instruments is None or sec.get("instrument") in instruments
 
         label = ""
         if gutter:
@@ -651,7 +707,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         lyric_lines = render.section_lyric_lines(doc, sec)
         beside = render.lyrics_beside(doc)
 
-        if sec.get("render", "chart") in ("chart", "both") and chart:
+        if main_prints and sec.get("render", "chart") in ("chart", "both") and chart:
             resolved = render.resolve_display_items(chart, eff)
             chart_lines = render.chart_body_lines(resolved, label, body_indent)
             if beside and lyric_lines:
@@ -666,11 +722,20 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
             body.append("")
             label = ""
 
+        part_lines = [r["text"] for r in
+                      render.printed_part_rows(doc, sec, instruments, body_indent)]
+        if part_lines:
+            if label:
+                part_lines[0] = f"{label:<{body_indent}}" + part_lines[0][body_indent:]
+                label = ""
+            body += part_lines
+            body.append("")
+
         # A gutter section with nothing in it still needs its name printed.
         if label:
             body += [label, ""]
 
-        measures = songmap.measure_items(sec)
+        measures = songmap.measure_items(sec) if main_prints else []
         if sec.get("render", "chart") in ("tab", "both") and measures:
             all_strings = INSTRUMENT_STRINGS.get(
                 sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
@@ -678,7 +743,9 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
                 [m.get("strings", {}) for m in measures], all_strings) or all_strings
             max_beats = max((m.get("beats", TAB_BEATS_DEFAULT) for m in measures),
                              default=TAB_BEATS_DEFAULT)
-            mpl = render.measures_per_line(len(measures), max_beats, width=body_w)
+            TOKEN_W = render.tab_token_width(measures)
+            mpl = render.measures_per_line(len(measures), max_beats, width=body_w,
+                                           token_w=TOKEN_W)
 
             for chunk_start in range(0, len(measures), mpl):
                 chunk = list(range(chunk_start, min(chunk_start + mpl, len(measures))))
@@ -791,7 +858,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     document what it wants.
     """
     if instruments is None:
-        instruments = _all_instruments(doc)
+        instruments = instruments_to_print(doc)
     if columns is None:
         columns = resolve_columns(doc, instruments, orient)
 
@@ -927,6 +994,17 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             if role == render.ROLE_BRACKET:
                 i = j
                 continue
+            if role == render.ROLE_CODA:
+                # The span covers the whole "[+ Coda]", spaces included.
+                end = next(e for s, e, r in spans if r == role and s <= i < e)
+                draw_coda(x, y, text, i, end)
+                i = end
+                continue
+            if role == render.ROLE_DYN:
+                color(0, 0, 0)
+                txt(x + i * CHAR_W, y, text[i:j], sz=MONO_SZ, bold=True)
+                i = j
+                continue
             color(*role_rgb(role))
             if role == render.ROLE_LICK and "|" in text[i:j]:
                 draw_tab_run(x, y, text, i, j, role_rgb(role))
@@ -966,6 +1044,15 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                               f"{max(0.4, 0.06 * MONO_SZ):.2f} w "
                               f"{x1:.1f} {mid:.1f} m {x2:.1f} {mid:.1f} l S")
                 k = e
+            elif text[k] != "|" and k + 1 < j and text[k + 1] not in "-|":
+                # A fret with techniques ("5h7", "7b9r7", "5/7") is one
+                # word: drawn letter by letter on the grid, the narrow "/"
+                # and "r" left gaps that split it in two.
+                e = k
+                while e < j and text[e] not in "-|":
+                    e += 1
+                txt(x + k * CHAR_W + CHAR_W * 0.06, y, text[k:e], sz=MONO_SZ)
+                k = e
             else:
                 # Centre narrow marks ("|", "1") in their column, so a bar
                 # line sits in the middle of its cell like it does on screen.
@@ -973,6 +1060,98 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                 off = CHAR_W * (0.35 if ch == "|" else 0.12 if ch.isdigit() else 0)
                 txt(x + k * CHAR_W + off, y, ch, sz=MONO_SZ)
                 k += 1
+
+    def marks_step(rows, idx):
+        """How far down to go after a marks row. Over fret numbers (small
+        type) the fret-row step is enough; straight over chord symbols it
+        would sit on their tops, so it takes a full line."""
+        nxt = rows[idx + 1].get("role") if idx + 1 < len(rows) else None
+        return FRET_LINE_H if nxt in (render.ROLE_FRET, render.ROLE_MARKS) else LINE_H
+
+    def stroke(rgb, width, *pts):
+        """A polyline in `rgb`, `width` points wide, through (x, y) pairs."""
+        (x0, y0), rest = pts[0], pts[1:]
+        path = f"{x0:.1f} {y0:.1f} m " + " ".join(f"{x:.1f} {y:.1f} l" for x, y in rest)
+        cur_ln.append(f"{rgb[0]:.3f} {rgb[1]:.3f} {rgb[2]:.3f} RG {width:.2f} w {path} S")
+
+    def circle(cx, cy_, r, rgb, width):
+        """A circle as four Bezier quarters (the usual 0.5523 handle)."""
+        k = 0.5523 * r
+        cur_ln.append(
+            f"{rgb[0]:.3f} {rgb[1]:.3f} {rgb[2]:.3f} RG {width:.2f} w "
+            f"{cx + r:.1f} {cy_:.1f} m "
+            f"{cx + r:.1f} {cy_ + k:.1f} {cx + k:.1f} {cy_ + r:.1f} {cx:.1f} {cy_ + r:.1f} c "
+            f"{cx - k:.1f} {cy_ + r:.1f} {cx - r:.1f} {cy_ + k:.1f} {cx - r:.1f} {cy_:.1f} c "
+            f"{cx - r:.1f} {cy_ - k:.1f} {cx - k:.1f} {cy_ - r:.1f} {cx:.1f} {cy_ - r:.1f} c "
+            f"{cx + k:.1f} {cy_ - r:.1f} {cx + r:.1f} {cy_ - k:.1f} {cx + r:.1f} {cy_:.1f} c S")
+
+    def draw_marks_row(x, y, row):
+        """The marks row above a chart line (render._marks_rows): what its
+        text spells with dashes, drawn as real marks. A 1st/2nd ending is
+        a bracket with its number; a palm-mute run is "P.M." with a dashed
+        line; a crescendo or diminuendo is a hairpin; an accent is ">"."""
+        text = row["text"]
+        black = (0, 0, 0)
+        lw = max(0.5, 0.06 * MONO_SZ)
+        top = y + MONO_SZ * 0.72
+        small = MONO_SZ * 0.82
+        for start, end, role in row.get("spans") or []:
+            x1, x2 = x + start * CHAR_W, x + end * CHAR_W
+            seg = text[start:end]
+            label = seg.rstrip("-|").rstrip()
+            if role == render.ROLE_ENDING:
+                stroke(black, lw, (x1 + 1, top), (x2 - 1, top))
+                if label:
+                    stroke(black, lw, (x1 + 1, y - MONO_SZ * 0.15), (x1 + 1, top))
+                    color(*black)
+                    txt(x1 + 3 * S, y, label, sz=small, bold=True)
+            elif role == render.ROLE_PM:
+                color(*black)
+                lx = x1
+                if label:
+                    txt(x1, y, label, sz=small)
+                    lx = x1 + (len(label) + 0.5) * CHAR_W
+                mid = y + MONO_SZ * 0.3
+                dash = 2.0 * S
+                xx = lx
+                while xx < x2 - 1:
+                    stroke(black, lw * 0.8, (xx, mid), (min(xx + dash, x2 - 1), mid))
+                    xx += dash * 2
+                if seg.endswith("|"):
+                    stroke(black, lw, (x2 - 1, mid - MONO_SZ * 0.3), (x2 - 1, mid + MONO_SZ * 0.3))
+            elif role in (render.ROLE_CRESC, render.ROLE_DIM):
+                mid = y + MONO_SZ * 0.3
+                h = MONO_SZ * 0.32
+                if role == render.ROLE_CRESC:
+                    stroke(black, lw, (x2 - 1, mid + h), (x1 + 1, mid), (x2 - 1, mid - h))
+                else:
+                    stroke(black, lw, (x1 + 1, mid + h), (x2 - 1, mid), (x1 + 1, mid - h))
+            elif role == render.ROLE_ACCENT:
+                mid = y + MONO_SZ * 0.3
+                h = MONO_SZ * 0.22
+                stroke(black, lw, (x1, mid + h), (x1 + CHAR_W * 0.8, mid), (x1, mid - h))
+
+    def draw_coda(x, y, text, i, j):
+        """The boxed coda, "[+ Coda]": a box round it, the coda sign (a
+        circle with a cross) where the "+" is, and the word."""
+        black = (0, 0, 0)
+        lw = max(0.5, 0.06 * MONO_SZ)
+        x1, x2 = x + i * CHAR_W, x + j * CHAR_W
+        cur_ln.append(f"0 0 0 RG {lw:.2f} w {x1:.1f} {y - MONO_SZ * 0.3:.1f} "
+                      f"{x2 - x1:.1f} {MONO_SZ * 1.25:.1f} re S")
+        seg = text[i:j]
+        p = seg.find("+")
+        if p >= 0:
+            cx = x + (i + p + 0.5) * CHAR_W
+            cyc = y + MONO_SZ * 0.32
+            r = MONO_SZ * 0.36
+            circle(cx, cyc, r, black, lw)
+            stroke(black, lw, (cx - r * 1.35, cyc), (cx + r * 1.35, cyc))
+            stroke(black, lw, (cx, cyc - r * 1.35), (cx, cyc + r * 1.35))
+        w = seg.find("Coda")
+        if w >= 0:
+            color(*black)
+            txt(x + (i + w) * CHAR_W, y, "Coda", sz=MONO_SZ, bold=True)
 
     def hline(x1, y, x2, width=0.25, gray=0.72):
         cur_ln.append(f"{gray:.2f} G {width} w {x1:.1f} {y:.1f} m {x2:.1f} {y:.1f} l S")
@@ -1103,11 +1282,10 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
          for m in songmap.measure_items(s)),
         default=TAB_BEATS_DEFAULT,
     )
-    MEAS_W = TOKEN_W * max_beats * CHAR_W + CHAR_W
-
-    def mpl_for(n_measures):
+    def mpl_for(n_measures, tok_w=TOKEN_W):
         usable = COL_W_TEXT - SN_W
-        return max(1, min(n_measures, int(usable / MEAS_W)))
+        meas_w = tok_w * max_beats * CHAR_W + CHAR_W
+        return max(1, min(n_measures, int(usable / meas_w)))
 
     band_h = 46 * S
     band_rgb, band_text = title_fill(colors)
@@ -1194,8 +1372,9 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         return col_x0() + gutter_w * CHAR_W
 
     for sec in sections:
-        if sec.get("instrument") not in instruments:
+        if not _section_prints(sec, instruments):
             continue
+        main_prints = sec.get("instrument") in instruments
         cy = cy_holder[0]
 
         all_strings = INSTRUMENT_STRINGS.get(
@@ -1212,12 +1391,16 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         chart = render.resolve_references(songmap.chart_items(sec), doc)
         chart_rows = (render.chart_body_rows(
                           render.resolve_display_items(chart, eff), "", 0)
-                      if chart and mode in ("chart", "both") else [])
-        measures = songmap.measure_items(sec) if mode in ("tab", "both") else []
+                      if main_prints and chart and mode in ("chart", "both") else [])
+        part_rows = render.printed_part_rows(doc, sec, instruments, 0)
+        measures = (songmap.measure_items(sec)
+                    if main_prints and mode in ("tab", "both") else [])
         strings = (render.active_strings(
                     [m.get("strings", {}) for m in measures], all_strings)
                    if measures else [])
-        mpl = mpl_for(len(measures)) if measures else 1
+        # A cell with a technique ("5h7") widens every cell of this grid.
+        tok_w = render.tab_token_width(measures)
+        mpl = mpl_for(len(measures), tok_w) if measures else 1
 
         # Acceptance criterion (design section 10): never split a section
         # across a page break.
@@ -1272,9 +1455,12 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             lyric_x = body_x() + lyric_col * CHAR_W
             lyric_cy = cy
             row_ys = []
-            for row in chart_rows:
+            for idx, row in enumerate(chart_rows):
                 row_ys.append(cy)
-                if row.get("role") == render.ROLE_FRET:
+                if row.get("role") == render.ROLE_MARKS:
+                    draw_marks_row(body_x(), cy, row)
+                    cy -= marks_step(chart_rows, idx)
+                elif row.get("role") == render.ROLE_FRET:
                     draw_fret_row(body_x(), cy, row["text"])
                     cy -= FRET_LINE_H
                 else:
@@ -1288,6 +1474,29 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                     lyric_cy -= LINE_H
                 cy = min(cy, lyric_cy)
                 lyric_lines = []
+            cy -= 2 * S
+
+        if part_rows:
+            # Each part: its instrument as a small grey heading, then its
+            # chart drawn the way the section's own line is.
+            row_ys = []
+            for idx, row in enumerate(part_rows):
+                row_ys.append(cy)
+                role = row.get("role")
+                if role == render.ROLE_PART:
+                    color(0.35, 0.35, 0.35)
+                    txt(body_x(), cy, row["text"].strip(), sz=MONO_SZ * 0.9, bold=True)
+                    cy -= LINE_H
+                elif role == render.ROLE_MARKS:
+                    draw_marks_row(body_x(), cy, row)
+                    cy -= marks_step(part_rows, idx)
+                elif role == render.ROLE_FRET:
+                    draw_fret_row(body_x(), cy, row["text"])
+                    cy -= FRET_LINE_H
+                else:
+                    draw_chart_row(body_x(), cy, row)
+                    cy -= LINE_H
+            draw_bracket_runs(part_rows, row_ys)
             cy -= 2 * S
 
         if sec.get("annotation"):
@@ -1307,7 +1516,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
 
             def col_x(i, batch=batch):
                 return col_x0() + SN_W + sum(
-                    TOKEN_W * measures[batch[j]].get("beats", TAB_BEATS_DEFAULT)
+                    tok_w * measures[batch[j]].get("beats", TAB_BEATS_DEFAULT)
                     * CHAR_W + CHAR_W
                     for j in range(i))
 
@@ -1326,7 +1535,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                     while len(tokens) < beats:
                         tokens.append("-")
                     tokens = tokens[:beats]
-                    row_str = "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
+                    row_str = "".join(f"{tok:>{tok_w}}" for tok in tokens) + "|"
                     color(0, 0, 0)
                     txt(col_x(i), cy, row_str, sz=MONO_SZ)
                 cy -= LINE_H
@@ -1350,11 +1559,85 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     while side and pn_holder[0] < len(side_pages):
         pn_holder[0] += 1
         finish_page()
-    return _assemble_pdf(pages, W, H), len(pages)
+    return _assemble_pdf(pages, W, H, song=song_bytes(doc)), len(pages)
 
 
-def _assemble_pdf(pages, W, H) -> bytes:
-    """Assemble raw PDF bytes from a list of zlib-compressed page streams.
+# ── The song inside its PDF ────────────────────────────────────────────
+# Every PDF carries the song it was made from as an attached file, so the
+# PDF alone is enough to open the song again in the app (Open / Import).
+# A PDF viewer shows it as an attachment named song.sng. A TXT export has
+# nowhere to keep it, so only the PDF reopens.
+
+EMBEDDED_NAME = "song.sng"
+
+
+def song_bytes(doc: dict) -> bytes:
+    """The song as it would be saved, as UTF-8 JSON, without the editor's
+    temporary `chart_line` fields. Same song, same bytes."""
+    clean = json.loads(json.dumps(doc))
+    for sec in clean.get("sections") or []:
+        sec.pop("chart_line", None)
+        for part in sec.get("parts") or []:
+            part.pop("chart_line", None)
+    return json.dumps(clean, indent=2, ensure_ascii=False).encode("utf-8")
+
+
+class SongImportError(ValueError):
+    """A file that does not hold a song we can open."""
+
+
+def read_embedded_song(data: bytes):
+    """The song attached to one of our PDFs, as a dict, or None if the PDF
+    has no song attached (made by another program, or by a version of the
+    app from before 0.30)."""
+    m = re.search(rb"/EF << /F (\d+) 0 R >>", data)
+    if not m:
+        return None
+    head = re.search(rb"(?m)^" + m.group(1) +
+                     rb" 0 obj\n<< /Length (\d+) /Filter /FlateDecode >>\nstream\n",
+                     data)
+    if not head:
+        return None
+    start = head.end()
+    raw = data[start:start + int(head.group(1))]
+    try:
+        return json.loads(zlib.decompress(raw).decode("utf-8"))
+    except (zlib.error, ValueError, UnicodeDecodeError):
+        return None
+
+
+def song_from_bytes(data: bytes, filename: str = "") -> dict:
+    """Read a song from a .sng file's bytes or from one of our PDFs.
+    Returns the song migrated to the current schema. Raises SongImportError
+    with a sentence for the user when the file holds no song."""
+    if data[:5] == b"%PDF-":
+        raw = read_embedded_song(data)
+        if raw is None:
+            raise SongImportError(
+                f"{filename or 'This PDF'} has no song inside it. Only PDFs "
+                "exported by Song Notation Tool 0.30 or later can be opened.")
+    else:
+        try:
+            raw = json.loads(data.decode("utf-8-sig"))
+        except (ValueError, UnicodeDecodeError):
+            raise SongImportError(
+                f"{filename or 'This file'} is not a song file (.sng) or a "
+                "PDF exported by Song Notation Tool.") from None
+    if not isinstance(raw, dict) or not isinstance(raw.get("sections", []), list):
+        raise SongImportError(f"{filename or 'This file'} does not look like a song.")
+    return model.migrate_document(raw)
+
+
+def load_song_file(path: str) -> dict:
+    """`song_from_bytes` for a file on disk (.sng, .json or .pdf)."""
+    with open(path, "rb") as f:
+        data = f.read()
+    return song_from_bytes(data, os.path.basename(path))
+
+
+def _assemble_pdf(pages, W, H, song: bytes = None) -> bytes:
+    """Assemble raw PDF bytes from a list of zlib-compressed page streams,
+    with `song` (the .sng bytes) attached when given.
     Ported directly from QLC+ Swiss Knife v0.4 — no external libraries."""
     raw = "%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
     offsets = []
@@ -1385,7 +1668,22 @@ def _assemble_pdf(pages, W, H) -> bytes:
         so.append(sobj(cid + 1, ps))
         cid += 2
 
-    add(obj(1, "<< /Type /Catalog /Pages 2 0 R >>"))
+    names = ""
+    if song is not None:
+        # The attachment: the file stream, the file spec that names it,
+        # and the catalog's EmbeddedFiles name tree pointing at the spec.
+        # The stream dict is the same shape as a page's, so the golden
+        # tests inflate it like the others.
+        so.append(sobj(cid, zlib.compress(song)))
+        so.append(obj(cid + 1,
+            f"<< /Type /Filespec /F ({EMBEDDED_NAME}) /UF ({EMBEDDED_NAME}) "
+            f"/Desc (The song, for reopening in Song Notation Tool) "
+            f"/EF << /F {cid} 0 R >> >>"))
+        names = (f" /Names << /EmbeddedFiles << /Names "
+                 f"[({EMBEDDED_NAME}) {cid + 1} 0 R] >> >>")
+        cid += 2
+
+    add(obj(1, f"<< /Type /Catalog /Pages 2 0 R{names} >>"))
     add(obj(2, f"<< /Type /Pages /Kids [{' '.join(kids)}] /Count {len(pages)} >>"))
     add(obj(3, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica "
                "/Encoding /WinAnsiEncoding >>"))
@@ -1395,6 +1693,8 @@ def _assemble_pdf(pages, W, H) -> bytes:
                "/Encoding /WinAnsiEncoding >>"))
     for p, s in zip(po, so):
         add(p); add(s)
+    for s in so[len(po):]:
+        add(s)
 
     n = cid - 1
     xoff = len(raw)

@@ -678,6 +678,44 @@ button {
    same two colours the PDF uses, so the preview and the paper agree. */
 .sec-preview-more.sec-row-lick { color: var(--blue); }
 .tok-rest { color: var(--lbl-gray); }
+/* Riffs dialog and the chart-line autocomplete */
+.riff-rows { display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow-y: auto; }
+.riff-row, .riff-new { display: flex; gap: 6px; align-items: center; }
+.riff-row .riff-name, .riff-new #riff-new-name { width: 130px; flex: 0 0 auto; }
+.riff-row .riff-line, .riff-new #riff-new-line { flex: 1; min-width: 0; font-family: var(--mono); }
+.riff-used { font-size: 11px; color: var(--lbl-gray); min-width: 90px; }
+.riff-new { margin-top: 10px; }
+.sec-line-row, .sec-part-head { position: relative; }
+.autocomplete { position: absolute; z-index: 20; background: var(--surface, var(--input-bg));
+  border: 1px solid var(--border); border-radius: 5px; min-width: 140px;
+  font-family: var(--mono); font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
+.autocomplete.hidden { display: none; }
+.autocomplete-item { padding: 4px 8px; cursor: pointer; }
+.autocomplete-item { color: var(--fg); }
+.autocomplete-item.active, .autocomplete-item:hover { background: var(--select-bg); color: var(--select-fg); }
+/* Parts: another instrument's line under the section's own. */
+.sec-parts { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.sec-part { border-left: 3px solid var(--border); padding-left: 8px; }
+.sec-part-head { display: flex; gap: 6px; align-items: center; }
+.sec-part-head select { max-width: 170px; background: var(--input-bg); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 5px; padding: 5px 7px; font-size: 13px; }
+.sec-part-head .part-line { flex: 1; min-width: 0; background: var(--input-bg);
+  color: var(--fg); border: 1px solid var(--border); border-radius: 5px;
+  padding: 6px 8px; font-family: var(--mono); font-size: 13px; }
+.sec-part-head .part-line:focus { border-color: var(--select-bg); outline: none; }
+.sec-add-part { margin-top: 6px; align-self: flex-start; }
+.layout-instruments { display: flex; flex-direction: column; gap: 4px; }
+.layout-instrument { flex-direction: row !important; align-items: center; gap: 6px; }
+/* The marks row over a line: 1st/2nd endings, P.M./cresc./dim. runs and
+   accents, a little smaller than the notes, like the fret row. The
+   characters stay so the columns line up; endings get a real top line. */
+.sec-preview-more.sec-row-marks { font-size: 0.86em; letter-spacing: 0.163ch;
+  color: var(--fg); line-height: 1.3; }
+.tok-ending { border-top: 1.5px solid var(--fg); color: var(--fg); }
+.tok-pm, .tok-cresc, .tok-dim { color: var(--fg); font-style: italic; }
+.tok-accent { font-weight: bold; }
+.tok-dyn { font-weight: bold; font-style: italic; }
+.tok-coda { outline: 1.5px solid var(--fg); outline-offset: 1px; font-weight: bold; }
 /* No .tok-bracket rule: paintRow skips a "bracket"-tagged span entirely
    (see there) rather than printing it in any colour — it's drawn as a
    real line by applyBracketRuns instead. */

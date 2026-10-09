@@ -1008,6 +1008,13 @@ class SongNotationApp(tk.Tk):
             lines.append(f'  "{sec["annotation"]}"')
         if render.has_coda(sec.get("items", [])):
             lines.append("  ◆ coda")
+        # Parts for other instruments are edited in the browser app; here
+        # they are only listed, and kept as they are on save.
+        parts = render.section_parts(sec)
+        if parts:
+            names = ", ".join(p.get("instrument", "") for p in parts)
+            label = "part" if len(parts) == 1 else "parts"
+            lines.append(f"  + {label}: {names} (edit in the browser app)")
         return "\n".join(lines)
 
     # ── focus / selection ────────────────────────────────────────────────
@@ -2506,6 +2513,13 @@ class SongNotationApp(tk.Tk):
         "it follows.\n\n"
         "Chords (🎸) keeps the voicings you had to work out (x32010 is C) and "
         "prints them as diagrams at the start or the end of the chart.\n\n"
+        "Techniques on a lick: 5h7 hammer-on, 7p5 pull-off, 5/7 and 7\\5 "
+        "slides, 7b9 bend, 7b9r7 bend and release, 7~ vibrato, x muted. "
+        "Dynamics are words of their own (p, mf, ff), 5A^ is an accent, and "
+        "[pm 5A 5A 5A], [cresc A D E] and [dim E D A] cover a run of notes.\n\n"
+        "Open also reads a PDF this app exported, because every PDF carries "
+        "its song. Parts for other instruments are edited in the browser "
+        "app; here they are listed under their section and kept on save.\n\n"
         "A parse error never clears what you typed. It shows in place, and "
         "the last good chart stays on screen above it.\n\n"
         "Reorder sections by dragging a row's handle (⠿), or with "
@@ -2597,12 +2611,29 @@ class SongNotationApp(tk.Tk):
         messagebox.showinfo("Saved", f"Project saved to:\n{path}")
 
     def _open(self):
+        # A PDF exported by the app carries its song, so it opens too.
         path = filedialog.askopenfilename(
-            filetypes=[("Song files", "*.sng"), ("All files", "*.*")])
+            filetypes=[("Songs and exported PDFs", "*.sng *.pdf"),
+                       ("Song files", "*.sng"), ("PDF exports", "*.pdf"),
+                       ("All files", "*.*")])
         if not path:
             return
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        try:
+            with open(path, "rb") as f:
+                raw = f.read()
+            if raw[:5] == b"%PDF-":
+                data = songexport.read_embedded_song(raw)
+            else:
+                try:
+                    data = json.loads(raw.decode("utf-8-sig"))
+                except (ValueError, UnicodeDecodeError):
+                    data = None
+            if not isinstance(data, dict):
+                # Same check and wording as Import in the browser app.
+                songexport.song_from_bytes(raw, os.path.basename(path))
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Can't open this file", str(exc))
+            return
 
         self._started_fresh = False
         self.doc = model.migrate_document(data)

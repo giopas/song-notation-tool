@@ -14,7 +14,8 @@ from __future__ import annotations
 import re
 
 from model import (make_token, make_group, make_block_ref, make_section_ref,
-                    make_mark, make_lick, make_lick_ref, validate_block_name)
+                    make_mark, make_lick, make_lick_ref, validate_block_name,
+                    DYNAMICS, SPAN_KINDS)
 
 MAX_FRET = 24
 
@@ -119,6 +120,9 @@ _BREAK_RE = re.compile(r'^//(>*)$')
 def _match_mark(word: str):
     if word in _LITERAL_MARKS:
         return _LITERAL_MARKS[word]
+    # Dynamics are lower case only: "f" is forte, "F" stays the chord.
+    if word in DYNAMICS:
+        return "dyn_" + word
     m = _ENDING_RE.match(word)
     if m:
         n = m.group(1)
@@ -136,6 +140,7 @@ _MARK_TO_TEXT = {v: k for k, v in _LITERAL_MARKS.items()}
 _MARK_TO_TEXT["ending_1"] = "|1."
 _MARK_TO_TEXT["ending_2"] = "|2."
 _MARK_TO_TEXT.update({v: k for k, v in _WORD_MARKS.items()})
+_MARK_TO_TEXT.update({"dyn_" + d: d for d in DYNAMICS})
 
 
 # ==============================================================================
@@ -174,7 +179,8 @@ def _apply_shift(items, n):
 # ==============================================================================
 
 _TOKEN_RE = re.compile(
-    r'^(?P<fret>0|[1-9][0-9]?)?(?P<note>[A-G])(?P<acc>[#b])?(?P<qual>[A-Za-z0-9/+\-()]*)$'
+    r'^(?P<fret>0|[1-9][0-9]?)?(?P<note>[A-G])(?P<acc>[#b])?(?P<qual>[A-Za-z0-9/+\-()]*)'
+    r'(?P<accent>\^)?$'
 )
 _IDENT_RE = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
 _LEADING_ZERO_RE = re.compile(r'^0\d')
@@ -191,7 +197,12 @@ def _parse_token_or_block(word: str):
         if fret_val is not None and fret_val > MAX_FRET:
             raise ParseError(f"fret {fret_val} exceeds MAX_FRET ({MAX_FRET}): {word!r}")
         symbol = m.group("note") + (m.group("acc") or "") + (m.group("qual") or "")
-        return make_token(symbol, fret_val)
+        return make_token(symbol, fret_val, accent=bool(m.group("accent")))
+
+    if word.lower() in SPAN_KINDS:
+        raise ParseError(
+            f"{word!r} marks a run: put it first in brackets, "
+            f"[{word.lower()} 5A 5A 5A]")
 
     if _IDENT_RE.match(word):
         return make_block_ref(word)
@@ -232,7 +243,14 @@ def _parse_group(word: str):
     repeat, all_flag, shift = _consume_suffix(tail)
     if all_flag or shift:
         raise ParseError("'all' and +/- shift are not valid on a group")
-    return make_group(parse_items(inner), repeat=repeat)
+    # "[pm 5A 5A 5A]": a run word first marks the whole run.
+    span = ""
+    head, _, rest = inner.strip().partition(" ")
+    if head.lower() in SPAN_KINDS:
+        span, inner = head.lower(), rest
+        if not inner.strip():
+            raise ParseError(f"[{span} ...] needs the notes it covers after {span!r}")
+    return make_group(parse_items(inner), repeat=repeat, span=span)
 
 
 # ==============================================================================
@@ -246,7 +264,23 @@ def _parse_group(word: str):
 #  some people, so both "G 5 7 5" and "G: 5 7 5" are accepted.
 # ==============================================================================
 
-_LICK_FRET_RE = re.compile(r'^(?:[-x]|0|[1-9][0-9]?)$', re.IGNORECASE)
+# A lick position: "-" (not played), "x" (muted), or a fret with any of the
+# usual tab techniques after it: 5h7 hammer-on, 7p5 pull-off, 5/7 and 7\5
+# slides, 7b9 bend (7b9r7: bend and release), 7~ vibrato, and ^ for an
+# accent at the very end (5^, 5h7^).
+_FRET_NUM = r'(?:0|[1-9][0-9]?)'
+_LICK_FRET_RE = re.compile(
+    rf'^(?:[-x]|{_FRET_NUM}(?:[hpb/\\]{_FRET_NUM}|r{_FRET_NUM}|~)*\^?)$',
+    re.IGNORECASE)
+_NUMBERS_RE = re.compile(r'\d+')
+
+
+def valid_tab_position(text: str) -> bool:
+    """True for one lick or tab-grid position: "-", "x", or a fret with
+    techniques (see _LICK_FRET_RE), every fret no higher than MAX_FRET."""
+    if not _LICK_FRET_RE.match(text or ""):
+        return False
+    return all(int(n) <= MAX_FRET for n in _NUMBERS_RE.findall(text))
 # "{Riff1 = G 5 7 5 | D - - 3}" names the lick; "{Riff1}" recalls it.
 _LICK_NAME_RE = re.compile(r'^\s*([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.*)$', re.DOTALL)
 
@@ -287,8 +321,9 @@ def _parse_lick(word: str):
             if not _LICK_FRET_RE.match(f):
                 raise ParseError(
                     f"{f!r} is not a fret in lick line {st_name!r} "
-                    f"(0-{MAX_FRET}, '-' for not played, or 'x' for muted)")
-            if f not in ("-", "x", "X") and int(f) > MAX_FRET:
+                    f"(0-{MAX_FRET}, '-' for not played, 'x' for muted, or a "
+                    f"fret with h p / \\ b r ~ after it, and ^ for an accent)")
+            if not valid_tab_position(f):
                 raise ParseError(f"fret {f} exceeds MAX_FRET ({MAX_FRET}) in lick")
         lines.append({"string": st_name, "frets": frets})
 
@@ -385,7 +420,8 @@ def _unparse_item(it: dict) -> str:
     k = it["kind"]
     if k == "token":
         fret = it.get("fret")
-        return (str(fret) if fret is not None else "") + it["symbol"]
+        return ((str(fret) if fret is not None else "") + it["symbol"]
+                + ("^" if it.get("accent") else ""))
     if k == "lick":
         return _unparse_lick(it)
     if k == "lick_ref":
@@ -399,6 +435,8 @@ def _unparse_item(it: dict) -> str:
         return _MARK_TO_TEXT[it["mark"]]
     if k == "group":
         inner = " ".join(_unparse_item(x) for x in it["items"])
+        if it.get("span"):
+            inner = f"{it['span']} {inner}"
         s = f"[{inner}]"
         if it.get("repeat", 1) != 1:
             s += f"x{it['repeat']}"

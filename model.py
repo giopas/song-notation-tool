@@ -19,7 +19,18 @@ MARK_NAMES = (
     # it plays nothing — so that a long section can be grouped into
     # phrases the way you'd actually write it out by hand.
     "line_break",
+    # Dynamics, typed as the usual music words (lower case only, so they
+    # never clash with the chords F and P... which do not exist, but F does).
+    "dyn_pp", "dyn_p", "dyn_mp", "dyn_mf", "dyn_f", "dyn_ff",
 )
+
+# The words a dynamic mark is typed as, in order from soft to loud.
+DYNAMICS = ("pp", "p", "mp", "mf", "f", "ff")
+
+# A group can mark a run instead of (or as well as) repeating it: its first
+# word says what the run is. "[pm 5A 5A 5A]" palm-mutes the three notes;
+# "[cresc 5A 7D 9E]" and "[dim ...]" get louder or softer across them.
+SPAN_KINDS = ("pm", "cresc", "dim")
 
 RENDER_MODES = ("chart", "tab", "both", "free")
 
@@ -63,14 +74,21 @@ COLOR_MODES = ("color", "bw")
 #  Item constructors — thin helpers that guarantee the required keys exist.
 # ==============================================================================
 
-def make_token(symbol, fret=None):
-    return {"kind": "token", "symbol": symbol, "fret": fret}
+def make_token(symbol, fret=None, accent=False):
+    d = {"kind": "token", "symbol": symbol, "fret": fret}
+    if accent:
+        d["accent"] = True     # typed as "5A^": played with an accent
+    return d
 
 
-def make_group(items=None, repeat=1, note=""):
+def make_group(items=None, repeat=1, note="", span=""):
     d = {"kind": "group", "repeat": repeat, "items": list(items or [])}
     if note:
         d["note"] = note
+    if span:
+        if span not in SPAN_KINDS:
+            raise ValueError(f"unknown run kind: {span!r}")
+        d["span"] = span       # "pm", "cresc" or "dim" over the whole run
     return d
 
 
@@ -157,6 +175,9 @@ def new_document(title="", artist="", key="", time="4/4", bpm=""):
         "color_mode": "color",
         "pdf_scale": "fit",
         "pdf_columns": "auto",
+        # Which instruments print, when a song has more than one (sections
+        # and parts). Empty means all of them.
+        "print_instruments": [],
         "blocks": {},
         "sections": [],
     }
@@ -178,6 +199,15 @@ def new_section(section_id, name, section_type="Verse",
         "render": render, "annotation": "", "lyrics_text": "",
         "print_lyrics": False, "free_text": free_text, "items": [],
     }
+
+
+def make_part(part_id, instrument, items=None):
+    """Another instrument's chart line in the same section: the guitar
+    under the bass line, say. The section's own chart line is its first
+    part, played on the section's instrument; `section["parts"]` holds the
+    others, each printed under it with the instrument's name."""
+    return {"id": str(part_id), "instrument": instrument,
+            "items": list(items or [])}
 
 
 def make_chord(name, frets, instrument="Guitar (6-string)", note=""):
@@ -205,6 +235,10 @@ def validate_block_name(name):
     (e.g. "A1", "b2"). Returns True if the name is valid, False otherwise.
     """
     if not name:
+        return False
+    # A dynamic ("mf") or a run word ("pm") means something on a chart
+    # line, so it can't also be a riff's name.
+    if name in DYNAMICS or name.lower() in SPAN_KINDS:
         return False
     return not _BLOCK_NAME_REJECT_RE.match(name)
 

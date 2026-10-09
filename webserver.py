@@ -55,6 +55,7 @@ each route.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import mimetypes
 import os
@@ -466,6 +467,10 @@ def _with_chart_lines(doc: dict) -> dict:
         # keeps ids (see songmap.display_ref_key).
         sec["chart_line"] = (grammar.unparse(songmap.display_items(chart, doc))
                              if chart else "")
+        if sec.get("parts"):
+            sec["parts"] = [dict(p, chart_line=(
+                grammar.unparse(songmap.display_items(p.get("items") or [], doc))
+                if p.get("items") else "")) for p in sec["parts"]]
         out["sections"].append(sec)
     return out
 
@@ -666,6 +671,60 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
         try:
+            if path == "/api/riffs":
+                # The riff library, edited from the browser. The whole song
+                # comes and goes, so the editor stays the one copy of it.
+                body = self._read_json_body()
+                doc = model.migrate_document(body.get("doc") or {})
+                op = body.get("op")
+                try:
+                    if op == "create":
+                        items = (grammar.parse_items(body.get("line") or "")
+                                 if (body.get("line") or "").strip() else [])
+                        songmap.create_riff(doc, body.get("name"),
+                                            songmap.canonicalise_refs(items, doc))
+                    elif op == "set_line":
+                        block = (doc.get("blocks") or {}).get(body.get("id"))
+                        if block is None:
+                            raise songmap.RiffError("No such riff.")
+                        block["items"] = songmap.canonicalise_refs(
+                            grammar.parse_items(body.get("line") or ""), doc)
+                    elif op == "rename":
+                        songmap.rename_riff(doc, body.get("id"), body.get("name"))
+                    elif op == "delete":
+                        songmap.delete_riff(doc, body.get("id"))
+                    elif op == "list":
+                        pass
+                    elif op == "promote":
+                        sec = next((s for s in doc.get("sections", [])
+                                    if s.get("id") == body.get("section_id")), None)
+                        if sec is None:
+                            raise songmap.RiffError("No such section.")
+                        name = (body.get("name") or "").strip() or \
+                            songmap.unique_block_id(doc, "riff")
+                        name = songmap.check_riff_name(doc, name)
+                        new_line, riff_items = songmap.promote_to_riff(
+                            body.get("line") or "", int(body.get("start", 0)),
+                            int(body.get("end", 0)), name)
+                        songmap.create_riff(doc, name,
+                                            songmap.canonicalise_refs(riff_items, doc))
+                        new_items, annotation = grammar.parse(new_line)
+                        songmap.set_chart_items(
+                            sec, songmap.canonicalise_refs(new_items, doc))
+                    else:
+                        raise songmap.RiffError(f"unknown riff operation {op!r}")
+                except (songmap.RiffError, grammar.ParseError, ValueError) as exc:
+                    return self._send_json({"ok": False, "error": str(exc)},
+                                           status=HTTPStatus.BAD_REQUEST)
+                usage = songmap.block_usage(doc)
+                return self._send_json({
+                    "ok": True, "doc": _with_chart_lines(doc),
+                    "riffs": [{"id": k,
+                               "line": grammar.unparse(songmap.display_items(
+                                   b.get("items") or [], doc)),
+                               "used_in": usage.get(k, [])}
+                              for k, b in (doc.get("blocks") or {}).items()]})
+
             if path == "/api/update/settings":
                 body = self._read_json_body()
                 update.set_enabled(bool(body.get("check", True)))
@@ -700,6 +759,23 @@ class Handler(BaseHTTPRequestHandler):
                 # browser before the process/window goes away.
                 threading.Timer(0.5, _shutdown).start()
                 return self._send_json({"ok": True, "message": "Shutting down…"})
+
+            if path == "/api/import":
+                # Import a song from a file the user picked: a .sng, or a
+                # PDF the app exported (it carries its song). Body
+                # {filename, data} with data in base64. Always a new song
+                # file, named after the song, never over an existing one.
+                body = self._read_json_body()
+                try:
+                    raw = base64.b64decode(body.get("data") or "", validate=True)
+                    doc = export.song_from_bytes(raw, body.get("filename") or "")
+                except (export.SongImportError, ValueError) as exc:
+                    return self._send_json({"ok": False, "error": str(exc)},
+                                           status=HTTPStatus.BAD_REQUEST)
+                filename = self.store.free_name(song_file_name(doc))
+                self.store.save(filename, doc)
+                return self._send_json({"ok": True, "filename": filename,
+                                        "doc": _with_chart_lines(self.store.load(filename))})
 
             if path == "/api/songs":
                 # New song: {name, title, artist, key, time, bpm}
@@ -856,6 +932,8 @@ class Handler(BaseHTTPRequestHandler):
             doc = model.migrate_document(doc)
             for sec in doc.get("sections", []):
                 sec.pop("chart_line", None)
+                for part in sec.get("parts") or []:
+                    part.pop("chart_line", None)
             # Saved under the song's own name — "Artist - Title.sng" —
             # renaming the file if that changed since it was last saved.
             saved_name = self.store.save_song(filename, doc)

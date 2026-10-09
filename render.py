@@ -53,6 +53,16 @@ def active_strings(tab_cells, strings):
     return [st for st in strings if string_has_content(tab_cells, st)]
 
 
+def tab_token_width(measures) -> int:
+    """Characters per beat in a tab grid: TOKEN_W, or wider when a cell
+    holds a technique ("5h7", "7b9r7"), so every cell of the grid keeps the
+    same width and the beats still line up across strings."""
+    longest = max((len(tok) for m in (measures or [])
+                   for raw in (m.get("strings") or {}).values()
+                   for tok in _row_tokens(raw)), default=0)
+    return max(TOKEN_W, longest + 1)
+
+
 def measures_per_line(n_measures: int, max_beats: int,
                        width: int = DEFAULT_TXT_WIDTH,
                        token_w: int = TOKEN_W, prefix_w: int = 4) -> int:
@@ -105,7 +115,9 @@ def _symbol_str(item: dict) -> str:
         # before rendering ever gets here — see _flatten_bracket_groups —
         # because neither a lick's tab nor a "//" survives being flattened
         # into inline bracket text.
-        inner = " ".join(_fret_str(x) + _symbol_str(x) for x in item["items"])
+        inner = " ".join(_fret_str(x) + _symbol_str(x)
+                         + ("^" if x.get("accent") else "")
+                         for x in item["items"])
         s = f"[{inner}]"
         if item.get("repeat", 1) != 1:
             s += f"(x{item['repeat']})"
@@ -127,7 +139,17 @@ def _symbol_str(item: dict) -> str:
             s += f" (x{item['repeat']})"
         return s
     if k == "mark":
-        return _MARK_TO_TEXT.get(item["mark"], item["mark"])
+        m = item["mark"]
+        if m in ("ending_1", "ending_2"):
+            # The ending is drawn as a numbered bracket on the marks row
+            # above the run it covers (see _marks_rows), starting at this
+            # column; nothing prints on the chord row.
+            return ""
+        if m == "coda":
+            # Boxed, with the coda sign: the PDF and the browser draw a
+            # real box and sign over this text; TXT shows it as written.
+            return "[+ Coda]"
+        return _MARK_TO_TEXT.get(m, m)
     return ""
 
 
@@ -213,7 +235,7 @@ def _needs_bracket(items) -> bool:
             return True
         if k == "mark" and x.get("mark") == "line_break":
             return True
-        if k == "group" and _needs_bracket(x.get("items")):
+        if k == "group" and (x.get("span") or _needs_bracket(x.get("items"))):
             return True
     return False
 
@@ -243,8 +265,18 @@ def _flatten_bracket_groups(items):
     _symbol_str builds."""
     out = []
     for it in (items or []):
-        if it.get("kind") == "group" and _needs_bracket(it.get("items")):
+        if it.get("kind") == "group" and (it.get("span")
+                                          or _needs_bracket(it.get("items"))):
             inner = _flatten_bracket_groups(it.get("items", []))
+            span = it.get("span")
+            if inner and span:
+                # A run ("[pm ...]", "[cresc ...]") is drawn as a line on
+                # the marks row over the items it covers: tag where it
+                # opens and closes, the same way a repeat bracket is.
+                inner = ([dict(inner[0], _span_open=(inner[0].get("_span_open") or ()) + (span,))]
+                         + inner[1:])
+                inner = (inner[:-1]
+                         + [dict(inner[-1], _span_close=(inner[-1].get("_span_close") or ()) + (span,))])
             rep = it.get("repeat", 1)
             if inner and rep != 1:
                 if len(inner) == 1:
@@ -297,6 +329,26 @@ ROLE_TEXT = "text"
 # row's own role, which a drawing front end would otherwise apply to it
 # like any other stretch of that row.
 ROLE_BRACKET = "bracket"
+# The row above the frets that carries what a player reads over the notes:
+# 1st/2nd ending brackets, palm-mute and crescendo/diminuendo runs, and
+# accents. Each stretch on it is tagged with its own role, so a renderer
+# with vector graphics can draw a real bracket, line or hairpin over the
+# columns the text version marks.
+ROLE_MARKS = "marks"
+ROLE_ENDING = "ending"
+ROLE_PM = "pm"
+ROLE_CRESC = "cresc"
+ROLE_DIM = "dim"
+ROLE_ACCENT = "accent"
+# On the chord row: a dynamic ("mf") and the boxed coda.
+ROLE_DYN = "dyn"
+ROLE_CODA = "coda"
+
+# The heading line of a part (another instrument's line in the section).
+ROLE_PART = "part"
+
+_SPAN_LABEL = {"pm": "P.M.", "cresc": "cresc.", "dim": "dim."}
+_SPAN_ROLE = {"pm": ROLE_PM, "cresc": ROLE_CRESC, "dim": ROLE_DIM}
 
 
 def _row(text: str, role: str, spans=None):
@@ -336,7 +388,12 @@ def _apply_group_brackets(rows, run_ranges):
         # size, out of step with the bar around it. A broken group can
         # have more than one — every line it breaks onto gets its own —
         # so every row in the span is checked, not just the first.
-        idxs = [i for i in range(s, e + 1) if rows[i]["role"] != ROLE_FRET]
+        # The marks row above a line (endings, runs, accents) is not part
+        # of what repeats either: the bracket starts below it.
+        while s < e and rows[s]["role"] == ROLE_MARKS:
+            s += 1
+        idxs = [i for i in range(s, e + 1)
+                if rows[i]["role"] not in (ROLE_FRET, ROLE_MARKS)]
         if not idxs:
             idxs = list(range(s, e + 1))
         # Centred on the rows that actually carry the bar; rounded down
@@ -440,26 +497,122 @@ def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):
         # back to the left margin beneath the name.
         cont_indent = _gutter_width(label, indent)
         out, run_ranges = [], []
+        state = {}
         for i, (level, run) in enumerate(runs):
             step = level * INDENT_STEP
             before = len(out)
             if i == 0:
-                out.extend(_render_one_row(run, label, indent + step))
+                out.extend(_render_one_row(run, label, indent + step, state))
             else:
-                out.extend(_render_one_row(run, "", cont_indent + step))
+                out.extend(_render_one_row(run, "", cont_indent + step, state))
             run_ranges.append((before, len(out) - 1, run))
         out = _apply_group_brackets(out, run_ranges)
         return out or ([_row(label.rstrip(), ROLE_SYM)] if label else [])
     _, one_run = runs[0]
 
-    rows = _render_one_row(one_run, label, indent)
+    rows = _render_one_row(one_run, label, indent, {})
     return _apply_group_brackets(rows, [(0, len(rows) - 1, one_run)])
 
 
-def _render_one_row(items, label: str, indent: int):
+def _marks_rows(items, starts, widths, state):
+    """The marks row(s) above one block of a chart row, as row dicts.
+
+    `starts[i]` and `widths[i]` are where item i sits on the line and how
+    wide its own content is. `state` carries what is still open at the end
+    of the block (an ending, a "[pm ...]" run) into the next block of the
+    same section, where it continues without its label.
+
+    What goes here:
+      - 1st/2nd endings: "1.------" from the ending mark to the next ending,
+        through a ":|" for the 1st, or to the end of the section;
+      - runs: "P.M.-----|", "cresc.---", "dim.---" over the items a
+        "[pm ...]" (and so on) group covers;
+      - accents: ">" over an accented note ("5A^").
+    Stretches that would overlap go on a second row.
+    """
+    spans = []          # (start_col, end_col, role, label)
+
+    def item_end(i):
+        return starts[i] + max(widths[i], 1)
+
+    # carried over from the block before
+    ending = state.get("ending")            # (label, start_col) or None
+    if ending:
+        ending = ("", starts[0]) if items else None
+    open_runs = {k: ("", starts[0]) for k in state.get("runs", ())} if items else {}
+
+    for i, it in enumerate(items):
+        if it.get("kind") == "mark" and it.get("mark") in ("ending_1", "ending_2"):
+            if ending and i > 0:
+                spans.append((ending[1], item_end(i - 1), ROLE_ENDING, ending[0]))
+            ending = ("1." if it["mark"] == "ending_1" else "2.", starts[i])
+        for kind in it.get("_span_open") or ():
+            open_runs[kind] = (_SPAN_LABEL[kind], starts[i])
+        if it.get("kind") == "token" and it.get("accent"):
+            spans.append((starts[i], starts[i] + 1, ROLE_ACCENT, ">"))
+        for kind in it.get("_span_close") or ():
+            if kind in open_runs:
+                lbl, s0 = open_runs.pop(kind)
+                spans.append((s0, item_end(i), _SPAN_ROLE[kind], lbl, "close"))
+        if (ending and ending[0] != "2." and it.get("kind") == "mark"
+                and it.get("mark") == "repeat_close"):
+            spans.append((ending[1], item_end(i), ROLE_ENDING, ending[0]))
+            ending = None
+
+    if items:
+        last = item_end(len(items) - 1)
+        if ending:
+            spans.append((ending[1], last, ROLE_ENDING, ending[0]))
+        for kind, (lbl, s0) in open_runs.items():
+            spans.append((s0, last, _SPAN_ROLE[kind], lbl))
+    state["ending"] = ending
+    state["runs"] = tuple(open_runs)
+
+    if not spans:
+        return []
+
+    def text_for(sp):
+        start, end, role, lbl = sp[:4]
+        if role == ROLE_ACCENT:
+            return ">"
+        body = lbl + "-" * max(0, (end - start) - len(lbl))
+        if role == ROLE_PM and len(sp) > 4:
+            body = body[:-1] + "|" if len(body) > len(lbl) else body + "|"
+        return body or "-"
+
+    rows_occ = []        # per marks row: list of (start, end) taken
+    placed = []          # (row_index, start, text, role)
+    for sp in sorted(spans, key=lambda x: (x[0], x[2] == ROLE_ACCENT)):
+        text = text_for(sp)
+        start, end = sp[0], sp[0] + len(text)
+        for r, occ in enumerate(rows_occ):
+            if all(end + 1 <= a or start >= b + 1 for a, b in occ):
+                occ.append((start, end))
+                placed.append((r, start, text, sp[2]))
+                break
+        else:
+            rows_occ.append([(start, end)])
+            placed.append((len(rows_occ) - 1, start, text, sp[2]))
+
+    out = []
+    for r in range(len(rows_occ)):
+        width = max(s + len(t) for rr, s, t, _ in placed if rr == r)
+        chars = [" "] * width
+        row_spans = []
+        for rr, s, t, role in placed:
+            if rr != r:
+                continue
+            chars[s:s + len(t)] = list(t)
+            row_spans.append((s, s + len(t), role))
+        out.append(_row("".join(chars).rstrip(), ROLE_MARKS, sorted(row_spans)))
+    return out
+
+
+def _render_one_row(items, label: str, indent: int, state=None):
     """One block of a chart row — see render_chart_row."""
     if not items:
         return []
+    state = {} if state is None else state
 
     frets = [_fret_str(it) for it in items]
     symbols = [_symbol_str(it) for it in items]
@@ -493,9 +646,16 @@ def _render_one_row(items, label: str, indent: int):
     # Where each item starts on the symbol row, so a rest can be drawn in
     # its own colour without the drawing code having to find it in the text.
     sym_spans, col_x = [], label_w
+    starts = []
     for it, sym, w in zip(items, symbols, cols):
-        if sym and it.get("kind") == "mark" and it.get("mark") == "rest":
+        starts.append(col_x)
+        mark = it.get("mark") if it.get("kind") == "mark" else None
+        if sym and mark == "rest":
             sym_spans.append((col_x, col_x + len(sym), ROLE_REST))
+        elif sym and mark and mark.startswith("dyn_"):
+            sym_spans.append((col_x, col_x + len(sym), ROLE_DYN))
+        elif sym and mark == "coda":
+            sym_spans.append((col_x, col_x + len(sym), ROLE_CODA))
         # A lick's name, or a reference to one, is the same thing as the
         # tab it stands for, so it prints in the same blue — findable at
         # a glance among the chord symbols, which is the point of naming it.
@@ -515,7 +675,9 @@ def _render_one_row(items, label: str, indent: int):
     # sitting a line lower than its neighbours.
     fret_line = fret_line.rstrip()
     sym_line = sym_line.rstrip()
-    rows = ([_row(fret_line, ROLE_FRET)] if fret_line else [])
+    widths = [w - 2 for w in cols]
+    rows = _marks_rows(items, starts, widths, state)
+    rows += ([_row(fret_line, ROLE_FRET)] if fret_line else [])
     rows.append(_row(sym_line, ROLE_SYM, sym_spans))
     rows += [_row(r, ROLE_LICK) for r in lick_rows if r.strip()]
     # A lick with nothing beside it is a tab block standing on its own,
@@ -733,6 +895,41 @@ def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT):
     while lines and not lines[-1]["text"].strip():
         lines.pop()
     return lines
+
+
+# ==============================================================================
+#  Parts — another instrument's line in the same section
+# ==============================================================================
+
+def section_parts(sec: dict) -> list:
+    """The section's extra parts that have something in them."""
+    return [p for p in (sec.get("parts") or []) if p.get("items")]
+
+
+def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT):
+    """One part's printed rows: a heading with its instrument, then its
+    chart, with references expanded and the section's transpose applied."""
+    import transpose
+    eff = transpose.effective_transpose((doc or {}).get("transpose", 0),
+                                        sec.get("transpose", 0))
+    items = resolve_references(
+        [i for i in part.get("items", []) if i.get("kind") != "measure"], doc or {})
+    if not items:
+        return []
+    rows = chart_body_rows(resolve_display_items(items, eff), "", indent)
+    head = _row(" " * indent + (part.get("instrument") or "Part") + ":", ROLE_PART)
+    return [head] + rows
+
+
+def printed_part_rows(doc: dict, sec: dict, instruments=None,
+                      indent: int = BODY_INDENT):
+    """Every part of `sec` that prints for `instruments` (None: all)."""
+    out = []
+    for p in section_parts(sec):
+        if instruments is not None and p.get("instrument") not in instruments:
+            continue
+        out += part_rows(doc, sec, p, indent)
+    return out
 
 
 # ==============================================================================
@@ -1035,7 +1232,8 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
     chart_lines_drawn = 0
     render_mode = section.get("render", "chart")
     free = section.get("free_text", "") if render_mode == "free" else ""
-    if not items and not annotation and not lyrics.strip() and not free.strip():
+    if (not items and not annotation and not lyrics.strip() and not free.strip()
+            and not section_parts(section)):
         return 0
 
     lines = 1  # section label line
@@ -1073,6 +1271,11 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
             n_groups = -(-len(measures) // mpl)  # ceil division
             lines += n_groups * n_rows
 
+    if doc is not None:
+        lines += len(printed_part_rows(doc, section, None, 0))
+    else:
+        lines += 3 * len(section_parts(section))
+
     if annotation:
         lines += 1
 
@@ -1108,6 +1311,18 @@ def estimate_page_count(doc: dict, instrument_strings: dict = None,
 #  paths"). transpose.py never mutates stored items; this walks a copy.
 # ==============================================================================
 
+def transpose_tab_position(text: str, semitones: int) -> str:
+    """One lick or tab-grid position moved by `semitones`: every fret in it
+    ("5h7" -> "7h9"), its techniques kept. "-" and "x" stay as they are, and
+    so does a position with any fret that would fall off the neck, rather
+    than being clamped to a fret you would not play."""
+    import re as _re
+    nums = [int(n) for n in _re.findall(r"\d+", text or "")]
+    if not nums or any(not 0 <= n + semitones <= 24 for n in nums):
+        return text
+    return _re.sub(r"\d+", lambda m: str(int(m.group()) + semitones), text)
+
+
 def resolve_display_items(items, eff_semitones: int):
     """
     Return a shallow-copied item list with every `token`'s symbol/fret
@@ -1140,11 +1355,7 @@ def resolve_display_items(items, eff_semitones: int):
             for ln in it.get("lines", []):
                 frets = []
                 for f in ln.get("frets", []):
-                    if f in ("-", "x", "X"):
-                        frets.append(f)
-                        continue
-                    shifted = int(f) + eff_semitones
-                    frets.append(str(shifted) if 0 <= shifted <= 24 else f)
+                    frets.append(transpose_tab_position(f, eff_semitones))
                 new_lines.append({"string": ln.get("string", ""), "frets": frets})
             new_it = dict(it)
             new_it["lines"] = new_lines

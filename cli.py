@@ -30,6 +30,10 @@ sanity-check a .sng file, or a file emitted by another tool, without
 opening the GUI):
 
     ./cli.py lint -i song.sng
+
+Get the song back out of a PDF the app exported (every PDF carries it):
+
+    ./cli.py extract -i "Artist - Title.pdf"
 """
 
 from __future__ import annotations
@@ -42,13 +46,12 @@ import sys
 
 import export
 import model
-from constants import APP_VERSION, default_export_name
+from constants import APP_VERSION, default_export_name, song_file_name
 
 
 def _load_doc(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
-        raw = json.load(f)
-    return model.migrate_document(raw)
+    """A .sng file, or a PDF exported by the app (it carries its song)."""
+    return export.load_song_file(path)
 
 
 def _parse_instruments(arg_list):
@@ -144,6 +147,18 @@ def cmd_lint(args):
     return 0 if report["ok"] else 1
 
 
+def cmd_extract(args):
+    """Write the song a PDF carries back out as a .sng file."""
+    doc = _load_doc(args.input)
+    out_path = args.output or song_file_name(doc)
+    written = export.write_export(out_path, export.song_bytes(doc),
+                                  overwrite=args.force)
+    if os.path.abspath(written) != os.path.abspath(out_path):
+        print(f"{out_path} already exists, so it was kept.")
+    print(f"Wrote {written}")
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(
         prog="cli.py",
@@ -168,7 +183,8 @@ def build_parser():
 
     pc = sub.add_parser("convert", parents=[common],
                          help="Convert one .sng file to TXT or PDF")
-    pc.add_argument("-i", "--input", required=True, help="Path to a .sng file")
+    pc.add_argument("-i", "--input", required=True,
+                     help="Path to a .sng file, or a PDF the app exported")
     pc.add_argument("-o", "--output", help="Output path "
                      "(default: '<Artist> - <Title>.<ext>' in the current folder)")
     pc.set_defaults(func=cmd_convert)
@@ -183,8 +199,20 @@ def build_parser():
 
     pl = sub.add_parser("lint", help="Parse every section's chart line and "
                          "report errors, without opening the GUI")
-    pl.add_argument("-i", "--input", required=True, help="Path to a .sng file")
+    pl.add_argument("-i", "--input", required=True,
+                     help="Path to a .sng file, or a PDF the app exported")
     pl.set_defaults(func=cmd_lint)
+
+    px = sub.add_parser("extract", help="Get the song back out of a PDF "
+                         "exported by the app, as a .sng file")
+    px.add_argument("-i", "--input", required=True,
+                     help="Path to a PDF exported by Song Notation Tool")
+    px.add_argument("-o", "--output", help="Output path "
+                     "(default: 'Artist - Title.sng' in the current folder)")
+    px.add_argument("--force", action="store_true",
+                     help="Replace an existing file instead of writing the "
+                          "next free name")
+    px.set_defaults(func=cmd_extract)
 
     return p
 
@@ -192,7 +220,11 @@ def build_parser():
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (export.SongImportError, OSError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

@@ -415,6 +415,11 @@ def used_symbols(doc: dict, guitar_only: bool = None) -> list:
                                             sec.get("transpose", 0))
         items = render.resolve_display_items(
             render.resolve_references(songmap.chart_items(sec), doc), eff)
+        for part in render.section_parts(sec):
+            if guitar_only and not _is_guitar(part.get("instrument")):
+                continue
+            items = items + render.resolve_display_items(
+                render.resolve_references(part.get("items", []), doc), eff)
         for it in _walk(items):
             if it.get("kind") == "token":
                 sym = (it.get("symbol") or "").strip()

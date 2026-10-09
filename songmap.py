@@ -42,7 +42,10 @@ def block_usage(doc: dict) -> dict:
     usage: dict = {}
     for sec in doc.get("sections", []):
         seen = set()
-        for bid in block_refs_in(sec.get("items", [])):
+        all_items = list(sec.get("items", []))
+        for part in sec.get("parts") or []:
+            all_items += part.get("items", [])
+        for bid in block_refs_in(all_items):
             if bid not in seen:
                 usage.setdefault(bid, []).append(sec.get("name") or sec.get("id", ""))
                 seen.add(bid)
@@ -276,6 +279,79 @@ def promote_to_riff(line: str, sel_start: int, sel_end: int, block_id: str):
     trail = "" if (not after or after[0].isspace()) else " "
     new_line = before + lead + block_id + trail + after
     return new_line, riff_items
+
+
+# ==============================================================================
+#  Riff library edits (the browser's Riffs dialog; the desktop app has its
+#  own strip). A riff is a block: its id is the word typed on a chart line.
+# ==============================================================================
+
+class RiffError(ValueError):
+    pass
+
+
+def check_riff_name(doc: dict, name: str, current: str = None) -> str:
+    """`name` cleaned and checked as a new riff name, or RiffError."""
+    name = (name or "").strip()
+    if not _REF_IDENT_RE.match(name):
+        raise RiffError("A riff name is one word: a letter, then letters, "
+                        "digits or _ (Riff1, main_riff).")
+    if not model.validate_block_name(name):
+        raise RiffError(f"{name!r} would read as a chord, a dynamic or a run "
+                        f"word on a chart line; pick another name.")
+    taken = {k.lower() for k in (doc.get("blocks") or {}) if k != current}
+    if name.lower() in taken:
+        raise RiffError(f"There is already a riff called {name!r}.")
+    return name
+
+
+def _map_block_refs(items, old: str, new: str):
+    out = []
+    for it in items or []:
+        if it.get("kind") == "block_ref" and it.get("block") == old:
+            out.append(dict(it, block=new))
+        elif it.get("kind") == "group":
+            out.append(dict(it, items=_map_block_refs(it.get("items", []), old, new)))
+        else:
+            out.append(it)
+    return out
+
+
+def create_riff(doc: dict, name: str, items=None) -> str:
+    name = check_riff_name(doc, name)
+    block = model.new_block(name, name)
+    block["items"] = list(items or [])
+    doc.setdefault("blocks", {})[name] = block
+    return name
+
+
+def rename_riff(doc: dict, old: str, new: str) -> str:
+    """Rename a riff and every reference to it, in sections, parts and
+    other riffs."""
+    blocks = doc.get("blocks") or {}
+    if old not in blocks:
+        raise RiffError(f"No riff called {old!r}.")
+    new = check_riff_name(doc, new, current=old)
+    if new == old:
+        return old
+    block = blocks.pop(old)
+    block["id"], block["name"] = new, new
+    blocks[new] = block
+    for sec in doc.get("sections", []):
+        sec["items"] = _map_block_refs(sec.get("items", []), old, new)
+        for part in sec.get("parts") or []:
+            part["items"] = _map_block_refs(part.get("items", []), old, new)
+    for b in blocks.values():
+        b["items"] = _map_block_refs(b.get("items", []), old, new)
+    return new
+
+
+def delete_riff(doc: dict, name: str) -> None:
+    ok, users = can_delete_block(doc, name)
+    if not ok:
+        raise RiffError(f"{name!r} is still used in: {', '.join(users)}. "
+                        f"Take it out of those lines first.")
+    (doc.get("blocks") or {}).pop(name, None)
 
 
 def unique_block_id(doc: dict, stem: str = "riff") -> str:

@@ -18,6 +18,9 @@ const API = {
     method: "POST", body: JSON.stringify(fields),
   }),
   openExample: () => fetchJSON("/api/songs/example", { method: "POST" }),
+  importSong: (filename, data) => fetchJSON("/api/import", {
+    method: "POST", body: JSON.stringify({ filename, data }),
+  }),
   deleteSong: (name) => fetchJSON(`/api/songs/${encodeURIComponent(name)}`, { method: "DELETE" }),
   // `doc` is optional context so the server can expand =section / riff
   // references into the items they point at for the preview row.
@@ -42,6 +45,10 @@ const API = {
     method: "POST", body: JSON.stringify({ text, instrument }),
   }),
   quit: () => fetchJSON("/api/quit", { method: "POST" }),
+  riffs: (op, fields) => fetch("/api/riffs", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ op, doc: currentDoc }, fields || {})),
+  }).then((r) => r.json()),
 };
 
 function fetchJSON(url, opts) {
@@ -58,12 +65,14 @@ function debounce(fn, ms) {
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
-function toast(msg) {
+function toast(msg, long) {
+  // `long`: a message worth reading in full, such as why a file could
+  // not be imported, stays up longer.
   const el = document.getElementById("toast");
   el.textContent = msg;
   el.classList.remove("hidden");
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.add("hidden"), 2200);
+  toast._t = setTimeout(() => el.classList.add("hidden"), long ? 6000 : 2200);
 }
 
 // ---------------------------------------------------------------------------
@@ -203,6 +212,43 @@ async function openExampleSong() {
   refreshSongList();
 }
 
+// Import: a .sng file, or a PDF this app exported (it carries the song).
+// The server always makes a new song file, so nothing is overwritten.
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",", 2)[1] || "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function importSongFile(file) {
+  try {
+    const { filename, doc } = await API.importSong(file.name, await fileToBase64(file));
+    currentFilename = filename;
+    currentDoc = doc;
+    document.getElementById("start-here").classList.add("hidden");
+    document.getElementById("editor").classList.remove("hidden");
+    renderEditor();
+    refreshSongList();
+    schedulePreviewUpdate();
+    toast(`Imported ${file.name} as ${filename}`);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+function wireImport() {
+  const input = document.getElementById("import-file");
+  const pick = () => { input.value = ""; input.click(); };
+  document.getElementById("btn-import").addEventListener("click", pick);
+  document.getElementById("start-import").addEventListener("click", pick);
+  input.addEventListener("change", () => {
+    if (input.files && input.files[0]) importSongFile(input.files[0]);
+  });
+}
+
 // ---------------------------------------------------------------------------
 //  Layout panel
 //
@@ -243,12 +289,53 @@ function refreshLayoutPanel() {
     ? "Set by the lyrics: their column on the left, one chart column beside it."
     : "Two columns halve the height a chart needs, and the fit uses the space for bigger type. Auto only splits the page when that helps.";
 
+  renderLayoutInstruments();
+
   const bits = [optionLabel("meta-scale")];
   if (!side) bits.push(optionLabel("meta-columns").replace(/\s*\(.*\)$/, ""));
   bits.push(lyr === "none" ? "no lyrics" : `lyrics: ${({
     start: "at the start", end: "at the end", side: "left column",
     beside: "beside", below: "under" })[lyr]}`);
   document.getElementById("layout-summary").textContent = bits.filter(Boolean).join(" · ");
+}
+
+/** Every instrument the song uses, in sections and parts. */
+function songInstruments() {
+  const out = [];
+  (currentDoc.sections || []).forEach((s) => {
+    [s.instrument, ...((s.parts || []).map((p) => p.instrument))].forEach((i) => {
+      if (i && !out.includes(i)) out.push(i);
+    });
+  });
+  return out;
+}
+
+/** ⚙ Layout → Instruments: a box per instrument; all ticked means all print
+ *  (stored as an empty list, so a new instrument prints without asking). */
+function renderLayoutInstruments() {
+  const box = document.getElementById("layout-instruments");
+  if (!box || !currentDoc) return;
+  const all = songInstruments();
+  const chosen = (currentDoc.print_instruments || []).filter((i) => all.includes(i));
+  box.innerHTML = "";
+  all.forEach((name) => {
+    const label = document.createElement("label");
+    label.className = "layout-instrument";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !chosen.length || chosen.includes(name);
+    cb.addEventListener("change", () => {
+      const ticked = [...box.querySelectorAll("input")]
+        .map((el, i) => (el.checked ? all[i] : null)).filter(Boolean);
+      // None ticked would print nothing: keep at least this one.
+      if (!ticked.length) { cb.checked = true; return; }
+      currentDoc.print_instruments = ticked.length === all.length ? [] : ticked;
+      schedulePreviewUpdate();
+    });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(" " + name));
+    box.appendChild(label);
+  });
 }
 
 function openLayoutPanel() {
@@ -455,6 +542,7 @@ function wireSectionEvents(node, sec, idx) {
     schedulePreviewUpdate();
   }, 150);
   lineInput.addEventListener("input", onLineChange);
+  attachAutocomplete(lineInput);
 
   node.querySelector(".sec-annotation").addEventListener("input", (e) => {
     byId().annotation = e.target.value;
@@ -477,6 +565,10 @@ function wireSectionEvents(node, sec, idx) {
   node.querySelector(".sec-insert-strip").addEventListener("click", (e) => {
     const btn = e.target.closest(".ins-btn");
     if (!btn) return;
+    if (btn.dataset.promote) {
+      promoteSelection(node.querySelector(".sec-chart-line"), byId());
+      return;
+    }
     if (btn.dataset.insLickRef) {
       insertAtCursor(node.querySelector(".sec-chart-line"),
                       `{${btn.dataset.insLickRef}}`, 0);
@@ -506,10 +598,111 @@ function wireSectionEvents(node, sec, idx) {
     insertAtCursor(node.querySelector(".sec-chart-line"), text, back);
   });
 
+  // Parts: another instrument's line in this section.
+  renderParts(node, byId());
+  node.querySelector(".sec-add-part").addEventListener("click", () => {
+    const s = byId();
+    s.parts = s.parts || [];
+    const others = Object.keys(META.instruments).filter((i) => i !== s.instrument);
+    s.parts.push({ id: `p${Date.now().toString(36)}`, instrument: others[0] || s.instrument,
+                   items: [], chart_line: "" });
+    renderParts(node, s);
+    const inputs = node.querySelectorAll(".part-line");
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+
   node.querySelector(".sec-up").addEventListener("click", () => moveSection(sec.id, -1));
   node.querySelector(".sec-down").addEventListener("click", () => moveSection(sec.id, 1));
   node.querySelector(".sec-dup").addEventListener("click", () => duplicateSection(sec.id));
   node.querySelector(".sec-del").addEventListener("click", () => deleteSection(sec.id));
+}
+
+/**
+ * A section's parts, one row each: the instrument, its chart line (parsed
+ * and previewed exactly like the section's own), and a remove button.
+ */
+function renderParts(node, sec) {
+  const box = node.querySelector(".sec-parts");
+  if (!box) return;
+  box.innerHTML = "";
+  (sec.parts || []).forEach((part) => {
+    const row = document.createElement("div");
+    row.className = "sec-part";
+    const head = document.createElement("div");
+    head.className = "sec-part-head";
+    const sel = document.createElement("select");
+    sel.className = "part-instrument";
+    sel.title = "The instrument this line is for";
+    Object.keys(META.instruments).forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name; opt.textContent = name;
+      if (name === part.instrument) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "part-line sec-chart-line-like";
+    input.placeholder = "This instrument's chart line, e.g. A D E7";
+    input.value = part.chart_line || "";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn icon-btn";
+    del.textContent = "×";
+    del.title = "Remove this part";
+    head.append(sel, input, del);
+    const err = document.createElement("div");
+    err.className = "sec-error hidden";
+    const preview = document.createElement("div");
+    preview.className = "sec-preview part-preview";
+    row.append(head, preview, err);
+    box.appendChild(row);
+
+    sel.addEventListener("change", () => {
+      part.instrument = sel.value;
+      renderLayoutInstruments();
+      schedulePreviewUpdate();
+    });
+    del.addEventListener("click", () => {
+      sec.parts = (sec.parts || []).filter((p) => p !== part);
+      renderParts(node, sec);
+      schedulePreviewUpdate();
+    });
+    const paint = (result) => {
+      if (!result || !result.ok) {
+        err.textContent = (result && result.error) || "";
+        err.classList.toggle("hidden", !(result && result.error));
+        return;
+      }
+      err.classList.add("hidden");
+      preview.innerHTML = "";
+      (result.rendered || []).forEach((text, i) => {
+        const div = document.createElement("div");
+        const role = (result.roles || [])[i] || "";
+        div.className = "sec-preview-more" + (role ? " sec-row-" + role : "");
+        paintRow(div, { text, role, spans: (result.spans || [])[i] });
+        preview.appendChild(div);
+      });
+      applyBracketRuns(preview, [...preview.querySelectorAll(".sec-preview-more")],
+                       result.brackets);
+    };
+    const onLine = debounce(async () => {
+      if (!input.value.trim()) {
+        part.items = []; part.chart_line = ""; preview.innerHTML = "";
+        err.classList.add("hidden"); schedulePreviewUpdate(); return;
+      }
+      try {
+        const result = await API.parseLine(input.value, currentDoc);
+        if (result.ok) { part.items = result.items; part.chart_line = result.unparsed; }
+        paint(result);
+      } catch (e) { paint({ ok: false, error: String(e) }); }
+      schedulePreviewUpdate();
+    }, 150);
+    input.addEventListener("input", onLine);
+    attachAutocomplete(input);
+    if (input.value.trim()) {
+      API.parseLine(input.value, currentDoc).then(paint).catch(() => {});
+    }
+  });
 }
 
 /**
@@ -718,19 +911,29 @@ function updateSectionPreview(node, sec, parseResult) {
     // A row is 1..N lines now: an optional fret row, the symbol row, and
     // one line per string for any lick. The first two elements are reused
     // so the fret/symbol colouring stays; anything beyond is appended.
-    const hasFret = parseResult ? !!parseResult.fret_row : rendered.length > 1;
     const roles = (parseResult && parseResult.roles) || [];
     const spans = (parseResult && parseResult.spans) || [];
     const row = (i) => ({ text: rendered[i] || "", role: roles[i], spans: spans[i] });
-    fretRow.textContent = hasFret ? rendered[0] : "";
-    paintRow(symRow, hasFret ? row(1) : row(0));
-    setExtraPreviewRows(node, rendered.slice(hasFret ? 2 : 1)
-      .map((_, i) => row(i + (hasFret ? 2 : 1))));
+    if (roles.length === rendered.length) {
+      // Every row painted by its own role: the marks row (endings, runs,
+      // accents), frets, symbols, tab. The two fixed rows stay empty.
+      fretRow.textContent = "";
+      symRow.textContent = "";
+      setExtraPreviewRows(node, rendered.map((_, i) => row(i)));
+    } else {
+      const hasFret = parseResult ? !!parseResult.fret_row : rendered.length > 1;
+      fretRow.textContent = hasFret ? rendered[0] : "";
+      paintRow(symRow, hasFret ? row(1) : row(0));
+      setExtraPreviewRows(node, rendered.slice(hasFret ? 2 : 1)
+        .map((_, i) => row(i + (hasFret ? 2 : 1))));
+    }
     // rowEls[i] is whatever row index i was just painted into, in the
     // same order the server counted rows in — applyBracketRuns measures
     // these to draw a group's repeat bracket as a real line.
-    const rowEls = [...(hasFret ? [fretRow] : []), symRow,
-                    ...node.querySelectorAll(".sec-preview-more")];
+    const rowEls = roles.length === rendered.length
+      ? [...node.querySelectorAll(".sec-preview-more")]
+      : [...(fretRow.textContent ? [fretRow] : []), symRow,
+         ...node.querySelectorAll(".sec-preview-more")];
     applyBracketRuns(previewBox, rowEls, parseResult && parseResult.brackets);
     emptyEl.classList.add("hidden");
   } else if (!items.length && !measureItems(sec).length) {
@@ -856,7 +1059,15 @@ function rebuildTabGrid(node, sec) {
         input.type = "text";
         input.className = "tab-cell";
         input.value = tokens[bi] || "-";
-        input.maxLength = 3;
+        // A cell with a technique ("7b9r7") grows to show all of it.
+        const fit = () => { input.style.width = Math.max(32, input.value.length * 8 + 12) + "px"; };
+        fit();
+        input.addEventListener("input", fit);
+        // Room for a technique: 5h7, 7b9r7, 12h14^.
+        input.maxLength = 8;
+        input.title = "A fret, - for not played, x for muted; techniques: "
+          + "5h7 hammer-on, 7p5 pull-off, 5/7 or 7\\5 slide, 7b9 bend, 7b9r7 "
+          + "bend and release, 7~ vibrato, 5^ accent";
         input.addEventListener("input", () => {
           commitTabCell(sec, mi, st, beats, node);
         });
@@ -2016,6 +2227,190 @@ function importLyricsFile(file) {
 //  Wire-up
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
+//  Riffs: the library of named runs, kept in the song (doc.blocks). Every
+//  change goes through the server (songmap), which returns the whole song,
+//  so the rules (names, references, what is still in use) live in one place.
+// ---------------------------------------------------------------------------
+
+async function riffOp(op, fields) {
+  const msg = document.getElementById("riffs-msg");
+  const res = await API.riffs(op, fields);
+  if (!res.ok) {
+    if (msg) msg.textContent = res.error || "That did not work.";
+    toast(res.error || "That did not work.");
+    return null;
+  }
+  if (msg) msg.textContent = "";
+  currentDoc = res.doc;
+  renderEditor();
+  renderRiffRows(res.riffs || []);
+  schedulePreviewUpdate();
+  return res;
+}
+
+function renderRiffRows(riffs) {
+  const box = document.getElementById("riffs-rows");
+  box.innerHTML = "";
+  if (!riffs.length) {
+    box.innerHTML = '<p class="modal-hint">No riffs yet.</p>';
+    return;
+  }
+  riffs.forEach((r) => {
+    const row = document.createElement("div");
+    row.className = "riff-row";
+    const name = document.createElement("input");
+    name.type = "text"; name.value = r.id; name.className = "riff-name";
+    name.title = "The riff's name, as typed on a chart line. Change it to rename the riff everywhere.";
+    name.spellcheck = false;
+    const line = document.createElement("input");
+    line.type = "text"; line.value = r.line; line.className = "riff-line";
+    line.title = "What the riff plays";
+    line.spellcheck = false;
+    const used = document.createElement("span");
+    used.className = "riff-used";
+    used.textContent = r.used_in.length ? `in ${r.used_in.join(", ")}` : "not used yet";
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "btn icon-btn"; del.textContent = "🗑";
+    del.disabled = r.used_in.length > 0;
+    del.title = r.used_in.length
+      ? `Still used in ${r.used_in.join(", ")}: take it out of those lines first`
+      : "Delete this riff";
+    name.addEventListener("change", () => {
+      if (name.value.trim() && name.value.trim() !== r.id) {
+        riffOp("rename", { id: r.id, name: name.value.trim() });
+      }
+    });
+    line.addEventListener("change", () => riffOp("set_line", { id: r.id, line: line.value }));
+    del.addEventListener("click", () => riffOp("delete", { id: r.id }));
+    row.append(name, line, used, del);
+    box.appendChild(row);
+  });
+}
+
+async function openRiffsModal() {
+  if (!currentDoc) { toast("Open a song first"); return; }
+  document.getElementById("riffs-msg").textContent = "";
+  const res = await API.riffs("list");
+  renderRiffRows((res && res.riffs) || []);
+  document.getElementById("riffs-modal-backdrop").classList.remove("hidden");
+}
+
+function closeRiffsModal() {
+  document.getElementById("riffs-modal-backdrop").classList.add("hidden");
+}
+
+async function addRiff() {
+  const name = document.getElementById("riff-new-name");
+  const line = document.getElementById("riff-new-line");
+  const res = await riffOp("create", { name: name.value, line: line.value });
+  if (res) { name.value = ""; line.value = ""; }
+}
+
+/** "→ riff": the selected part of a chart line becomes a riff, named for
+ *  you (riff1, riff2…; rename it in Riffs), and its name takes its place. */
+async function promoteSelection(input, sec) {
+  if (!input || !sec) return;
+  const start = input.selectionStart, end = input.selectionEnd;
+  if (start == null || end == null || start === end) {
+    toast("Select the part of the chart line to turn into a riff first.");
+    return;
+  }
+  const res = await riffOp("promote", { section_id: sec.id, line: input.value, start, end });
+  if (res) toast("Made a riff from the selection. Rename it in Riffs if you like.");
+}
+
+function wireRiffs() {
+  document.getElementById("btn-riffs").addEventListener("click", openRiffsModal);
+  document.getElementById("riffs-close").addEventListener("click", closeRiffsModal);
+  document.getElementById("riff-add").addEventListener("click", addRiff);
+}
+
+// ---------------------------------------------------------------------------
+//  Autocomplete on chart lines: "=" offers the song's sections, "{" its
+//  named licks, and a plain word the riffs. Up/Down to choose, Enter or Tab
+//  to take one, Esc to close.
+// ---------------------------------------------------------------------------
+
+function refSpelling(name) {
+  return (name || "").trim().replace(/[\s-]+/g, "_");
+}
+
+function autocompleteOptions(word) {
+  if (!currentDoc || !word) return [];
+  const lower = word.toLowerCase();
+  let pool = [];
+  if (word.startsWith("=")) {
+    pool = currentDoc.sections.map((s) => "=" + refSpelling(s.name))
+      .filter((w) => /^=[A-Za-z][A-Za-z0-9_]*$/.test(w));
+  } else if (word.startsWith("{")) {
+    pool = namedLicks().map((n) => `{${n}}`);
+  } else if (/^[A-Za-z][A-Za-z0-9_]*$/.test(word)) {
+    pool = Object.keys(currentDoc.blocks || {});
+  }
+  return [...new Set(pool)]
+    .filter((w) => w.toLowerCase().startsWith(lower) && w.toLowerCase() !== lower)
+    .slice(0, 8);
+}
+
+function attachAutocomplete(input) {
+  if (!input || input.dataset.autocomplete) return;
+  input.dataset.autocomplete = "1";
+  const list = document.createElement("div");
+  list.className = "autocomplete hidden";
+  input.insertAdjacentElement("afterend", list);
+  let options = [], active = 0;
+
+  const currentWord = () => {
+    const caret = input.selectionStart ?? input.value.length;
+    const before = input.value.slice(0, caret);
+    const m = /(\S*)$/.exec(before);
+    return { word: m ? m[1] : "", start: caret - (m ? m[1].length : 0), caret };
+  };
+  const close = () => { list.classList.add("hidden"); options = []; };
+  const show = () => {
+    const { word } = currentWord();
+    options = autocompleteOptions(word);
+    if (!options.length) { close(); return; }
+    active = 0;
+    list.innerHTML = "";
+    options.forEach((opt, i) => {
+      const item = document.createElement("div");
+      item.className = "autocomplete-item" + (i === active ? " active" : "");
+      item.textContent = opt;
+      item.addEventListener("mousedown", (e) => { e.preventDefault(); take(i); });
+      list.appendChild(item);
+    });
+    list.style.left = input.offsetLeft + "px";
+    list.style.top = (input.offsetTop + input.offsetHeight) + "px";
+    list.classList.remove("hidden");
+  };
+  const take = (i) => {
+    const { start, caret } = currentWord();
+    const text = options[i];
+    input.value = input.value.slice(0, start) + text + input.value.slice(caret);
+    const pos = start + text.length;
+    input.setSelectionRange(pos, pos);
+    close();
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  input.addEventListener("input", (e) => { if (e.isTrusted) show(); });
+  input.addEventListener("blur", () => setTimeout(close, 100));
+  input.addEventListener("keydown", (e) => {
+    if (list.classList.contains("hidden") || !options.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      active = (active + (e.key === "ArrowDown" ? 1 : options.length - 1)) % options.length;
+      [...list.children].forEach((el, i) => el.classList.toggle("active", i === active));
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      take(active);
+    } else if (e.key === "Escape") {
+      close();
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
 //  About and updates. The installed app asks GitHub once at start whether a
 //  newer release is out (see update.py; it can be switched off here). Run
 //  from sources, it never checks by itself: "Check now" still works.
@@ -2146,6 +2541,8 @@ async function init() {
   META = await API.meta();
   document.getElementById("app-version").textContent = `v${META.app_version}`;
   wireAbout();
+  wireRiffs();
+  wireImport();
   wireMetaForm();
 
   // Layout, Colour and Size are all properties of the *song*, not of this

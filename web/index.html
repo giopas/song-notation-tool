@@ -21,6 +21,7 @@
       <button id="btn-notation-ref" class="btn subtle" title="Everything you can type on a chart line">Notation ⌘</button>
       <button id="btn-transpose" class="btn" title="Transpose the whole song or one section, without rewriting what you typed">Transpose ↕</button>
       <button id="btn-lyrics" class="btn" title="Paste, import or mark up lyrics, and give each marked block to its section">Lyrics 📝</button>
+      <button id="btn-riffs" class="btn" title="The riff library: name a run of chart line once and play it anywhere by its name">Riffs 🔁</button>
       <button id="btn-chords" class="btn" title="Chord shapes: the voicings you had to work out, printed once at the start or the end of the chart">Chords 🎸</button>
       <button id="btn-preview-toggle" class="btn">Preview</button>
       <button id="btn-save" class="btn">Save</button>
@@ -50,7 +51,10 @@
         or put part of a line in brackets with a repeat. <code>[5A 7D]x2</code> plays
         the pair twice, then carries on.</li>
       <li>Riffs: a block used by name in more than one section. Edit it once and every
-        section that uses it changes. (Riffs are managed in the desktop app for now.)</li>
+        section that uses it changes. <strong>Riffs 🔁</strong> at the top lists them;
+        select part of a chart line and click <strong>→ riff</strong> to make one from
+        it. While you type, a short list suggests the song's riffs, its sections after
+        <code>=</code> and its named licks after <code>{</code>.</li>
       <li><strong>Transpose ↕</strong> shifts every chord and fret in a section, or the
         whole song, by semitones without rewriting what you typed. Transposing back
         undoes it.</li>
@@ -64,6 +68,17 @@
         indents it, so a phrase can sit inside the one above.</li>
       <li>Licks: write a short tab figure inline with <code>{G 5 7 5 | D - - 3}</code>,
         one part per string. It prints among the chords, where it is played.</li>
+      <li>Techniques on a lick or tab cell: <code>5h7</code> hammer-on,
+        <code>7p5</code> pull-off, <code>5/7</code> and <code>7\5</code> slides,
+        <code>7b9</code> bend, <code>7b9r7</code> bend and release, <code>7~</code>
+        vibrato, <code>x</code> muted.</li>
+      <li>Dynamics and accents: <code>p</code>, <code>mf</code>, <code>ff</code>… where
+        the change happens, <code>5A^</code> for an accent, and runs over several notes:
+        <code>[pm 5A 5A 5A]</code> palm mute, <code>[cresc A D E]</code>,
+        <code>[dim E D A]</code>.</li>
+      <li>Parts: <strong>+ Part</strong> under a section adds another instrument's line,
+        such as the guitar chords under the bass. <strong>⚙ Layout → Instruments</strong>
+        picks which instruments print.</li>
       <li>Named licks: give a lick a name, <code>{Riff1 = G 5 7 5 | D - - 3}</code>,
         and play it again anywhere in the song as <code>{Riff1}</code>, with a repeat if
         you like: <code>{Riff1}x3</code>. Edit the lick once and every place that plays
@@ -88,6 +103,8 @@
         write it.</li>
       <li>A parse error never clears what you typed. It shows in red under the field, and
         the last good chart stays visible above it.</li>
+      <li>Every PDF export carries its song. <strong>Import song…</strong> (left, under
+        the song list) opens such a PDF, or a .sng file, as a new song.</li>
     </ul>
   </section>
 
@@ -99,6 +116,8 @@
       </div>
       <ul id="song-list"></ul>
       <button id="btn-open-example" class="btn subtle">Open example song</button>
+      <button id="btn-import" class="btn subtle" title="Open a .sng file, or a PDF exported by this app (every PDF carries its song), as a new song in your songs folder">Import song…</button>
+      <input id="import-file" type="file" accept=".sng,.json,.pdf,application/pdf,application/json" hidden>
 
       <!-- Where your files are. Shown rather than assumed: songs used to be
            written inside the source tree, where a git clean would take them
@@ -167,6 +186,13 @@
         <label>Chord shapes <select id="meta-chord-sheet"></select></label>
         <p class="layout-hint">Edit the shapes with Chords 🎸 in the toolbar.</p>
       </div>
+
+      <div class="layout-group">
+        <div class="layout-group-title">Instruments</div>
+        <div id="layout-instruments" class="layout-instruments"></div>
+        <p class="layout-hint">Which instruments print, when sections or parts use more
+          than one. Untick one to print a chart for the others only.</p>
+      </div>
     </div>
 
     <main id="main">
@@ -177,6 +203,7 @@
         <div id="start-actions">
           <button id="start-new" class="btn accent">New song</button>
           <button id="start-example" class="btn">Open example</button>
+          <button id="start-import" class="btn" title="A .sng file, or a PDF exported by this app">Import song…</button>
         </div>
       </section>
 
@@ -413,6 +440,10 @@
             <tr><td>Group with a lick</td><td>A group can hold more than chords: put chords and a lick together and the whole phrase repeats, tab included</td><td><code>[3B 2F# {Riff3 = G - - | D 4 -}]x4</code></td></tr>
             <tr><td>Riff reference</td><td>A plain name that is not a chord</td><td><code>riff1</code> <code>riff1 x3</code></td></tr>
             <tr><td>Section reference</td><td><code>=sectionname</code></td><td><code>=verse1</code> <code>=verse1 x2 all</code></td></tr>
+            <tr><td>Technique</td><td>Tab letters after a fret, in a lick or a tab cell</td><td><code>{G 5h7 7p5 5/7}</code> <code>{D 7\5 7b9 7b9r7 7~ x}</code></td></tr>
+            <tr><td>Accent</td><td><code>^</code> right after a note or chord</td><td><code>5A^</code> <code>Am^</code></td></tr>
+            <tr><td>Dynamics</td><td>A word of its own, lower case (<code>F</code> stays a chord)</td><td><code>pp</code> <code>p</code> <code>mp</code> <code>mf</code> <code>f</code> <code>ff</code></td></tr>
+            <tr><td>Run</td><td><code>pm</code>, <code>cresc</code> or <code>dim</code> first inside brackets; covers the notes after it</td><td><code>[pm 5A 5A 5A]</code> <code>[cresc A D E]</code> <code>[dim E D A]x2</code></td></tr>
             <tr><td>Transpose shift</td><td><code>+N</code> or <code>-N</code> as its own word after a riff or section reference (after its repeat, if it has one)</td><td><code>riff1 +2</code> <code>=verse1 -1</code> <code>riff1 x2 +3</code></td></tr>
           </tbody>
         </table>
@@ -465,6 +496,30 @@
           if you find it easier to read. Transposing a section moves a lick's frets
           with it: same strings, shifted positions.</p>
 
+        <h4>Playing techniques</h4>
+        <p>A lick position or a tab-grid cell can carry the usual tab letters after
+          the fret: <code>5h7</code> hammer-on, <code>7p5</code> pull-off,
+          <code>5/7</code> slide up, <code>7\5</code> slide down, <code>7b9</code>
+          bend up to the pitch of fret 9, <code>7b9r7</code> bend and release,
+          <code>7~</code> vibrato, <code>x</code> muted, <code>5^</code> accented.</p>
+        <pre>|G|-5h7-7p5-|
+|D|-----7b9-|</pre>
+        <p>They print as typed, and the columns widen so the strings still line up.
+          Transposing moves every fret in a position.</p>
+
+        <h4>Dynamics, accents and runs</h4>
+        <p>Write how loud to play where it changes, as a word of its own:
+          <code>pp p mp mf f ff</code>, printed in bold. An accent is <code>^</code>
+          right after a note, <code>5A^</code>, and prints as <code>&gt;</code> over it.
+          Something that covers several notes is a run, its word first inside
+          brackets:</p>
+        <p><code>p [pm 5A 5A 5A 5A] mf 7D^ 7D</code></p>
+        <pre>     P.M.-----|      &gt;
+     5  5  5  5      7  7
+  p  A  A  A  A  mf  D  D</pre>
+        <p><code>[cresc A D E]</code> and <code>[dim E D A]</code> print as hairpins in
+          the PDF. A run repeats like any group: <code>[pm 5A 5A]x2</code>.</p>
+
         <h4>Marks</h4>
         <p class="modal-hint" style="margin-top:0">These are the usual sheet-music
           symbols, written as plain text you can type. They let you write a repeated
@@ -479,11 +534,13 @@
                 <td>End of a repeated stretch: go back to the last <code>|:</code> (or to the
                     start of the song if there is none) and play it through once more.</td></tr>
             <tr><td><code>|1.</code></td><td>1st ending</td>
-                <td>Play this the first time through the repeat, then go back.
-                    Everything after the mark belongs to the ending, up to the next one.</td></tr>
+                <td>Play this the first time through the repeat, then go back. Prints as a
+                    bracket marked "1." over the bars up to the <code>:|</code> or the next
+                    ending.</td></tr>
             <tr><td><code>|2.</code></td><td>2nd ending</td>
                 <td>The second time through, skip the 1st ending and play this instead,
-                    then carry on. Use it when the last bars differ between the passes.</td></tr>
+                    then carry on. Use it when the last bars differ between the passes. Its
+                    bracket runs to the next ending or the end of the section.</td></tr>
             <tr><td><code>//</code></td><td>Line break</td>
                 <td>Layout only: start a new line here. Plays nothing.</td></tr>
             <tr><td><code>//&gt;</code></td><td>Line break, indented</td>
@@ -500,7 +557,7 @@
             <tr><td><code>coda</code></td><td>Coda (𝄌)</td>
                 <td>Marks the ending: the separate final passage you jump to after
                     the last repeat, instead of playing the section out as written.
-                    Italian for "tail".</td></tr>
+                    Prints as a boxed coda sign. Italian for "tail".</td></tr>
             <tr><td><code>dc</code></td><td>D.C. (<em>da capo</em>)</td>
                 <td>"From the top": go back to the very beginning of the song and play
                     through again from there.</td></tr>
@@ -537,6 +594,28 @@
       </div>
     </div>
   </div>
+  <!-- The riff library -->
+  <div id="riffs-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3>Riffs</h3>
+      <p class="modal-hint" style="margin-top:0">A riff is a run of chart line with a
+        name. Type the name on any chart line to play it there (<code>Riff1 x3</code>),
+        and edit it here once to change every place that plays it. To make one from a
+        line you already typed, select that part and click <strong>→ riff</strong>
+        beside it.</p>
+      <div id="riffs-rows" class="riff-rows"></div>
+      <p id="riffs-msg" class="about-msg"></p>
+      <div class="riff-new">
+        <input id="riff-new-name" type="text" placeholder="Name, e.g. Riff1" spellcheck="false">
+        <input id="riff-new-line" type="text" placeholder="Its chart line, e.g. 5A 7D 5A 3G" spellcheck="false">
+        <button id="riff-add" class="btn subtle">+ Riff</button>
+      </div>
+      <div class="modal-actions">
+        <button id="riffs-close" class="btn accent">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- About and updates -->
   <div id="about-modal-backdrop" class="modal-backdrop hidden">
     <div class="modal modal-wide">
@@ -609,6 +688,7 @@
                inserts the reference rather than the notes. Filled in by
                renderLickChips(). -->
           <span class="sec-lick-refs"></span>
+          <button type="button" class="ins-btn" data-promote="1" title="Turn the part of this line you selected into a riff, and put the riff's name in its place">→ riff</button>
           <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
           <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
           <button type="button" class="ins-btn" data-ins="dc" title="D.C.: repeat from the beginning">dc</button>
@@ -626,6 +706,11 @@
            line set it, unparse() then left it out of the line, and nothing
            displayed it — so once set it could never be seen or removed.
            One visible field, in every render mode. -->
+      <!-- Other instruments in this section (parts): one line each, printed
+           under the section's own line with the instrument's name. -->
+      <div class="sec-parts"></div>
+      <button type="button" class="btn subtle sec-add-part"
+              title="Add another instrument's line to this section, such as the guitar under the bass">+ Part</button>
       <input class="sec-annotation" type="text"
              placeholder="Annotation (optional), printed in quotes under this section"
              title="A free note printed under this section in the export. Clear it to remove it.">

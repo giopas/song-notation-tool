@@ -60,3 +60,6 @@ Claude outputs/
 
 # The golden-file test songs are invented and ship with the tests.
 !tests/golden/*.sng
+
+# Packaging output (pyinstaller and packaging/make_archive.py)
+release/

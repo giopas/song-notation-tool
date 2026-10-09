@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Song Notation Tool
+Comment=One-page stage charts for guitar and bass
+Exec="@DIR@/Song-Notation-Tool"
+Icon=@DIR@/song-notation-tool.png
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupNotify=true

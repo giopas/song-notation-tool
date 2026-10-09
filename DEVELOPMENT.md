@@ -161,9 +161,20 @@ re-run the workflow from the Actions tab.
    "why" paragraph, and add the row to the table in `ROADMAP.md`.
 3. Run the full test suite.
 4. Merge, tag and push as above.
-5. Create the GitHub release from the tag, with that version's
-   `CHANGELOG.md` section as the body, and mark it *Latest*.
-6. Small fixes are patch versions (0.26.3, 0.26.4).
+5. Wait for the release workflow (`.github/workflows/release.yml`). It
+   builds the packages for macOS (Apple silicon and Intel), Windows and
+   Linux, smoke-tests each one, tests the Windows installer, and leaves a
+   draft release with the files, `SHA256SUMS`, and that version's
+   `CHANGELOG.md` section as its text.
+6. Check the draft (title, text, only this version's files plus
+   `SHA256SUMS`), mark it *Latest* and publish it. Only a published
+   release is offered by **Update and restart**.
+7. Try **Update and restart** from the previous installed version.
+8. Small fixes are patch versions (0.26.3, 0.26.4).
+
+`.github/` is protected for Claude's tools on giopas's computer, so a
+change to a workflow is written by Claude and copied into
+`.github/workflows/` by giopas.
 
 ## Privacy and safety
 

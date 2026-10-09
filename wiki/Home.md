@@ -10,6 +10,9 @@ on the same engine.
 
 ## Pages
 
+- [[Installing and Updating]]: the packages for macOS, Windows and Linux,
+  the first start of an unsigned app, and the update check (what it sends
+  and how to switch it off).
 - [[CLI and Web Use]]: the command-line `cli.py` (convert, batch, lint) and
   the `webserver.py` browser front end, with the full command and API
   reference.

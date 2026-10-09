@@ -18,6 +18,7 @@ three front ends share them. `tests/test_export.py` checks it for
 | `export.py` | The TXT and PDF builders, `build_song_lines(doc, instruments=None)` and `build_pdf(doc, instruments=None, orient=..., date=None)`, and the one writer every front end uses: `export_to_file()` checks the song (`check_document()`, which `cli.py lint` also runs), builds the bytes (`export_bytes()`) and writes them (`write_export()`: atomic, and never over an existing file unless the caller says the user agreed). `prepare_export()` does the check and the bytes for the browser's downloads. `build_pdf` resolves the song's size setting and calls `_build_pdf(..., scale)`, which also returns the page count, so `resolve_scale()` can search for the largest scale that still fits. `date` sets the footer date (today by default), so the same song and date give the same bytes. See [[Printing and Layout]] |
 | `examples.py` | `example_document()`, the song behind **Open example song** |
 | `userpaths.py` | Where the user's files live: the songs folder, the last export folder, the config file for each platform, and the one-time move out of the old in-repo `songs/`. Changing the songs folder: `plan_relocation()` says what a move would do without doing it, and `relocate_songs()` moves the `.sng` files, never overwriting, then switches |
+| `update.py` | The update check and **Update and restart** for the packaged app (adapted from QLC+ Swiss Knife): asking the GitHub Releases API, picking this computer's download, checking it against `SHA256SUMS`, unpacking it safely and writing the script that swaps it in after the app closes. The only network code in the app. See [[Installing and Updating]] |
 | `constants.py` | `APP_VERSION`, the instrument-to-strings map, section types, render-mode labels, the labels for every **⚙ Layout** choice, and `default_export_name()` |
 
 Each of them takes and returns plain dicts and lists shaped like
@@ -33,6 +34,19 @@ Each of them takes and returns plain dicts and lists shaped like
 
 None of the three has its own copy of the TXT and PDF builders, the chart
 grammar or the transposition code. They all call the same engine modules.
+
+## The packages
+
+`packaging/songnotation.spec` builds the native window with PyInstaller:
+`webserver.py` as the program, `web/` as data, and the icons from
+`packaging/icons/`. In the package `webserver.WEB_DIR` points into the
+bundle (`sys._MEIPASS`), the virtualenv switch and the old `songs/` move
+are skipped, and the previous version is cleaned up after an update.
+`packaging/make_archive.py` turns the build into the release files, with
+the names `update.py` looks for; `packaging/windows/installer.iss` is the
+Inno Setup installer, and `packaging/linux/` holds the menu entry. The
+release workflow (`.github/workflows/release.yml`) runs all of this on a
+version tag; see [[Installing and Updating]].
 
 ## Where a change goes
 

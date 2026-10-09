@@ -82,7 +82,10 @@ python3 webserver.py --dir mysongs --port 9000
 python3 webserver.py --browser        # use a normal browser tab
 python3 webserver.py --no-open        # just start the server
 python3 webserver.py --host 0.0.0.0   # reachable from other devices on the LAN
+python3 webserver.py --smoke          # check the page, files and an export, then exit
 ```
+
+Without `--port` it listens on 8420, or on any free port if 8420 is taken.
 
 It opens a window by itself, so there is no URL to copy into a browser.
 If the optional `pywebview` package is installed (`pip install pywebview`,
@@ -194,6 +197,10 @@ file is the source of truth. In short:
 | `POST` | `/api/lyrics/marked` | read a sheet marked with `=== Section ===` lines, body `{doc, text?}` → its segments, the section each belongs to, and names with no section yet. Writes nothing |
 | `POST` | `/api/chords/shape` | parse one chord shape, body `{text, instrument?}` → frets per string, or `{ok: false, error}` |
 | `POST` | `/api/chords/coverage` | chords the chart plays with no shape, shapes it never plays, and what each shape prints as under the song's transpose, body `{doc}` |
+| `GET` | `/api/update/check` | the update check (`?force=1` asks again instead of using the answer from the last 12 hours): current and latest version, whether it is newer, the release notes, and whether this copy can install it. See [[Installing and Updating]] |
+| `POST` | `/api/update/settings` | body `{check}`: switch the check at start on or off |
+| `POST` | `/api/update/install` | installed app only: download, verify and stage the new version, then close so it can be swapped in; from the sources a `400` that says to use `git pull` |
+| `POST` | `/api/update/open` | open the release page in the system browser (only the project's own pages) |
 | `POST` | `/api/quit` | called by **⏻ Save & Close** after it saves: closes the native window, or stops the server in a browser tab |
 | `GET` | `/api/songs/<name>/export.txt` \| `.pdf` | export a saved song (PDF takes `?orient=portrait\|landscape`) |
 | `POST` | `/api/export.txt` \| `/api/export.pdf` | export a song from the editor that may not be saved yet, body `{doc}` (PDF also takes `orient`) |

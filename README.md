@@ -133,6 +133,8 @@ Getting around
   in plain words.
 - Stage View (Ctrl/Cmd+P in the desktop app): full window, high contrast,
   read only.
+- The version number at the top opens the About card, with the update
+  check for the installed app (see [Updates](#updates)).
 - The desktop app shows a live page count and switches between a light and
   a dark theme.
 
@@ -151,7 +153,49 @@ insert notation at the cursor.
 <tr><td width="50%" valign="top"><a href="screenshots/export-menu.png"><img src="screenshots/export-menu.png" alt="Export"></a><br><b>Export</b>: TXT, PDF in portrait or landscape, or the system print dialog.</td><td width="50%"></td></tr>
 </table>
 
-## Quick start
+## Install
+
+Download the file for your computer from the
+[latest release](https://github.com/giopas/song-notation-tool/releases/latest).
+It is the native window (the browser front end in its own window), with
+Python and everything else it needs inside.
+
+| Computer | File | Then |
+|---|---|---|
+| macOS, Apple silicon (M1 and later) | `Song-Notation-Tool-<version>-macos-arm64.dmg` | drag *Song Notation Tool* to Applications |
+| macOS, Intel | `Song-Notation-Tool-<version>-macos-x86_64.dmg` | the same |
+| Windows 10/11 | `Song-Notation-Tool-<version>-windows-x64-setup.exe` | run the installer (no administrator needed; it adds a Start menu entry and an uninstaller). Or take the `…-windows-x64.zip`, unzip it and run `Song Notation Tool.exe` |
+| Linux | `Song-Notation-Tool-<version>-linux-x64.tar.gz` | unpack it and run `Song-Notation-Tool`; `./install-desktop-entry.sh` in the same folder adds it to your applications menu |
+
+The apps are not signed, so the system asks once before the first start.
+On macOS, open **System Settings** → **Privacy & Security** and click
+**Open Anyway** next to the message about Song Notation Tool (on macOS 14
+and earlier, right-clicking the app and choosing **Open** also works), or
+run `xattr -dr com.apple.quarantine "/Applications/Song Notation Tool.app"`.
+On Windows, click **More info**, then **Run anyway**. Each release has a
+`SHA256SUMS` file to check the download.
+
+On Linux the package opens in your browser. The native window needs GTK or
+Qt with WebKit from your system, which the package cannot carry; run from
+the sources with `pywebview` installed to get it.
+
+### Updates
+
+The installed app asks GitHub once when it starts whether a newer release
+is out, and shows a badge next to the version when there is one. The
+request carries only the app's name and version: nothing about you or your
+songs. Click the badge (or the version number) for what is new, and
+**Update and restart** downloads the new version, checks it against the
+release's `SHA256SUMS`, and starts it again; your songs and settings are
+not touched. **Check for updates when the app starts** in the same card
+switches the check off. Run from the sources, the app never checks by
+itself, and the card says to use `git pull`. More in the wiki:
+[Installing and updating](https://github.com/giopas/song-notation-tool/wiki/Installing-and-Updating).
+
+## Run from the sources
+
+The packages above contain the native window only. The Tkinter desktop app
+and the command line run from the sources.
 
 ```bash
 # Desktop app: nothing to install, just run it

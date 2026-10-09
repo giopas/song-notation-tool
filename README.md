@@ -106,7 +106,9 @@ Printing and export
   [Printing and page layout](#printing-and-page-layout).
 - Export to `.txt` (plain text) or `.pdf`, a formatted sheet with a footer
   that shows the version, the date and the project link. Exports open a
-  real save panel and tell you where the file went.
+  real save panel and tell you where the file went. Every export checks
+  the song first: a chart line that no longer parses stops the export and
+  says which section, and chord-shape notes are shown without stopping it.
 - **Print…** goes through the system's own print panel, with a preview.
 - The PDF fills the page, or shrinks the chart to fit on one page, in one
   or two columns (portrait A4 by default). Empty strings are left out, and
@@ -184,13 +186,19 @@ python3 cli.py convert -i song.sng -e pdf
 python3 cli.py convert -i song.sng -e txt --instrument "Bass (4-string)"
 
 # Regenerate every .sng in a folder, e.g. before a gig or after a
-# formatting change
-python3 cli.py batch -i songs/ -e pdf
+# formatting change (--force replaces the previous exports)
+python3 cli.py batch -i songs/ -e pdf --force
 python3 cli.py batch -i songs/ -e txt --out-dir exports/
 
 # Check a .sng file's chart lines without opening the GUI
 python3 cli.py lint -i song.sng
 ```
+
+The command line never replaces a file that is already there unless you
+add `--force`: the export goes to the next free name instead
+(`song_v2.pdf`, then `song_v3.pdf`), and it says so. `convert` and `batch`
+run the same check as `lint` first, and a song that fails it is not
+exported.
 
 `python3 cli.py --help` (or `... convert --help`, `... batch --help`) lists
 every option.

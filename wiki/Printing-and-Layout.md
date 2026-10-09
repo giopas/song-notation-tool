@@ -207,6 +207,25 @@ Exports open the system's save panel in the native window, filled in with
 wrote. In a browser tab an export is an ordinary download, and the
 browser's settings decide where it goes.
 
+### How an export is written
+
+Every export, from any front end, goes through `export.py`:
+
+- The song is checked first (`check_document()`, the same check as
+  `cli.py lint`). A chart line that cannot be written out or does not
+  parse again stops the export, and the message names the section.
+  Chord-shape notes (chords with no shape, shapes never played) are shown
+  but never stop it.
+- The bytes come from one place (`export_bytes()`): TXT is UTF-8 with Unix
+  line endings and a newline at the end on every system, and PDF is
+  `build_pdf()`. A download, a saved file and a command-line export of the
+  same song are the same bytes.
+- The file is written to a temporary file in the same folder and then
+  moved into place, so a crash halfway never leaves half a file.
+- An existing file is replaced only when you agreed to it in a save
+  dialog. Otherwise (the command line without `--force`) the export goes
+  to the next free name, `song_v2.pdf`.
+
 ## What the printed chart shows
 
 - The body is 9 pt Helvetica at 100% (`export.MONO_SIZE`), and headings are

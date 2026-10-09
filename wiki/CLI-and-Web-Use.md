@@ -25,6 +25,15 @@ python3 cli.py convert -i song.sng -e txt --instrument "Bass (4-string)"
 | `-o, --output` | output path (default: `<Artist> - <Title>.<ext>` in the current folder) |
 | `--instrument` | only this instrument's sections; repeat the flag for more than one (default: all) |
 | `--orient` | `portrait` (default) or `landscape`, PDF only |
+| `--force` | replace the output file if it exists (default: keep it and write to the next free name, `song_v2.pdf`) |
+
+An existing file is never replaced without `--force`. The export goes to
+the next free name instead (`out.pdf` becomes `out_v2.pdf`, then
+`out_v3.pdf`; a name that already ends in `_vN` counts on from N), and
+`convert` says which file it kept. Before writing anything, `convert` runs
+the same check as `lint`: a song that fails it is not exported, the errors
+go to standard error, and the exit code is 1. Its notes are printed and
+never stop the export.
 
 ### `batch`: a whole folder
 
@@ -35,9 +44,12 @@ python3 cli.py batch -i songs/ -e txt --out-dir exports/
 
 Regenerates every `*.sng` in `--input-dir`. The files are written next to
 each `.sng` unless you give `--out-dir`, which is created if it does not
-exist. It reports what happened to each file and exits with a non-zero
-code if any failed, so you can use it in a CI job or a script before a
-gig.
+exist. It takes the same `--force` as `convert`: without it, running the
+batch again writes `song_v2.pdf` next to last time's `song.pdf`. It
+checks each song first and reports what happened to each file (written,
+not exported because of the check, or failed), and exits with a non-zero
+code if any was not written, so you can use it in a CI job or a script
+before a gig.
 
 ### `lint`: check a song without the GUI
 
@@ -51,6 +63,10 @@ the same after being written back out. That helps with a `.sng` file
 edited by hand or made by another tool. If the song has chord shapes, it
 also lists chords the chart plays that have no shape, and shapes for
 chords it never plays. These are notes, never failures.
+
+This is the check every export runs first, in every front end
+(`export.check_document()`), so `lint` tells you in advance whether an
+export will go through.
 
 `python3 cli.py --help` (and `... <command> --help`) always has the
 current option list.
@@ -183,7 +199,11 @@ file is the source of truth. In short:
 | `POST` | `/api/export.txt` \| `/api/export.pdf` | export a song from the editor that may not be saved yet, body `{doc}` (PDF also takes `orient`) |
 
 Bodies and responses are JSON, except the two export routes, which return
-the file itself with a `Content-Disposition` header.
+the file itself with a `Content-Disposition` header. The export routes
+check the song first. A song that fails the check gets a `422` with
+`{ok: false, error, errors}` and no file; the check's notes, if any, come
+with the file in an `X-Export-Warnings` header (a JSON list), and the
+front end shows them after the download.
 
 In the native window the front end also calls Python directly through
 pywebview's `window.pywebview.api` bridge, for what a web page cannot do:

@@ -15,7 +15,7 @@ three front ends share them. `tests/test_export.py` checks it for
 | `lyrics.py` | The lyric sheet: splitting on blank lines and proposing which block goes to which section, and the `=== Section ===` markers (`split_marked()`, `match_sections()`, `apply_marked()`, `strip_markers()`) |
 | `chords.py` | Chord shapes: parsing `x32010`, drawing a shape as a small tab diagram, laying the shapes out in rows, checking them against the chords the chart plays (`coverage()`), and re-voicing a shape for a transpose (`transpose_chord()`: open to open, otherwise an E-form or A-form barre; movable shapes slide) |
 | `songmap.py` | Song-map operations: reorder, promote to riff, duplicate as reference, riff usage, and splitting chart items from measure items. Reference lookup and the split between what is stored and what is shown (`find_section()`, `display_ref_key()`, `display_items()`, `canonicalise_refs()`): ids in the file, names on screen. The named-lick index, worked out from the song each time instead of stored (`lick_index()`, `find_lick()`, `lick_names()`) |
-| `export.py` | The TXT and PDF builders, `build_song_lines(doc, instruments=None)` and `build_pdf(doc, instruments=None, orient=..., date=None)`. `build_pdf` resolves the song's size setting and calls `_build_pdf(..., scale)`, which also returns the page count, so `resolve_scale()` can search for the largest scale that still fits. `date` sets the footer date (today by default), so the same song and date give the same bytes. See [[Printing and Layout]] |
+| `export.py` | The TXT and PDF builders, `build_song_lines(doc, instruments=None)` and `build_pdf(doc, instruments=None, orient=..., date=None)`, and the one writer every front end uses: `export_to_file()` checks the song (`check_document()`, which `cli.py lint` also runs), builds the bytes (`export_bytes()`) and writes them (`write_export()`: atomic, and never over an existing file unless the caller says the user agreed). `prepare_export()` does the check and the bytes for the browser's downloads. `build_pdf` resolves the song's size setting and calls `_build_pdf(..., scale)`, which also returns the page count, so `resolve_scale()` can search for the largest scale that still fits. `date` sets the footer date (today by default), so the same song and date give the same bytes. See [[Printing and Layout]] |
 | `examples.py` | `example_document()`, the song behind **Open example song** |
 | `userpaths.py` | Where the user's files live: the songs folder, the last export folder, the config file for each platform, and the one-time move out of the old in-repo `songs/`. Changing the songs folder: `plan_relocation()` says what a move would do without doing it, and `relocate_songs()` moves the `.sng` files, never overwriting, then switches |
 | `constants.py` | `APP_VERSION`, the instrument-to-strings map, section types, render-mode labels, the labels for every **⚙ Layout** choice, and `default_export_name()` |
@@ -57,7 +57,17 @@ grammar or the transposition code. They all call the same engine modules.
 ## Testing
 
 `tests/` covers the engine modules with plain pytest, and needs no Tkinter
-to run. The desktop app is smoke-tested with Tkinter running under Xvfb:
+to run. The command line is tested through a real subprocess, and the web
+server through its real HTTP routes.
+
+`tests/golden/` holds ten invented songs, one per layout feature, with the
+TXT and PDF each one must produce (`tests/test_golden.py`). TXT is compared
+byte for byte; PDF is compared with its page streams inflated, because
+different zlib builds pack the same drawing into different bytes. The
+footer date and the version are fixed for these files, so a release does
+not change them. When an output change is intended, run
+`python3 tools/make_golden.py`, look at the new PDFs, and commit them with
+the change. The desktop app is smoke-tested with Tkinter running under Xvfb:
 create a `SongNotationApp`, drive it through `_start_open_example()`,
 `_toggle_help()`, `_toggle_preview()`, `_build_song_lines()` and
 `_build_pdf()`, and check the resulting state. There is no

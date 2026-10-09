@@ -58,13 +58,17 @@ the output toward a one-page chart is not the priority.
    file is the app's own document: Save writes it in place, atomically,
    and a rename never replaces another song. Exports and imports never
    overwrite an existing file; they take the next free name (`name_v2`).
-2. **One writer.** TXT and PDF output is built in `export.py` and written
-   to disk through one function, so format details live in one place.
+   The only exception is a file the user has just agreed to replace in a
+   system save dialog.
+2. **One writer.** Every TXT and PDF export goes through
+   `export.export_to_file()` (or `prepare_export()` for a download), so the
+   bytes, the check and the way files are written live in one place.
 3. **Deterministic output.** The same song gives the same bytes. The only
-   variable is the footer date, which `build_pdf(date=...)` fixes for
-   tests.
-4. **Validate before export.** The `cli.py lint` checks run before an
-   export: errors block it, warnings are shown.
+   variables are the footer date and the version, which the golden-file
+   tests fix.
+4. **Validate before export.** `export.check_document()`, the same check
+   as `cli.py lint`, runs before every export: errors block it, warnings
+   are shown.
 5. **The printed page is the reference.** Output is judged against the
    handwritten chart it replaces.
 6. **Pure modules first, UI last.** `model.py` → `grammar.py` →
@@ -113,6 +117,9 @@ the output toward a one-page chart is not the priority.
 - Test data uses invented band, song and lyric names. The author's songs
   stay out of the repository.
 - A bug found in live use gets a test that reproduces it.
+- Golden files (`tests/golden/`) record approved output. Change them only
+  on purpose, with `python3 tools/make_golden.py`, and look at the new PDFs
+  before committing them.
 - Release notes say which systems were tried live and which were only
   built and unit-tested. "Untested" stays visible until it is not.
 

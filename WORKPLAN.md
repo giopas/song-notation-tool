@@ -18,24 +18,46 @@ the Claude project as `claude/WORKPLAN.md`.
   stopped in the tests; fixed in v0.29.1).
 - Every release from v0.26.3 on has its GitHub release.
 - Items 1 to 8 of the first plan are done (see "Done" below).
-- Test suite: 422 tests, all passing (`python3 -m pytest -q`), on Linux,
-  macOS and Windows in the release workflow.
+- v0.30.0 is built on the branch `feat/v0.30.0`, committed and not yet
+  merged or tagged: seven roadmap items in one release (see "Second plan"
+  below). Waiting for giopas to push it and run the release workflow.
+- Test suite: 479 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
 Housekeeping, small:
 
-1. The newer `release.yml` (actions on Node.js 24) is still at the top of
-   the repository folder, untracked, and `.github/workflows/release.yml` is
-   the old one. Move it into place and commit it
-   (`mv release.yml .github/workflows/release.yml`). The v0.29.1 changelog
-   says this change was made; it takes effect with the next release, and
-   the next changelog entry says so.
-2. The three rewritten issue templates (from v0.27.1) are not in
-   `.github/ISSUE_TEMPLATE/` yet. Copy them in and commit them.
+1. Done: the newer `release.yml` (actions on Node.js 24) is in
+   `.github/workflows/` (commit `14fd35d`), and v0.30.0 is its first
+   release.
+2. The three rewritten issue templates (from v0.27.1) are still not in
+   `.github/ISSUE_TEMPLATE/`: commit `14fd35d` names them but only changed
+   `release.yml`, and the files there are the originals from v0.15. Copy
+   them in and commit them.
 
-The next piece of work is giopas's choice; see "Candidates for the next
-version" below.
+After v0.30.0, the next piece of work is giopas's choice; see
+"Candidates for the next version" below.
+
+### Second plan: v0.30.0 (10 October 2026)
+
+giopas picked seven candidates and one release for all of them, with
+these choices: standard tab letters for techniques, music words and `^`
+for dynamics and accents, extra parts per section.
+
+| Item | What |
+|---|---|
+| 1 | Round trip: every PDF carries its song (`song.sng` attached). **Import song…** in the browser, **Open** in the desktop app, `cli.py extract`. TXT cannot carry it |
+| 2 | Riff library in the browser: **Riffs 🔁**, **→ riff**, `POST /api/riffs` |
+| 3 | Techniques on licks and tab cells: `5h7 7p5 5/7 7\5 7b9 7b9r7 7~ x` |
+| 4 | Parts: **+ Part** per section, **⚙ Layout → Instruments** (`print_instruments`). Edited in the browser only |
+| 5 | Dynamics `pp`…`ff`, accent `^`, runs `[pm …]`, `[cresc …]`, `[dim …]` |
+| 6 | Ending brackets and a boxed coda in the PDF, TXT and preview |
+| 7 | Suggestions while typing a chart line (browser) |
+
+Checked by Claude: the two new golden PDFs looked at page by page, the
+browser app driven with Playwright (parts, riffs dialog, → riff,
+suggestions, Import of a PDF), and the desktop app opening a PDF under
+Xvfb. Not yet seen by giopas.
 
 ### Done (first plan, 8 to 10 October 2026)
 
@@ -55,17 +77,8 @@ version" below.
 From `ROADMAP.md` and the open notes, closest to the goal first. None is
 started until giopas picks it.
 
-- Round-trip import: reopen a song from its own TXT or PDF export (the
-  song's data embedded in the file), and `.sng` import in the browser.
-- Riff library in the browser: create, rename and delete riffs,
-  **Promote to riff**, which today only the desktop app has. With it the
-  packaged app (native window only) covers everything the desktop app does.
-- Techniques on tab and licks: palm muting, slides, hammer-on and pull-off,
-  bends, vibrato, typed in the tab itself.
-- Parts: bass and guitar in one section, each printable or hideable.
-- Dynamics and accents on a chart line, a lick or a tab grid.
-- Graphical ending brackets and a boxed coda in the PDF.
-- Autocomplete in the chart line (`=` for sections, riff and lick names).
+- Editing parts in the desktop app, and suggestions in its editor bar.
+- Duplicating a riff as a reference in the browser app.
 - The benchmark: one real song rebuilt with the tool only and timed
   ("one page in five minutes"), with what got in the way written down.
 - A token for `webserver.py --host 0.0.0.0` before it is used beyond a
@@ -86,6 +99,10 @@ Manual checks waiting for giopas (each stays here until reported back):
   including the first-start warning (Windows) and the Linux menu entry.
   The Mac (install and **Update and restart**) is confirmed.
 - The three decisions of 9 October marked "giopas to confirm" below.
+- v0.30.0: a look at `tests/golden/marks-and-techniques.pdf` and
+  `tests/golden/parts.pdf`; writing a chart with techniques, dynamics,
+  a part and a riff in the app; exporting a PDF and opening it again with
+  **Import song…**.
 
 ## Release history
 
@@ -138,6 +155,9 @@ and readable on stage without the handwritten sheet.
 | 9 Oct 2026 | The Linux package opens in the browser, because the native window needs GTK or Qt WebKit from the system. From the sources with pywebview, Linux gets the window. (Proposed by Claude while building item 8; giopas to confirm.) |
 | 9 Oct 2026 | The update check runs by itself only in the installed app. From the sources, **Check now** in the About card asks on request. (Proposed by Claude while building item 8; giopas to confirm.) |
 | 9 Oct 2026 | The release workflow leaves a draft release; giopas checks it and publishes it. Only published releases are offered by **Update and restart**. (Proposed by Claude while building item 8; giopas to confirm.) |
+| 10 Oct 2026 | Techniques use the standard tab letters; palm mute is a run, `[pm …]`. Dynamics are lower-case words, an accent is `^`. (giopas, 10 October.) |
+| 10 Oct 2026 | Parts are extra chart lines inside a section, each with its own instrument; ⚙ Layout picks which instruments print. (giopas, 10 October.) |
+| 10 Oct 2026 | The song travels inside its PDF as an attachment, so a PDF can be opened again. TXT exports carry nothing. |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

@@ -35,6 +35,7 @@ serves that, not by difficulty.
 
 | **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.30.0** | **Notation and round trip** — techniques on licks and tab, dynamics, accents and runs (palm mute, cresc., dim.), ending brackets and a boxed coda in the PDF, parts for several instruments in one section, the riff library and suggestions while typing in the browser, and every PDF carries its song so it can be opened again. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.29.0** | **Standalone packages** — macOS (Apple silicon and Intel), Windows (installer and zip) and Linux, built by a release workflow, with an update check and Update and restart. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.28.0** | **One export writer** — every front end checks, builds and writes exports through `export.py`; the command line never replaces an existing file without `--force`; golden-file tests for ten invented songs. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.27.0** | **An app icon** — a fret number over a chord, as the charts are written by hand; SVG, PNG, `.icns` and `.ico`, shown in the window, the web front end, the README and the wiki. See [CHANGELOG.md](CHANGELOG.md). |
@@ -51,16 +52,18 @@ serves that, not by difficulty.
 Specified in [DESIGN_v0_21.md](DESIGN_v0_21.md), in the order they are
 worth building:
 
-- [ ] **Round-trip import** — `.sng` import in the browser front end
-      (the desktop app already has it), and reopening a song from its own
-      exported TXT or PDF by embedding the document JSON in the export
-      itself rather than parsing the printed page back
-- [ ] **Techniques on tab and licks** — palm muting, slides, hammer-on /
-      pull-off, bends, vibrato, as characters you type in the tab itself
-- [ ] **Dynamics and accents** — accent one item, or open a crescendo
-      across a run, on a chart line, a lick or a tab grid
-- [ ] **Parts — several instruments in one section**, each printable or
-      hideable, so bass and guitar live in one file
+- [x] **Round-trip import** — done in v0.30.0: every PDF carries its
+      song, and Import song… (browser), Open (desktop) and `cli.py
+      extract` read it back. A TXT export cannot carry it, so only the
+      PDF reopens
+- [x] **Techniques on tab and licks** — done in v0.30.0, as tab letters
+      (`5h7`, `7p5`, `5/7`, `7\5`, `7b9r7`, `7~`, `x`); palm muting is a
+      run on the chart line, `[pm …]`
+- [x] **Dynamics and accents** — done in v0.30.0 on the chart line:
+      `pp`…`ff`, `5A^`, `[cresc …]`, `[dim …]`. Accents inside a lick
+      use `^` after the fret
+- [x] **Parts — several instruments in one section** — done in v0.30.0;
+      edited in the browser app, ⚙ Layout → Instruments picks what prints
 - [x] **Lyrics under the chart** — answered in v0.23.0, and answered
       *beside* rather than under: the chart keeps a narrow left column and
       the words run down their own to the right of it, with no attempt to
@@ -73,11 +76,11 @@ worth building:
 Deferred out of v0.17 that v0.18 didn't touch, plus what v0.18 itself
 opens up:
 
-- [ ] **Graphical ending brackets and a boxed coda block** — `render.py`
-      already resolves the spans (`mark_spans()`, `has_coda()`); nothing
-      draws them yet beyond inline text tokens
-- [ ] **Autocomplete in the chart editor bar** — `=` for section names,
-      bare identifiers for riff names
+- [x] **Graphical ending brackets and a boxed coda block** — done in
+      v0.30.0, in the PDF, the TXT and the browser preview
+- [x] **Autocomplete in the chart editor bar** — done in v0.30.0 in the
+      browser app: riffs, `=` sections and `{` named licks. The desktop
+      editor bar does not have it yet
 - [ ] **Tab-grid measure copy/paste** and a per-measure beats picker
       (both existed pre-v0.17; dropped in the rewrite for time)
 - [ ] **Real one-page-in-five-minutes measurement** — the page estimate
@@ -88,10 +91,11 @@ opens up:
       `render:"tab"`/`"both"` section's measure grid is read-only there
       for now (ships read-only/preview first, per the phased roadmap;
       full grid editing is the natural v0.18.1 follow-up)
-- [ ] **Web UI: riff library management** — creating/renaming/deleting
-      riffs and Promote-to-riff/Duplicate-as-reference are desktop-only
-      for now; the web editor can *use* an existing riff reference but
-      not manage the library
+- [x] **Web UI: riff library management** — done in v0.30.0: the
+      Riffs 🔁 dialog and **→ riff**. Duplicating a riff as a reference is
+      still desktop-only
+- [ ] **Desktop: edit parts** — the desktop app lists a section's parts
+      and keeps them, but they are edited in the browser app
 - [ ] **`webserver.py` authentication** — currently no auth at all,
       fine on `localhost` or a trusted home network; worth a lightweight
       token before recommending `--host 0.0.0.0` on anything else
@@ -103,7 +107,7 @@ opens up:
 - [ ] **Time signature support** — 3/4, 6/8, etc.
 - [ ] **Import from Guitar Pro / GuitarPro format** — stretch goal
 - [ ] **Undo / Redo stack** — per section
-- [ ] **Multiple instruments per song** — e.g. guitar + bass in the same project
+- [x] **Multiple instruments per song** — parts, v0.30.0
 - [ ] **Auto-save / crash recovery**
 - [ ] **Dark/light theme preference saved between sessions**
 - [ ] **Keyboard shortcuts reference card** (in-app)

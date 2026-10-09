@@ -4,9 +4,53 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.30.0] — 2026-10-10
+
+Seven items from the roadmap in one release: more of what a player writes
+on a chart, several instruments in one song, the riff library in the
+browser, and songs that come back out of their PDF.
+
+### Added
+- Playing techniques on licks and tab-grid cells, in the usual tab
+  letters: `5h7` hammer-on, `7p5` pull-off, `5/7` and `7\5` slides, `7b9`
+  bend, `7b9r7` bend and release, `7~` vibrato, `x` muted. They print as
+  typed, the columns widen to keep the strings lined up, and transposing
+  moves every fret in a position. A cell that is not a fret is a warning
+  before export.
+- Dynamics as words of their own (`pp p mp mf f ff`, lower case, so `F`
+  stays a chord), printed in bold, and `^` after a note or chord for an
+  accent (`5A^`), printed as `>` over it.
+- Runs over several notes: `[pm 5A 5A 5A]` palm mute ("P.M." and a
+  dashed line), `[cresc A D E]` and `[dim E D A]` hairpins. A run repeats
+  like a group, `[pm 5A 5A]x2`. These, endings and accents print on a row
+  of their own above the fret numbers, in the PDF, the TXT and the
+  browser preview.
+- Ending brackets: `|1.` and `|2.` print as a bracket over the bars they
+  cover, carried over a `//` line break. A coda prints as a box with the
+  coda sign and "Coda" in bold.
+- Parts: **+ Part** under a section adds another instrument's chart line
+  to it, such as the guitar chords under the bass. **⚙ Layout →
+  Instruments** picks which instruments print (saved as
+  `print_instruments`); `--instrument` on the command line does the same.
+  Parts are edited in the browser app; the desktop app lists them and
+  keeps them.
+- The riff library in the browser app: **Riffs 🔁** creates, edits,
+  renames and deletes riffs, with where each is used. Renaming a riff
+  renames it on every line that plays it. **→ riff** beside a chart line
+  turns the selected part of it into a riff. New route `POST /api/riffs`.
+- Suggestions while typing a chart line in the browser app: riffs for a
+  plain word, sections after `=`, named licks after `{`.
+- Every PDF carries its song as an attached `song.sng`. **Import song…**
+  in the browser app (a `.sng` or such a PDF, always as a new song file),
+  **Open** in the desktop app and the new `cli.py extract` read it back;
+  `cli.py convert` and `lint` accept the PDF too. New route
+  `POST /api/import`. A TXT export has nowhere to keep the song, and PDFs
+  from before 0.30 have none.
+- Golden files for two more songs: marks and techniques, and parts.
 
 ### Changed
+- A file that holds no song now says so in a sentence when you open it,
+  in all three front ends, instead of showing a JSON error.
 - The release workflow now really uses the newer GitHub actions (Node.js
   24). The v0.29.1 entry below already said so, but the new workflow file
   only reached the repository after v0.29.1 was built.

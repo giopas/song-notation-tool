@@ -1,0 +1,465 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Slow Tide",
+    "artist": "The Placeholders",
+    "key": "A",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "gutter",
+  "color_mode": "bw",
+  "pdf_scale": "fit",
+  "pdf_columns": "2",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "s1",
+      "name": "Intro 1",
+      "type": "Intro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "name": "Verse 2",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "G",
+              "fret": 3
+            },
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": 5
+            }
+          ]
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "name": "Pre-Chorus 3",
+      "type": "Pre-Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s4",
+      "name": "Chorus 4",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s5",
+      "name": "Bridge 5",
+      "type": "Bridge",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 4,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s6",
+      "name": "Outro 6",
+      "type": "Outro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s7",
+      "name": "Intro 7",
+      "type": "Intro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s8",
+      "name": "Verse 8",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "G",
+              "fret": 3
+            },
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": 5
+            }
+          ]
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        }
+      ]
+    },
+    {
+      "id": "s9",
+      "name": "Pre-Chorus 9",
+      "type": "Pre-Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "name": "Chorus 10",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s11",
+      "name": "Bridge 11",
+      "type": "Bridge",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 4,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s12",
+      "name": "Outro 12",
+      "type": "Outro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    }
+  ]
+}

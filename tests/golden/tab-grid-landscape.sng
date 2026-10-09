@@ -1,0 +1,80 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Fret Study",
+    "artist": "The Placeholders",
+    "key": "E",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "1.5",
+  "pdf_columns": "auto",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "riff",
+      "name": "Riff",
+      "type": "Intro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "tab",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "measure",
+          "beats": 8,
+          "strings": {
+            "D": "- - 3 - - - - -",
+            "A": "4 4 - 4 - - - -"
+          }
+        }
+      ]
+    },
+    {
+      "id": "verse1",
+      "name": "Verse",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "both",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "measure",
+          "beats": 8,
+          "strings": {
+            "G": "5 - - - 7 - - -"
+          }
+        }
+      ]
+    }
+  ]
+}

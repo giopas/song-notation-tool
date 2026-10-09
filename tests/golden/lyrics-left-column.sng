@@ -1,0 +1,126 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Harbour Lights (left column)",
+    "artist": "The Placeholders",
+    "key": "E",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "side",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "fit",
+  "pdf_columns": "auto",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "verse1",
+      "name": "Verse 1",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "Salt on the window\nlights on the bay",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "F",
+          "fret": 8
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "Hold the rope\nhold the line\nwe come in slow",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "B",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "G#",
+          "fret": 4
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "solo",
+      "name": "Solo",
+      "type": "Solo",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 4,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

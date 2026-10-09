@@ -1,0 +1,262 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Paper Lanterns",
+    "artist": "The Placeholders",
+    "key": "E",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "fit",
+  "pdf_columns": "auto",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "intro",
+      "name": "Intro",
+      "type": "Intro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verse1",
+      "name": "Verse 1",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 2,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "lightly",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "F",
+          "fret": 8
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break",
+          "indent": 1
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "F",
+          "fret": 8
+        }
+      ]
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus 1",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "mark",
+          "mark": "repeat_open"
+        },
+        {
+          "kind": "token",
+          "symbol": "B",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "G#",
+          "fret": 4
+        },
+        {
+          "kind": "mark",
+          "mark": "repeat_close"
+        },
+        {
+          "kind": "mark",
+          "mark": "ending_1"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "ending_2"
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "simile"
+        },
+        {
+          "kind": "mark",
+          "mark": "rest"
+        }
+      ]
+    },
+    {
+      "id": "verse2",
+      "name": "Verse 2",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "section_ref",
+          "section": "verse1",
+          "repeat": 2,
+          "all": false,
+          "transpose": 0
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "name": "Bridge",
+      "type": "Bridge",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "free",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "Hold the last chord.\nDrums alone for four bars.",
+      "items": []
+    },
+    {
+      "id": "outro",
+      "name": "Outro",
+      "type": "Outro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "mark",
+          "mark": "segno"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "coda"
+        },
+        {
+          "kind": "mark",
+          "mark": "dc"
+        }
+      ]
+    }
+  ]
+}

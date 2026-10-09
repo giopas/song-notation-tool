@@ -1,0 +1,1409 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Long Road Home",
+    "artist": "The Placeholders",
+    "key": "E",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "one",
+  "pdf_columns": "auto",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "s1",
+      "name": "Part 1",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "name": "Part 2",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "name": "Part 3",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s4",
+      "name": "Part 4",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s5",
+      "name": "Part 5",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s6",
+      "name": "Part 6",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s7",
+      "name": "Part 7",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s8",
+      "name": "Part 8",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s9",
+      "name": "Part 9",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "name": "Part 10",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s11",
+      "name": "Part 11",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s12",
+      "name": "Part 12",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s13",
+      "name": "Part 13",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s14",
+      "name": "Part 14",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s15",
+      "name": "Part 15",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s16",
+      "name": "Part 16",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s17",
+      "name": "Part 17",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s18",
+      "name": "Part 18",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s19",
+      "name": "Part 19",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s20",
+      "name": "Part 20",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s21",
+      "name": "Part 21",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s22",
+      "name": "Part 22",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 2,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": 7
+            }
+          ]
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s23",
+      "name": "Part 23",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "s24",
+      "name": "Part 24",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    }
+  ]
+}

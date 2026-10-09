@@ -1,0 +1,75 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Grey Morning",
+    "artist": "The Placeholders",
+    "key": "E",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "=== Verse 1 ===\nCoffee gone cold\nradio low\n\n=== Chorus ===\nGrey morning\nlet it go",
+  "print_lyrics": false,
+  "lyrics_layout": "start",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "fit",
+  "pdf_columns": "auto",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "verse1",
+      "name": "Verse 1",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        }
+      ]
+    }
+  ]
+}

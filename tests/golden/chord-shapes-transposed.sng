@@ -1,0 +1,135 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Open Strings",
+    "artist": "The Placeholders",
+    "key": "C",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 2,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "tab",
+  "chords": [
+    {
+      "name": "C",
+      "instrument": "Guitar (6-string)",
+      "frets": [
+        "0",
+        "1",
+        "0",
+        "2",
+        "3",
+        "x"
+      ],
+      "note": ""
+    },
+    {
+      "name": "G",
+      "instrument": "Guitar (6-string)",
+      "frets": [
+        "3",
+        "0",
+        "0",
+        "0",
+        "2",
+        "3"
+      ],
+      "note": "full"
+    },
+    {
+      "name": "F",
+      "instrument": "Guitar (6-string)",
+      "frets": [
+        "1",
+        "1",
+        "2",
+        "3",
+        "3",
+        "1"
+      ],
+      "note": "barre"
+    }
+  ],
+  "chord_sheet": "start",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "fit",
+  "pdf_columns": "auto",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "verse1",
+      "name": "Verse",
+      "type": "Verse",
+      "instrument": "Guitar (6-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "C",
+          "fret": null
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": null
+        },
+        {
+          "kind": "token",
+          "symbol": "F",
+          "fret": null
+        },
+        {
+          "kind": "token",
+          "symbol": "C",
+          "fret": null
+        }
+      ]
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus",
+      "type": "Chorus",
+      "instrument": "Guitar (6-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "F",
+          "fret": null
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": null
+        },
+        {
+          "kind": "token",
+          "symbol": "C",
+          "fret": null
+        },
+        {
+          "kind": "token",
+          "symbol": "C",
+          "fret": null
+        }
+      ]
+    }
+  ]
+}

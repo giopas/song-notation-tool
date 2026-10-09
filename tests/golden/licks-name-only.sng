@@ -1,0 +1,226 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Copper Wire (names)",
+    "artist": "The Placeholders",
+    "key": "G",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "name",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "fit",
+  "pdf_columns": "auto",
+  "blocks": {},
+  "sections": [
+    {
+      "id": "intro",
+      "name": "Intro",
+      "type": "Intro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "C",
+          "fret": null
+        },
+        {
+          "kind": "lick",
+          "lines": [
+            {
+              "string": "G",
+              "frets": [
+                "5",
+                "7",
+                "5"
+              ]
+            },
+            {
+              "string": "D",
+              "frets": [
+                "-",
+                "-",
+                "3"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": null
+        },
+        {
+          "kind": "token",
+          "symbol": "Am",
+          "fret": null
+        }
+      ]
+    },
+    {
+      "id": "verse1",
+      "name": "Verse",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "lick",
+          "lines": [
+            {
+              "string": "G",
+              "frets": [
+                "5",
+                "7",
+                "5"
+              ]
+            },
+            {
+              "string": "D",
+              "frets": [
+                "-",
+                "-",
+                "3"
+              ]
+            }
+          ],
+          "name": "Riff1"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "lick_ref",
+          "lick": "Riff1",
+          "repeat": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "name": "Bridge",
+      "type": "Bridge",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 4,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "G",
+              "fret": 3
+            },
+            {
+              "kind": "token",
+              "symbol": "F#",
+              "fret": 2
+            },
+            {
+              "kind": "lick",
+              "lines": [
+                {
+                  "string": "G",
+                  "frets": [
+                    "-",
+                    "-",
+                    "-",
+                    "-"
+                  ]
+                },
+                {
+                  "string": "D",
+                  "frets": [
+                    "4",
+                    "-",
+                    "-",
+                    "-"
+                  ]
+                },
+                {
+                  "string": "A",
+                  "frets": [
+                    "-",
+                    "4",
+                    "5",
+                    "4"
+                  ]
+                },
+                {
+                  "string": "E",
+                  "frets": [
+                    "-",
+                    "-",
+                    "-",
+                    "-"
+                  ]
+                }
+              ],
+              "name": "Riff3"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

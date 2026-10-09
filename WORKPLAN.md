@@ -7,19 +7,19 @@ the Claude project as `claude/WORKPLAN.md`.
 
 ## Where we are
 
-- Released: v0.27.0 (the app icon), pushed on 8 October 2026 together
-  with the v0.26.3 tag. The housekeeping planned as v0.26.4 shipped in
-  v0.27.0.
-- Ready on `feat/v0.27.1` (9 October): the plain-language pass (item 2).
-  Waiting for merge, tag and push.
-- Test suite: 367 tests, all passing (`python3 -m pytest -q`).
+- Released: v0.27.1 (the plain-language pass), pushed on 9 October 2026.
+- Ready on `feat/v0.28.0` (9 October): items 3 to 6, one export writer
+  that checks every song first and never overwrites, and golden-file
+  tests. Waiting for merge, tag and push.
+- Test suite: 398 tests, all passing (`python3 -m pytest -q`), including
+  ten golden songs.
 
 ## What is left
 
 Work items, in order:
 
-1. GitHub releases for v0.26.3 and v0.27.0, each with its changelog
-   section as the body (if not done yet).
+1. GitHub releases for v0.26.3, v0.27.0 and v0.27.1, each with its
+   changelog section as the body (if not done yet).
 2. Plain-language pass: done in v0.27.1, except the three issue
    templates in `.github/ISSUE_TEMPLATE/`. Claude cannot write under
    `.github/` on this computer (the folder is protected for remote
@@ -27,21 +27,24 @@ Work items, in order:
    Left as they were on purpose: the ⚙ Layout option labels in
    `constants.py` ("All together — at the start" and so on), which are
    menu labels, and comments and docstrings in the code.
-3. One writer for files. TXT and PDF bytes come from `export.py`, but the
-   files are written in three places (`cli.py`, `webserver.py`,
-   `song_writer.py`). Move the writing into one function.
-4. Exports never overwrite. The desktop app and the native window go
-   through a save dialog, where the system asks before replacing a file.
-   `cli.py convert` and `batch` write straight to the output path. Make
-   them pick the next free name (`name_v2.pdf`) unless `--force` is given.
-5. Validate before export. `cli.py lint` already checks that every chart
-   line re-parses and warns about chord shapes. Run the same check before
-   every export: errors block it, warnings are shown.
-6. Golden-file tests: one anonymised song per layout feature, compared
-   byte for byte (now possible since `build_pdf` takes a date).
+3. One writer: done in v0.28.0. `export.export_to_file()` (and
+   `prepare_export()` for downloads) is the only place that builds and
+   writes TXT and PDF exports. TXT is now the same bytes everywhere: UTF-8,
+   Unix line endings, one newline at the end.
+4. Exports never overwrite: done in v0.28.0. The command line keeps an
+   existing file and writes `song_v2.pdf` unless `--force` is given. The
+   save dialogs (desktop, native window) already ask before replacing, so
+   they replace only when you agree.
+5. Validate before export: done in v0.28.0. `export.check_document()`, the
+   same check as `cli.py lint`, runs before every export in every front
+   end. Errors stop it and name the section; chord-shape notes are shown.
+6. Golden-file tests: done in v0.28.0. Ten invented songs in
+   `tests/golden/`, built by `tools/make_golden.py`. PDFs are compared
+   with their page streams inflated (zlib builds differ). Claude looked at
+   all ten PDFs before committing them; giopas should look once too.
 7. App icon: done in v0.27.0 (option C). Live check of how it looks in
    the Dock, the taskbar and a browser tab is on the manual list below.
-8. Standalone packages (`feat/v0.28.0`), built the way Swiss Knife 2.8
+8. Standalone packages (`feat/v0.29.0`), built the way Swiss Knife 2.8
    does it:
    - a PyInstaller spec (`packaging/songnotation.spec`) and
      `packaging/make_archive.py`, which names the files
@@ -79,6 +82,9 @@ Manual checks waiting for giopas (each stays here until reported back):
   window, and as the favicon in a browser tab.
 - v0.27.1: a read-through of the README and the wiki, and a look at
   the app's help texts, to confirm they sound like you.
+- v0.28.0: an export from the desktop app and from the native window
+  (TXT and PDF), replacing an existing file through the save dialog; and
+  a look at the ten golden PDFs in `tests/golden/`.
 - After item 8: each package installed and started on a real system
   (macOS Apple silicon, macOS Intel, Windows, Linux).
 

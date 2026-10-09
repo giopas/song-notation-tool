@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.28.0] — 2026-10-09
+
+Exports now have one writer. Every front end (desktop app, native window,
+browser tab, command line) checks the song, builds the file and writes it
+through the same code in `export.py`, so the same song gives the same file
+whichever way you export it. The command line no longer replaces a file
+that is already there, and golden-file tests now hold the approved output
+of ten invented songs.
+
+### Added
+- `export.export_to_file()`, `prepare_export()`, `export_bytes()`,
+  `write_export()` and `check_document()`: the one way an export is
+  checked, built and written.
+- `--force` for `cli.py convert` and `batch`, to replace an existing
+  output file.
+- A check before every export, the same one `cli.py lint` runs. A chart
+  line that cannot be written out or does not parse again stops the
+  export, and the message names the section. Chord-shape notes (chords
+  with no shape, shapes never played) are shown with the export and never
+  stop it. In the browser, a refused export is a `422`, and the notes come
+  in an `X-Export-Warnings` header.
+- Golden-file tests: ten invented songs in `tests/golden/`, one per layout
+  feature, with the TXT and PDF they must produce, and
+  `tools/make_golden.py` to rebuild them when a change is intended.
+
+### Changed
+- The command line keeps an existing output file and writes to the next
+  free name (`song_v2.pdf`, then `song_v3.pdf`) unless `--force` is given,
+  and says which file it kept. Running `batch` twice without `--force`
+  now leaves both versions.
+- TXT exports are the same bytes everywhere: UTF-8, Unix line endings and
+  one newline at the end. Before, the desktop app and the command line left
+  out the final newline and wrote Windows line endings on Windows, while
+  the native window added it; browser downloads had none.
+- Every export is written to a temporary file first and then moved into
+  place, so a crash halfway never leaves half a file.
+- The desktop app suggests the same export file name as the other front
+  ends (`default_export_name()`); with no title, that is `Untitled_Song`
+  instead of an empty name.
+
 ## [0.27.1] — 2026-10-09
 
 A plain-language pass over the README, the wiki and the texts the app

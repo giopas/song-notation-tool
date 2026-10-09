@@ -12,7 +12,9 @@
   <header id="topbar">
     <div id="topbar-left">
       <span id="app-title"><img id="app-logo" src="/logo/icon.svg" alt="" width="22" height="22">Song Notation Tool</span>
-      <span id="app-version"></span>
+      <button id="app-version" type="button" class="version-btn" title="About this app, and updates"></button>
+      <button id="update-badge" type="button" class="btn accent update-badge" hidden
+              title="A newer version is out. Click for what is new and how to get it"></button>
     </div>
     <div id="topbar-right">
       <button id="btn-help" class="icon-btn" title="How this works">?</button>
@@ -535,6 +537,32 @@
       </div>
     </div>
   </div>
+  <!-- About and updates -->
+  <div id="about-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <h3 id="about-title">Song Notation Tool</h3>
+      <p id="about-sub" class="modal-hint" style="margin-top:0"></p>
+      <pre id="about-notes" class="about-notes hidden"></pre>
+      <p id="about-msg" class="about-msg"></p>
+      <label class="about-check"><input type="checkbox" id="about-check-enabled">
+        Check for updates when the app starts</label>
+      <p class="modal-hint">The app then asks GitHub once for the latest release
+        of Song Notation Tool. The request carries only the app's name and version:
+        nothing about you or your songs. The check only runs in the installed app;
+        <strong>Check now</strong> works everywhere.</p>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <div>
+          <button id="about-check-now" class="btn subtle">Check now</button>
+          <button id="about-release-page" class="btn subtle">Release page ↗</button>
+        </div>
+        <div>
+          <button id="about-install" class="btn accent" hidden>Update and restart</button>
+          <button id="about-close" class="btn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="hidden"></div>
 
   <template id="section-template">

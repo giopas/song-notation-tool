@@ -2015,9 +2015,137 @@ function importLyricsFile(file) {
 // ---------------------------------------------------------------------------
 //  Wire-up
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  About and updates. The installed app asks GitHub once at start whether a
+//  newer release is out (see update.py; it can be switched off here). Run
+//  from sources, it never checks by itself: "Check now" still works.
+// ---------------------------------------------------------------------------
+
+let UPDATE = null;
+
+async function updateFetch(force) {
+  const res = await fetch(`/api/update/check${force ? "?force=1" : ""}`);
+  return res.json();
+}
+
+function updateApply(d) {
+  UPDATE = d;
+  const badge = document.getElementById("update-badge");
+  badge.hidden = !d.newer;
+  if (d.newer) badge.textContent = `⬆ v${d.latest} available`;
+  document.getElementById("about-check-enabled").checked = !!d.enabled;
+}
+
+async function updateAtStart() {
+  try {
+    const d = await updateFetch(false);
+    // Remember the setting either way; only the installed app checks by itself.
+    document.getElementById("about-check-enabled").checked = !!d.enabled;
+    if (d.frozen) updateApply(d);
+  } catch (e) { /* offline: say nothing */ }
+}
+
+function openAbout() {
+  const d = UPDATE || {};
+  const current = (META && META.app_version) || d.current || "";
+  document.getElementById("about-title").textContent = d.newer
+    ? `Song Notation Tool v${d.latest} is out` : `Song Notation Tool v${current}`;
+  let sub = `You have v${current}.`;
+  if (d.newer) {
+    sub += d.can_install
+      ? " Update and restart downloads the new version, checks it against the"
+        + " release's SHA-256 list and starts it again. Your songs and settings"
+        + " are not touched."
+      : (d.frozen ? " Download the new version from the release page."
+                  : " You run it from the sources: update with  git pull,"
+                    + " then restart it, or download the release.");
+  }
+  document.getElementById("about-sub").textContent = sub;
+  const notes = document.getElementById("about-notes");
+  notes.textContent = d.newer ? (d.notes || "") : "";
+  notes.classList.toggle("hidden", !(d.newer && d.notes));
+  document.getElementById("about-install").hidden = !(d.newer && d.can_install && d.asset);
+  document.getElementById("about-msg").textContent = d.error || "";
+  document.getElementById("about-modal-backdrop").classList.remove("hidden");
+}
+
+function closeAbout() {
+  document.getElementById("about-modal-backdrop").classList.add("hidden");
+}
+
+async function aboutCheckNow() {
+  const msg = document.getElementById("about-msg");
+  msg.textContent = "Checking…";
+  let d;
+  try { d = await updateFetch(true); }
+  catch (e) { msg.textContent = "Could not check for updates."; return; }
+  updateApply(d);
+  openAbout();
+  if (!d.error && !d.newer) {
+    msg.textContent = `You have the latest version (v${d.current}).`;
+  }
+}
+
+async function aboutInstall() {
+  const msg = document.getElementById("about-msg");
+  const btn = document.getElementById("about-install");
+  btn.disabled = true;
+  try {
+    if (currentDoc) await saveCurrent();   // the app restarts: keep the song
+  } catch (e) {
+    msg.textContent = `Could not save the song first: ${e}. Nothing was updated.`;
+    btn.disabled = false;
+    return;
+  }
+  msg.textContent = "Downloading…";
+  try {
+    const res = await fetch("/api/update/install", { method: "POST" });
+    const d = await res.json();
+    msg.textContent = d.message || (res.ok ? "Done." : "Failed.");
+    if (!res.ok) btn.disabled = false;
+  } catch (e) {
+    msg.textContent = "The app is restarting…";
+  }
+}
+
+async function aboutSetEnabled(on) {
+  try {
+    const res = await fetch("/api/update/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ check: !!on }),
+    });
+    const d = await res.json();
+    if (!on) document.getElementById("update-badge").hidden = true;
+    UPDATE = Object.assign(UPDATE || {}, { enabled: d.enabled });
+  } catch (e) { /* stays as it was */ }
+}
+
+async function aboutReleasePage() {
+  const url = (UPDATE && UPDATE.url) || "";
+  try {
+    await fetch("/api/update/open", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+  } catch (e) { toast("Could not open the release page."); }
+}
+
+function wireAbout() {
+  document.getElementById("app-version").addEventListener("click", openAbout);
+  document.getElementById("update-badge").addEventListener("click", openAbout);
+  document.getElementById("about-close").addEventListener("click", closeAbout);
+  document.getElementById("about-check-now").addEventListener("click", aboutCheckNow);
+  document.getElementById("about-install").addEventListener("click", aboutInstall);
+  document.getElementById("about-release-page").addEventListener("click", aboutReleasePage);
+  document.getElementById("about-check-enabled").addEventListener(
+    "change", (e) => aboutSetEnabled(e.target.checked));
+  setTimeout(updateAtStart, 1500);
+}
+
 async function init() {
   META = await API.meta();
   document.getElementById("app-version").textContent = `v${META.app_version}`;
+  wireAbout();
   wireMetaForm();
 
   // Layout, Colour and Size are all properties of the *song*, not of this

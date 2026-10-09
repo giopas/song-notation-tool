@@ -2326,20 +2326,15 @@ class SongNotationApp(tk.Tk):
         def do_export():
             instrs = {i for i, v in instr_vars.items() if v.get()}
             dlg.destroy()
-            artist = self.song_artist.get().strip()
-            title  = self.song_title.get().strip()
-            default_name = (f"{artist} - {title}" if artist else title
-                            ).replace(" ", "_") + ".txt"
+            self._sync_doc_meta()
+            default_name = default_export_name(self.doc, "txt")
             path = filedialog.asksaveasfilename(
                 defaultextension=".txt",
                 filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
                 initialfile=default_name)
             if not path:
                 return
-            lines = self._build_song_lines(instruments=instrs)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write("\n".join(lines))
-            messagebox.showinfo("Exported", f"Saved to:\n{path}")
+            self._write_export("txt", path, instruments=instrs)
 
         br = tk.Frame(dlg, bg=t["bg"])
         br.pack(fill="x", padx=16, pady=(10, 14))
@@ -2396,20 +2391,15 @@ class SongNotationApp(tk.Tk):
             # columns next time it's printed.
             self.doc["pdf_columns"] = cols_var.get()
             dlg.destroy()
-            artist = self.song_artist.get().strip()
-            title  = self.song_title.get().strip()
-            default_name = (f"{artist} - {title}" if artist else title
-                            ).replace(" ", "_") + ".pdf"
+            self._sync_doc_meta()
+            default_name = default_export_name(self.doc, "pdf")
             path = filedialog.asksaveasfilename(
                 defaultextension=".pdf",
                 filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
                 initialfile=default_name)
             if not path:
                 return
-            pdf_bytes = self._build_pdf(instruments=instrs, orient=orient)
-            with open(path, "wb") as f:
-                f.write(pdf_bytes)
-            messagebox.showinfo("Exported PDF", f"Saved to:\n{path}")
+            self._write_export("pdf", path, instruments=instrs, orient=orient)
 
         br = tk.Frame(dlg, bg=t["bg"])
         br.pack(fill="x", padx=16, pady=(10, 14))
@@ -2418,6 +2408,26 @@ class SongNotationApp(tk.Tk):
         ttk.Button(br, text="Export PDF", command=do_export,
                    style="Accent.TButton").pack(side="right")
         dlg.bind("<Return>", lambda e: do_export())
+
+    def _write_export(self, fmt, path, instruments=None, orient="portrait"):
+        """Check, build and write an export through export.py, the one
+        writer every front end uses. The save dialog has already asked
+        before replacing a file, so the user's answer stands. A song that
+        fails the check is not written, and the dialog says why."""
+        self._sync_doc_meta()
+        try:
+            result = songexport.export_to_file(
+                self.doc, fmt, path, instruments=instruments, orient=orient,
+                overwrite=True)
+        except songexport.ExportBlocked as exc:
+            messagebox.showerror(
+                "Not exported",
+                "Fix these chart lines first:\n\n" + "\n".join(exc.errors))
+            return None
+        note = ("\n\nNote: " + "\n".join(result["warnings"])
+                if result["warnings"] else "")
+        messagebox.showinfo("Exported", f"Saved to:\n{result['path']}{note}")
+        return result["path"]
 
     def _build_pdf(self, instruments=None, orient="portrait"):
         """Delegates to export.py — the same pure PDF builder the CLI and

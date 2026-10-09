@@ -174,15 +174,17 @@ class _JsApi:
                 return {"ok": False, "cancelled": True}
             path = chosen if isinstance(chosen, str) else chosen[0]
 
-            if fmt == "txt":
-                data = ("\n".join(export.build_song_lines(doc)) + "\n").encode("utf-8")
-            else:
-                data = export.build_pdf(doc, orient=orient)
-            with open(path, "wb") as f:
-                f.write(data)
+            # The save panel already asked before replacing a file, so
+            # the user's answer stands: overwrite=True.
+            result = export.export_to_file(doc, fmt, path, orient=orient,
+                                           overwrite=True)
 
             userpaths.set_last_export_dir(os.path.dirname(path))
-            return {"ok": True, "path": path}
+            return {"ok": True, "path": result["path"],
+                    "warnings": result["warnings"]}
+        except export.ExportBlocked as exc:
+            return {"ok": False, "error": "Not exported: " + "; ".join(exc.errors),
+                    "errors": exc.errors}
         except Exception as exc:  # noqa: BLE001 — surfaced in the UI, never fatal
             return {"ok": False, "error": str(exc)}
 
@@ -199,11 +201,9 @@ class _JsApi:
         import tempfile
         try:
             doc = model.migrate_document(doc or {})
-            data = export.build_pdf(doc, orient=orient)
             name = default_export_name(doc, "pdf")
             path = os.path.join(tempfile.mkdtemp(prefix="song-notation-"), name)
-            with open(path, "wb") as f:
-                f.write(data)
+            export.export_to_file(doc, "pdf", path, orient=orient, overwrite=True)
 
             if sys.platform == "darwin":
                 subprocess.Popen(["open", path])
@@ -536,15 +536,36 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_bytes(self, body: bytes, content_type: str, filename: str = None):
+    def _send_bytes(self, body: bytes, content_type: str, filename: str = None,
+                    warnings=None):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         if filename:
             self.send_header("Content-Disposition",
                               f'attachment; filename="{filename}"')
+        if warnings:
+            # JSON with ASCII escapes, so any chord name survives a header.
+            self.send_header("X-Export-Warnings", json.dumps(list(warnings)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_export(self, doc: dict, fmt: str, out_name: str,
+                     orient: str = "portrait"):
+        """Check the song, build the export, and send it as a download.
+
+        A song that fails the check gets a 422 with the errors, and no file.
+        """
+        try:
+            data, warnings = export.prepare_export(doc, fmt, orient=orient)
+        except export.ExportBlocked as exc:
+            return self._send_json({"ok": False,
+                                    "error": "Not exported: " + "; ".join(exc.errors),
+                                    "errors": exc.errors},
+                                   status=HTTPStatus.UNPROCESSABLE_ENTITY)
+        ctype = ("text/plain; charset=utf-8" if fmt == "txt"
+                 else "application/pdf")
+        return self._send_bytes(data, ctype, out_name, warnings=warnings)
 
     def _send_error_json(self, status, message):
         self._send_json({"ok": False, "error": message}, status=status)
@@ -606,12 +627,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send_error_json(HTTPStatus.NOT_FOUND, "no such song")
                 doc = self.store.load(filename)
                 out_name = default_export_name(doc, fmt)
-                if fmt == "txt":
-                    body = "\n".join(export.build_song_lines(doc)).encode("utf-8")
-                    return self._send_bytes(body, "text/plain; charset=utf-8", out_name)
                 orient = (qs.get("orient", ["portrait"])[0])
-                body = export.build_pdf(doc, orient=orient)
-                return self._send_bytes(body, "application/pdf", out_name)
+                return self._send_export(doc, fmt, out_name, orient=orient)
 
             m = re.match(r"^/api/songs/([^/]+)$", path)
             if m:
@@ -773,12 +790,9 @@ class Handler(BaseHTTPRequestHandler):
                 body = self._read_json_body()
                 doc = model.migrate_document(body.get("doc") or {})
                 out_name = default_export_name(doc, "txt" if path.endswith("txt") else "pdf")
-                if path.endswith("txt"):
-                    data = "\n".join(export.build_song_lines(doc)).encode("utf-8")
-                    return self._send_bytes(data, "text/plain; charset=utf-8", out_name)
-                orient = body.get("orient", "portrait")
-                data = export.build_pdf(doc, orient=orient)
-                return self._send_bytes(data, "application/pdf", out_name)
+                fmt = "txt" if path.endswith("txt") else "pdf"
+                return self._send_export(doc, fmt, out_name,
+                                         orient=body.get("orient", "portrait"))
 
             return self._send_error_json(HTTPStatus.NOT_FOUND, "unknown route")
         except grammar.ParseError as exc:

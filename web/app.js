@@ -1089,7 +1089,8 @@ async function printCurrent() {
     body: JSON.stringify({ doc: currentDoc, orient: "portrait" }),
   });
   if (!res.ok) {
-    toast("Print failed: could not build the PDF");
+    const err = await res.json().catch(() => ({}));
+    toast(`Print failed: ${err.error || "could not build the PDF"}`);
     return;
   }
   const url = URL.createObjectURL(await res.blob());
@@ -1122,7 +1123,7 @@ async function exportCurrent(kind) {
   if (api && api.export_document) {
     const res = await api.export_document(currentDoc, fmt, orient);
     if (res && res.ok) {
-      toast(`Saved to ${res.path}`);
+      toast(`Saved to ${res.path}` + exportWarningText(res.warnings));
     } else if (res && res.cancelled) {
       // user closed the panel — say nothing
     } else {
@@ -1158,7 +1159,16 @@ async function exportCurrent(kind) {
   a.href = dlUrl; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(dlUrl);
-  toast(`Downloaded ${filename}. It is in your browser's downloads folder.`);
+  let warnings = [];
+  try { warnings = JSON.parse(res.headers.get("X-Export-Warnings") || "[]"); }
+  catch (e) { warnings = []; }
+  toast(`Downloaded ${filename}. It is in your browser's downloads folder.`
+        + exportWarningText(warnings));
+}
+
+/** The check's warnings, as a sentence to add to an export message. */
+function exportWarningText(warnings) {
+  return (warnings && warnings.length) ? ` Note: ${warnings.join("; ")}.` : "";
 }
 
 // ---------------------------------------------------------------------------

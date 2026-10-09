@@ -7,12 +7,15 @@ the Claude project as `claude/WORKPLAN.md`.
 
 ## Where we are
 
-- Released: v0.27.1 (the plain-language pass), pushed on 9 October 2026.
-- Ready on `feat/v0.28.0` (9 October): items 3 to 6, one export writer
-  that checks every song first and never overwrites, and golden-file
-  tests. Waiting for merge, tag and push.
-- Test suite: 398 tests, all passing (`python3 -m pytest -q`), including
-  ten golden songs.
+- Released: v0.28.0 (one export writer, golden files), pushed on 9 October
+  2026.
+- Ready on `feat/v0.29.0` (9 October): item 8, the standalone packages and
+  the update check. The Linux package was built and smoke-tested in
+  Claude's workspace; macOS and Windows are built for the first time by the
+  release workflow. Waiting for giopas to copy `release.yml` into
+  `.github/workflows/`, then merge, tag and push.
+- Test suite: 420 tests and 1 skipped (`python3 -m pytest -q`); the skipped
+  one checks `release.yml` and runs once the file is in place.
 
 ## What is left
 
@@ -44,33 +47,12 @@ Work items, in order:
    all ten PDFs before committing them; giopas should look once too.
 7. App icon: done in v0.27.0 (option C). Live check of how it looks in
    the Dock, the taskbar and a browser tab is on the manual list below.
-8. Standalone packages (`feat/v0.29.0`), built the way Swiss Knife 2.8
-   does it:
-   - a PyInstaller spec (`packaging/songnotation.spec`) and
-     `packaging/make_archive.py`, which names the files
-     `Song-Notation-Tool-<version>-<os>-<arch>.<ext>`;
-   - a `release.yml` workflow that runs on a version tag and builds on
-     macOS Apple silicon, macOS Intel, Windows and Linux, runs the tests,
-     smoke-tests each bundle (`--smoke`), and attaches the files and
-     `SHA256SUMS` to the GitHub release;
-   - macOS: a `.app` in a `.dmg` (and a `.zip`); Windows: an Inno Setup
-     installer and a `.zip`, with the installer tested by a silent
-     install, start and uninstall in the workflow; Linux: a `.tar.gz`
-     with a `.desktop` launcher;
-   - README and wiki: an install section per system, including the
-     unsigned-app warning and how to get past it;
-   - an update check against the GitHub releases, with *Update and
-     restart*, as in Swiss Knife (`core/update.py` there);
-   - running from sources keeps working exactly as today.
-
-   Note: `.github/` is protected for Claude's tools on this computer, so
-   `release.yml` will be written in the session's own workspace and
-   copied into `.github/workflows/` by giopas.
-
-   Decided on 8 October (see standing decisions): the package opens the
-   native window; it has an update check with *Update and restart*, as
-   in Swiss Knife; no signing or notarisation; Linux gets `.tar.gz`
-   only, no AppImage.
+8. Standalone packages: done in v0.29.0, as planned (spec, archives,
+   Windows installer, Linux menu entry, release workflow with smoke tests
+   and `SHA256SUMS`, update check with **Update and restart**, install
+   sections in the README and the wiki). Still open: the first run of the
+   release workflow on macOS and Windows (fix what it finds as v0.29.x),
+   and the live checks below.
 
 Manual checks waiting for giopas (each stays here until reported back):
 
@@ -85,8 +67,12 @@ Manual checks waiting for giopas (each stays here until reported back):
 - v0.28.0: an export from the desktop app and from the native window
   (TXT and PDF), replacing an existing file through the save dialog; and
   a look at the ten golden PDFs in `tests/golden/`.
-- After item 8: each package installed and started on a real system
-  (macOS Apple silicon, macOS Intel, Windows, Linux).
+- v0.29.0, after the release workflow has run: each package installed and
+  started on a real system (macOS Apple silicon, macOS Intel, Windows,
+  Linux), including the first-start warning of an unsigned app, and the
+  Linux menu entry.
+- v0.29.x: **Update and restart** from v0.29.0 to the next release, on the
+  Mac first (Swiss Knife needed two fixes before it worked there).
 
 ## Release history
 
@@ -114,7 +100,9 @@ and readable on stage without the handwritten sheet.
   without a display.
 - Deterministic output: the same song (and the same footer date) gives the
   same TXT and PDF bytes.
-- Nothing leaves the computer. Lyrics are never fetched automatically.
+- Nothing leaves the computer, apart from the update check of the installed
+  app, which sends only its name and version and can be switched off.
+  Lyrics are never fetched automatically.
 
 ## Standing decisions
 
@@ -134,6 +122,9 @@ and readable on stage without the handwritten sheet.
 | 8 Oct 2026 | Packages get an update check with *Update and restart*, as in Swiss Knife. It is optional and disclosed, and sends nothing about the user. |
 | 8 Oct 2026 | The apps are not signed or notarised. The README and wiki explain the first-run warning. |
 | 8 Oct 2026 | Linux gets a `.tar.gz` with a `.desktop` launcher. No AppImage unless someone asks. |
+| 9 Oct 2026 | The Linux package opens in the browser, because the native window needs GTK or Qt WebKit from the system. From the sources with pywebview, Linux gets the window. (Proposed by Claude while building item 8; giopas to confirm.) |
+| 9 Oct 2026 | The update check runs by itself only in the installed app. From the sources, **Check now** in the About card asks on request. (Proposed by Claude while building item 8; giopas to confirm.) |
+| 9 Oct 2026 | The release workflow leaves a draft release; giopas checks it and publishes it. Only published releases are offered by **Update and restart**. (Proposed by Claude while building item 8; giopas to confirm.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

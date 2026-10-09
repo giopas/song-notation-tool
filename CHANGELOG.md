@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.29.0] — 2026-10-09
+
+Standalone packages for macOS (Apple silicon and Intel), Windows and Linux,
+built the way QLC+ Swiss Knife is built, with an update check and
+**Update and restart**. A package is the native window with Python and
+everything it needs inside, so there is nothing to install first. Running
+from the sources works as before. The apps are not signed, so the system
+asks once before the first start; the README says what to click.
+
+Built and smoke-tested on Linux only so far. The macOS and Windows
+packages are built for the first time by the release workflow on this tag.
+
+### Added
+- `packaging/songnotation.spec` (PyInstaller), `packaging/make_archive.py`
+  (the release files: a `.dmg` and a `.tar.gz` on macOS, a `.zip` and an
+  installer on Windows, a `.tar.gz` on Linux),
+  `packaging/windows/installer.iss` (a per-user Inno Setup installer with an
+  uninstaller) and `packaging/linux/` (a script that adds the app to the
+  applications menu).
+- A release workflow that, on a version tag, builds and smoke-tests the
+  packages on all four systems, tests the Windows installer, and leaves a
+  draft release with the files, `SHA256SUMS` and this changelog section.
+- `update.py`: the update check and **Update and restart**, adapted from
+  Swiss Knife. The installed app asks the GitHub Releases API once at start
+  (remembered for 12 hours) and sends only its name and version. The
+  download is checked against the release's `SHA256SUMS` before it is
+  installed, and songs and settings are never touched.
+- The About card: click the version number (or the "available" badge) for
+  the release notes, **Check now**, **Release page**, **Update and restart**,
+  and **Check for updates when the app starts** to switch the check off.
+- `webserver.py --smoke`: starts on a free port with a temporary songs
+  folder, loads the page and its files, exports the example song, and exits
+  with 0 when all of that worked. The release workflow runs it on every
+  package.
+- The wiki page "Installing and updating".
+
+### Changed
+- Without `--port`, `webserver.py` uses 8420, or any free port if 8420 is
+  taken.
+- When the native window cannot open (a Linux system without GTK or Qt
+  WebKit, for instance), the app says so and opens the browser instead of
+  stopping.
+
 ## [0.28.0] — 2026-10-09
 
 Exports now have one writer. Every front end (desktop app, native window,

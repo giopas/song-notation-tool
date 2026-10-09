@@ -7,72 +7,85 @@ the Claude project as `claude/WORKPLAN.md`.
 
 ## Where we are
 
-- v0.29.0 was tagged on 9 October 2026. The release workflow built macOS
-  (both) and Linux, but Windows stopped in the tests, so its draft release
-  has no Windows files. It stays a draft and is replaced by v0.29.1.
-- Ready on `fix/v0.29.1`: the Windows fixes from that run (port sharing,
-  golden files and CRLF, a symlink test). The updated `release.yml` (newer
-  actions) was handed to giopas to copy in. Waiting for merge, tag and
-  push, and the second workflow run.
-- Test suite: 422 tests, all passing on Linux (`python3 -m pytest -q`).
-  Windows is known only from the workflow.
+- Released: v0.29.1, published on 9 October 2026 with all eight files
+  (macOS Apple silicon and Intel, `.dmg` and `.tar.gz` each; Windows
+  installer and `.zip`; Linux `.tar.gz`; `SHA256SUMS`). The release
+  workflow built and smoke-tested all four systems and tested the Windows
+  installer.
+- On 10 October giopas installed v0.29.0 on the Mac and used **Update and
+  restart** to go to v0.29.1: it worked the first time.
+- v0.29.0 is published too, without Windows files (its Windows build
+  stopped in the tests; fixed in v0.29.1).
+- Every release from v0.26.3 on has its GitHub release.
+- Items 1 to 8 of the first plan are done (see "Done" below).
+- Test suite: 422 tests, all passing (`python3 -m pytest -q`), on Linux,
+  macOS and Windows in the release workflow.
 
 ## What is left
 
-Work items, in order:
+Housekeeping, small:
 
-1. GitHub releases for v0.26.3, v0.27.0 and v0.27.1, each with its
-   changelog section as the body (if not done yet).
-2. Plain-language pass: done in v0.27.1, except the three issue
-   templates in `.github/ISSUE_TEMPLATE/`. Claude cannot write under
-   `.github/` on this computer (the folder is protected for remote
-   tools), so the rewritten templates were handed to giopas to copy in.
-   Left as they were on purpose: the ⚙ Layout option labels in
-   `constants.py` ("All together — at the start" and so on), which are
-   menu labels, and comments and docstrings in the code.
-3. One writer: done in v0.28.0. `export.export_to_file()` (and
-   `prepare_export()` for downloads) is the only place that builds and
-   writes TXT and PDF exports. TXT is now the same bytes everywhere: UTF-8,
-   Unix line endings, one newline at the end.
-4. Exports never overwrite: done in v0.28.0. The command line keeps an
-   existing file and writes `song_v2.pdf` unless `--force` is given. The
-   save dialogs (desktop, native window) already ask before replacing, so
-   they replace only when you agree.
-5. Validate before export: done in v0.28.0. `export.check_document()`, the
-   same check as `cli.py lint`, runs before every export in every front
-   end. Errors stop it and name the section; chord-shape notes are shown.
-6. Golden-file tests: done in v0.28.0. Ten invented songs in
-   `tests/golden/`, built by `tools/make_golden.py`. PDFs are compared
-   with their page streams inflated (zlib builds differ). Claude looked at
-   all ten PDFs before committing them; giopas should look once too.
-7. App icon: done in v0.27.0 (option C). Live check of how it looks in
-   the Dock, the taskbar and a browser tab is on the manual list below.
-8. Standalone packages: done in v0.29.0, as planned (spec, archives,
-   Windows installer, Linux menu entry, release workflow with smoke tests
-   and `SHA256SUMS`, update check with **Update and restart**, install
-   sections in the README and the wiki). Still open: the first run of the
-   release workflow on macOS and Windows (fix what it finds as v0.29.x),
-   and the live checks below.
+1. The newer `release.yml` (actions on Node.js 24) is still at the top of
+   the repository folder, untracked, and `.github/workflows/release.yml` is
+   the old one. Move it into place and commit it
+   (`mv release.yml .github/workflows/release.yml`). The v0.29.1 changelog
+   says this change was made; it takes effect with the next release, and
+   the next changelog entry says so.
+2. The three rewritten issue templates (from v0.27.1) are not in
+   `.github/ISSUE_TEMPLATE/` yet. Copy them in and commit them.
+
+The next piece of work is giopas's choice; see "Candidates for the next
+version" below.
+
+### Done (first plan, 8 to 10 October 2026)
+
+| Item | Version | What |
+|---|---|---|
+| 1 | - | GitHub releases for every version from v0.26.3 |
+| 2 | v0.27.1 | Plain-language pass over the README, wiki and app texts (issue templates pending, see above) |
+| 3 | v0.28.0 | One export writer: `export.export_to_file()` / `prepare_export()` |
+| 4 | v0.28.0 | Exports never overwrite; the CLI has `--force` |
+| 5 | v0.28.0 | `export.check_document()` before every export |
+| 6 | v0.28.0 | Golden files: ten invented songs in `tests/golden/` |
+| 7 | v0.27.0 | App icon (option C) |
+| 8 | v0.29.0, v0.29.1 | Packages for macOS, Windows and Linux, release workflow, update check and **Update and restart** |
+
+### Candidates for the next version
+
+From `ROADMAP.md` and the open notes, closest to the goal first. None is
+started until giopas picks it.
+
+- Round-trip import: reopen a song from its own TXT or PDF export (the
+  song's data embedded in the file), and `.sng` import in the browser.
+- Riff library in the browser: create, rename and delete riffs,
+  **Promote to riff**, which today only the desktop app has. With it the
+  packaged app (native window only) covers everything the desktop app does.
+- Techniques on tab and licks: palm muting, slides, hammer-on and pull-off,
+  bends, vibrato, typed in the tab itself.
+- Parts: bass and guitar in one section, each printable or hideable.
+- Dynamics and accents on a chart line, a lick or a tab grid.
+- Graphical ending brackets and a boxed coda in the PDF.
+- Autocomplete in the chart line (`=` for sections, riff and lick names).
+- The benchmark: one real song rebuilt with the tool only and timed
+  ("one page in five minutes"), with what got in the way written down.
+- A token for `webserver.py --host 0.0.0.0` before it is used beyond a
+  trusted network.
+- A test file for the Tkinter desktop app (`tests/test_song_writer.py`).
 
 Manual checks waiting for giopas (each stays here until reported back):
 
 - v0.26.3 repeat bracket in a printed PDF and in the web preview.
-- Desktop app (Tkinter) and native window (pywebview) on the Mac after
-  v0.27.0.
-- Windows and Linux: never tried live. Built and unit-tested only.
 - v0.27.0: the icon in the desktop app's window and Dock, in the native
   window, and as the favicon in a browser tab.
-- v0.27.1: a read-through of the README and the wiki, and a look at
-  the app's help texts, to confirm they sound like you.
+- v0.27.1: a read-through of the README and the wiki, and a look at the
+  app's help texts, to confirm they sound like you.
 - v0.28.0: an export from the desktop app and from the native window
-  (TXT and PDF), replacing an existing file through the save dialog; and
-  a look at the ten golden PDFs in `tests/golden/`.
-- v0.29.0, after the release workflow has run: each package installed and
-  started on a real system (macOS Apple silicon, macOS Intel, Windows,
-  Linux), including the first-start warning of an unsigned app, and the
-  Linux menu entry.
-- v0.29.x: **Update and restart** from v0.29.0 to the next release, on the
-  Mac first (Swiss Knife needed two fixes before it worked there).
+  (TXT and PDF), replacing an existing file through the save dialog; and a
+  look at the ten golden PDFs in `tests/golden/`.
+- v0.29.1 on Windows and Linux: install and start on a real system,
+  including the first-start warning (Windows) and the Linux menu entry.
+  The Mac (install and **Update and restart**) is confirmed.
+- The three decisions of 9 October marked "giopas to confirm" below.
 
 ## Release history
 

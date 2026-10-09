@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- The release workflow now really uses the newer GitHub actions (Node.js
+  24). The v0.29.1 entry below already said so, but the new workflow file
+  only reached the repository after v0.29.1 was built.
+
 ## [0.29.1] — 2026-10-09
 
 The first run of the release workflow built the macOS and Linux packages,

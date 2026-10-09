@@ -22,6 +22,9 @@ sections are included (None = all instruments present in the doc).
 from __future__ import annotations
 
 import datetime
+import os
+import re
+import tempfile
 import zlib
 
 import chords as chords_mod
@@ -363,6 +366,175 @@ def resolve_columns(doc: dict, instruments=None, orient: str = "portrait") -> in
         return max(1, min(MAX_PDF_COLUMNS, int(float(raw))))
     except ValueError:
         return _auto_columns(doc, instruments, orient)
+
+
+EXPORT_FORMATS = ("txt", "pdf")
+
+
+def export_bytes(doc: dict, fmt: str, instruments=None,
+                 orient: str = "portrait", date=None) -> bytes:
+    """The exact bytes of a TXT or PDF export: the one place that decides them.
+
+    TXT is UTF-8 with Unix line endings and one newline at the end, on
+    every system. PDF is `build_pdf()`. Every front end (desktop, browser,
+    native window, command line) gets its export bytes from here, so a
+    download, a saved file and a CLI export of the same song are the same.
+    """
+    fmt = str(fmt).lower().lstrip(".")
+    if fmt == "txt":
+        text = "\n".join(build_song_lines(doc, instruments=instruments)) + "\n"
+        return text.encode("utf-8")
+    if fmt == "pdf":
+        return build_pdf(doc, instruments=instruments, orient=orient, date=date)
+    raise ValueError(f"unknown export format: {fmt!r} (use txt or pdf)")
+
+
+class ExportBlocked(ValueError):
+    """Raised instead of writing an export when the song fails its check.
+
+    `errors` is the list of messages from `check_document()`.
+    """
+
+    def __init__(self, errors):
+        self.errors = list(errors)
+        super().__init__("; ".join(self.errors) or "the song did not pass its check")
+
+
+def check_document(doc: dict) -> dict:
+    """Check a song before it is exported. The same check as `cli.py lint`.
+
+    Errors block an export: a section whose chart line cannot be written
+    out, or does not parse again once written out (a file edited by hand,
+    or saved by a newer grammar). Warnings never block: chords the chart
+    plays with no shape, and shapes for chords it never plays, when the
+    song has chord shapes at all.
+
+    Returns {"ok", "errors", "warnings", "sections"}, where `sections` has
+    one {"name", "line", "error"} per section, in order.
+    """
+    import grammar  # local: grammar is only needed for the check
+
+    sections, errors, warnings = [], [], []
+    for sec in doc.get("sections", []):
+        name = sec.get("name") or "?"
+        chart = songmap.chart_items(sec)
+        try:
+            line = grammar.unparse(chart) if chart else ""
+        except Exception as exc:  # noqa: BLE001 - reported, never fatal
+            msg = f"[{name}] could not unparse: {exc}"
+            errors.append(msg)
+            sections.append({"name": name, "line": None, "error": msg})
+            continue
+        try:
+            if line:
+                grammar.parse_items(line)
+        except grammar.ParseError as exc:
+            msg = f"[{name}] chart line does not re-parse: {exc}"
+            errors.append(msg)
+            sections.append({"name": name, "line": line, "error": msg})
+            continue
+        sections.append({"name": name, "line": line, "error": None})
+    if doc.get("chords"):
+        cov = chords_mod.coverage(doc)
+        if cov["missing"]:
+            warnings.append("chords played with no shape: " + ", ".join(cov["missing"]))
+        if cov["unused"]:
+            warnings.append("shapes for chords never played: " + ", ".join(cov["unused"]))
+    return {"ok": not errors, "errors": errors, "warnings": warnings,
+            "sections": sections}
+
+
+def prepare_export(doc: dict, fmt: str, instruments=None,
+                   orient: str = "portrait", date=None):
+    """Check the song, then build the export. Returns (bytes, warnings).
+
+    Raises `ExportBlocked` when the check finds errors, before anything is
+    built or written.
+    """
+    report = check_document(doc)
+    if report["errors"]:
+        raise ExportBlocked(report["errors"])
+    data = export_bytes(doc, fmt, instruments=instruments, orient=orient,
+                        date=date)
+    return data, report["warnings"]
+
+
+_VERSION_SUFFIX = re.compile(r"_v(\d+)$")
+
+
+def next_free_path(path: str) -> str:
+    """`path` if nothing is there yet, otherwise the next free `_vN` name.
+
+    `song.pdf` becomes `song_v2.pdf`, then `song_v3.pdf`; a name that
+    already ends in `_vN` counts on from N (`song_v2.pdf` → `song_v3.pdf`).
+    """
+    if not os.path.exists(path):
+        return path
+    folder, base = os.path.split(path)
+    stem, ext = os.path.splitext(base)
+    m = _VERSION_SUFFIX.search(stem)
+    n = int(m.group(1)) if m else 1
+    stem = stem[:m.start()] if m else stem
+    while True:
+        n += 1
+        candidate = os.path.join(folder, f"{stem}_v{n}{ext}")
+        if not os.path.exists(candidate):
+            return candidate
+
+
+def write_export(path: str, data: bytes, overwrite: bool = False) -> str:
+    """Write export bytes and return the path actually written.
+
+    The bytes go to a temporary file in the same folder first and are then
+    moved into place, so a crash halfway never leaves half a file behind.
+
+    An existing file is never replaced unless `overwrite` is true. Without
+    it, the export goes to the next free name (`song_v2.pdf`), and the
+    returned path says which. Pass `overwrite=True` only when the user has
+    already agreed to replace that file, as a system save dialog asks.
+    """
+    folder = os.path.dirname(os.path.abspath(path))
+    fd, tmp = tempfile.mkstemp(prefix=".export-", suffix=".tmp", dir=folder)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        if overwrite:
+            os.replace(tmp, path)
+            return path
+        while True:
+            target = next_free_path(path)
+            try:
+                os.link(tmp, target)       # fails if the name was taken meanwhile
+            except FileExistsError:
+                continue
+            except OSError:                # no hard links here: best effort
+                if os.path.exists(target):
+                    continue
+                os.replace(tmp, target)
+                return target
+            os.unlink(tmp)
+            return target
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def export_to_file(doc: dict, fmt: str, path: str, instruments=None,
+                   orient: str = "portrait", date=None,
+                   overwrite: bool = False) -> dict:
+    """Check, build and write an export: what every front end calls.
+
+    Returns {"path": the file written, "warnings": [...]}. Raises
+    `ExportBlocked` if the check fails; nothing is written then. See
+    `write_export()` for `overwrite`.
+    """
+    data, warnings = prepare_export(doc, fmt, instruments=instruments,
+                                    orient=orient, date=date)
+    written = write_export(path, data, overwrite=overwrite)
+    return {"path": written, "warnings": warnings}
 
 
 def build_pdf(doc: dict, instruments=None, orient: str = "portrait",

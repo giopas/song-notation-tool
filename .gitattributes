@@ -1,0 +1,7 @@
+# The golden files are compared byte for byte. Git must never change their
+# line endings (Windows checkouts convert text files to CRLF by default).
+tests/golden/* -text
+*.pdf binary
+*.png binary
+*.ico binary
+*.icns binary

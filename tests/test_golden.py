@@ -54,6 +54,15 @@ def test_golden_song(name):
         f"{name}.pdf changed"
 
 
+def test_git_keeps_the_golden_files_as_they_are():
+    """A Windows checkout turns text files into CRLF unless told not to,
+    and the golden TXT files are compared byte for byte."""
+    attrs = open(os.path.join(ROOT, ".gitattributes"), encoding="utf-8").read()
+    assert "tests/golden/* -text" in attrs
+    for name in make_golden.SONGS:
+        assert b"\r\n" not in _read(f"{name}.txt")
+
+
 def test_every_golden_song_is_invented():
     """No real band, song or lyric goes into the repository."""
     for name in make_golden.SONGS:

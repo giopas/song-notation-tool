@@ -136,8 +136,9 @@ removes the annotation.
 ## Riffs (block references)
 
 A plain word that is not a chord or note symbol refers to a named riff (a
-`block` in the document, managed in the desktop app's Riffs strip below
-the song map):
+`block` in the document). Riffs are managed in the **Riffs 🔁** dialog in
+the browser app, or in the Riffs strip below the song map in the desktop
+app:
 
 ```
 riff1 x3
@@ -146,7 +147,15 @@ riff1 x3
 Editing the riff changes every section that uses it, because there is
 only one copy. A riff name cannot look like a chord token: `A1` is refused
 as a riff name, because it would read as fret 1 on A (see
-`model.validate_block_name`).
+`model.validate_block_name`). Dynamics (`mf`) and the run words (`pm`,
+`cresc`, `dim`) are refused for the same reason.
+
+In the **Riffs 🔁** dialog you can create a riff from a chart line, change
+its line, rename it (every line that plays it follows the new name) and
+delete it once nothing plays it. To make a riff from something already
+typed, select that part of a section's chart line and click **→ riff**
+beside it: the selection becomes `riff1` and the riff holds what you
+selected.
 
 ## Section references
 
@@ -364,22 +373,76 @@ Transposing the section moves a lick's frets with it: same strings,
 shifted positions. A fret that would fall off either end of the neck stays
 as it was, instead of being moved to a position you would not play.
 
+## Playing techniques
+
+A lick position, or a cell of a tab grid, can carry the usual tab letters
+after the fret:
+
+| Typed | Means |
+|---|---|
+| `5h7` | hammer-on from 5 to 7 |
+| `7p5` | pull-off from 7 to 5 |
+| `5/7` | slide up from 5 to 7 |
+| `7\5` | slide down from 7 to 5 |
+| `7b9` | bend at 7 up to the pitch of 9 |
+| `7b9r7` | bend and release back to 7 |
+| `7~` | vibrato |
+| `x` | muted (dead) note |
+| `5^` | accented note |
+
+```
+{G 5h7 7p5 - | D - - 7b9r7}
+```
+
+They print as typed, so a position with a technique is wider than a plain
+fret, and the columns around it widen to keep the strings lined up.
+Transposing moves every fret in a position (`5h7` up two is `7h9`). A
+position that would go past fret 24 stays as written.
+
+Palm muting covers a run of notes, so it is written as a run on the chart
+line (see below), not as a letter on a fret.
+
 ## Marks
 
 | Typed | Means |
 |---|---|
 | `\|:` | repeat-open barline |
 | `:\|` | repeat-close barline |
-| `\|1.` | 1st ending (opens a numbered bracket over what follows, up to the next ending mark or the end of the line) |
-| `\|2.` | 2nd ending |
+| `\|1.` | 1st ending: a bracket marked "1." over what follows, up to the next ending or the `:\|` that closes it |
+| `\|2.` | 2nd ending: a bracket marked "2." up to the next ending or the end of the section, carried over a `//` line break |
 | `//` | line break: start a new line here (layout only, plays nothing) |
 | `//>` | line break, indented one step per `>` |
 | `%` | `simile`: play like the previous bar |
 | `rest` | rest or tacet: do not play this measure |
-| `coda` | coda mark (shows a coda sign; `render.has_coda()` checks for it) |
+| `coda` | coda: prints as a boxed coda sign with "Coda" beside it (`render.has_coda()` checks for it) |
 | `segno` | segno mark |
 | `dc` | D.C. (da capo) |
 | `ds` | D.S. (dal segno) |
+
+## Dynamics, accents and runs
+
+How loud to play is written with the usual music words, as a word of its
+own where the change happens:
+
+```
+p [pm 5A 5A 5A 5A] mf 7D^ 7D
+```
+
+| Typed | Means |
+|---|---|
+| `pp` `p` `mp` `mf` `f` `ff` | dynamics, printed in bold where they are typed |
+| `5A^`, `Am^` | accent: a `>` over that note or chord |
+| `[pm 5A 5A 5A]` | palm mute over the run: "P.M." and a dashed line to the last note |
+| `[cresc A D E]` | get louder over the run: an opening hairpin (TXT: `cresc.---`) |
+| `[dim E D A]` | get softer over the run: a closing hairpin (TXT: `dim.---`) |
+
+Dynamics are lower case only, so `f` is forte and `F` stays the chord.
+`pm`, `cresc` and `dim` go first inside the brackets, and a run can repeat
+like any group, `[pm 5A 5A]x2`. Typed on their own, outside brackets,
+they are an error that says where they go.
+
+The marks over a line (endings, runs, accents) print on a row of their
+own above the fret numbers, in the TXT, the PDF and the live preview.
 
 ## Typing it without remembering it
 
@@ -390,6 +453,11 @@ what is there, and leaves the cursor inside the brackets or quotes when
 that is where you will type next. The insert sends the same `input` event
 as typing, so the live parse, the error messages and the preview behave
 exactly the same, and the chart line stays text you can edit by hand.
+
+As you type a word in the browser app, a short list offers what fits: the
+song's riffs for a plain word, its sections after `=`, and its named licks
+after `{`. Use the arrow keys to choose, Enter or Tab to take one, and Esc
+to close the list.
 
 The **Notation ⌘** panel explains every mark in full: what `segno`,
 `coda`, `dc` and `ds` tell a player to do, and the usual

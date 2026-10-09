@@ -68,6 +68,17 @@ This is the check every export runs first, in every front end
 (`export.check_document()`), so `lint` tells you in advance whether an
 export will go through.
 
+### `extract`: the song out of its PDF
+
+```bash
+python3 cli.py extract -i "The Placeholders - Paper Lanterns.pdf"
+```
+
+Every PDF the app exports carries its song. `extract` writes it back out
+as `Artist - Title.sng` in the current folder (or `-o` path), never over an
+existing file unless you add `--force`. `convert` and `lint` also accept
+such a PDF as `-i` directly.
+
 `python3 cli.py --help` (and `... <command> --help`) always has the
 current option list.
 
@@ -132,7 +143,9 @@ covers the config file, the one-time move out of the old in-repo
 Open the URL it prints. The front end (`web/index.html`, `app.js`,
 `style.css`) has:
 
-- a song list (every `.sng` in the served folder), and the songs folder
+- a song list (every `.sng` in the served folder), **Import song…** (a
+  `.sng` file, or a PDF the app exported, opened as a new song in your
+  songs folder), and the songs folder
   itself with **Reveal** and **Change…** buttons. **Change…** can move your
   songs to the new folder (native window only);
 - a form for the song's details (title, artist, key, time, BPM), which
@@ -156,6 +169,13 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
 - the **Chords 🎸** dialog: chord shapes typed as `x32010`, a live preview
   of how they will print, the chords played that have no shape, and
   **+ From chart** to add them;
+- the **Riffs 🔁** dialog: create, edit, rename and delete the song's
+  riffs, with where each one is used. **→ riff** beside a chart line turns
+  the selected part of it into a new riff;
+- a short list of suggestions as you type a chart line: riffs for a plain
+  word, sections after `=`, named licks after `{`;
+- **+ Part** under each section, for another instrument's line in the same
+  section (see [[Printing and Layout]]);
 - an Annotation field for each section;
 - four render modes per section: Chart, Tab, Both and Free (a plain text
   box, kept and exported exactly as typed);
@@ -173,9 +193,9 @@ the section list scrolls, so **Save**, **Preview** and **Export** are
 always in reach in a long song.
 
 Not yet in the browser (desktop only for now; see [[Architecture]] and
-`ROADMAP.md`): managing the riff library, which means creating, renaming
-or deleting a riff, **Promote to riff**, and duplicating a riff (as opposed
-to a section) as a reference.
+`ROADMAP.md`): duplicating a riff (as opposed to a section) as a
+reference. The other way round, parts, the riff dialog and the
+suggestions while typing are in the browser app only.
 
 ### API reference
 
@@ -201,6 +221,8 @@ file is the source of truth. In short:
 | `POST` | `/api/update/settings` | body `{check}`: switch the check at start on or off |
 | `POST` | `/api/update/install` | installed app only: download, verify and stage the new version, then close so it can be swapped in; from the sources a `400` that says to use `git pull` |
 | `POST` | `/api/update/open` | open the release page in the system browser (only the project's own pages) |
+| `POST` | `/api/riffs` | the riff library, body `{op, doc, ...}` with `op` one of `create` (`name`, `line`), `set_line` (`id`, `line`), `rename` (`id`, `name`), `delete` (`id`), `promote` (`section_id`, `line`, `start`, `end`, `name?`) or `list` → `{ok, doc, riffs: [{id, line, used_in}]}`, or `{ok: false, error}`. Changes only the song it is sent; the editor saves it as usual |
+| `POST` | `/api/import` | import a song, body `{filename, data}` with the file in base64: a `.sng`, or a PDF the app exported. Always saved as a new file named after the song → `{ok, filename, doc}`, or `{ok: false, error}` |
 | `POST` | `/api/quit` | called by **⏻ Save & Close** after it saves: closes the native window, or stops the server in a browser tab |
 | `GET` | `/api/songs/<name>/export.txt` \| `.pdf` | export a saved song (PDF takes `?orient=portrait\|landscape`) |
 | `POST` | `/api/export.txt` \| `/api/export.pdf` | export a song from the editor that may not be saved yet, body `{doc}` (PDF also takes `orient`) |

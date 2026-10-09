@@ -20,9 +20,31 @@ button on a bar along the bottom of its window.
 | Lyrics | Lyrics | `lyrics_layout` |
 | Licks & chords | Recalled licks | `lick_refs` |
 | Licks & chords | Chord shapes | `chord_sheet` |
+| Instruments | Which instruments print | `print_instruments` |
 
 None of them changes a note. They belong to the song and are saved in the
 `.sng`, so a chart prints the same wherever it is opened.
+
+## Parts and instruments
+
+A section can hold more than one instrument. The section's own chart line
+belongs to the instrument picked in its header; click **+ Part** under it
+to add another instrument's line to the same section, for example the
+guitar chords under the bass line of a verse. A part has its own
+instrument and its own chart line, with the same grammar, and plays the
+section's repeats and transpose.
+
+A part prints under the section's own line, with its instrument as a small
+grey heading. **⚙ Layout → Instruments** picks which instruments print: all
+of them (nothing ticked), or only the ones you tick. A section prints when
+its own instrument or one of its parts is picked, so a guitarist's copy
+can leave out the bass lines and keep the guitar parts. A choice that
+matches nothing in the song is ignored, so the chart never comes out
+empty because of it. The command line's `--instrument` does the same for
+one export.
+
+Parts are edited in the browser app. The desktop app lists them under
+their section and keeps them as they are when it saves.
 
 ## Where the section name goes
 
@@ -267,7 +289,20 @@ Every export, from any front end, goes through `export.py`:
   and prints like one.
 - References are expanded: a section whose content is `=Interlude` prints
   the Interlude's notes, not the pointer. See [[Chart Line Syntax]].
+- Endings print as brackets: a line over the bars with a short drop at
+  the start and the number ("1.", "2.") in bold. Palm mute prints "P.M."
+  and a dashed line ending in a tick, cresc. and dim. print as hairpins,
+  and an accent as a small wedge over its note. These sit on a row of
+  their own above the fret numbers.
+- A coda prints as a box with the coda sign and "Coda" in bold, so the
+  place to jump to is easy to find on a stand. Dynamics print in bold.
 - The footer shows the version, the date and the project URL.
+- Every PDF carries the song it was made from, attached as `song.sng`.
+  Open the PDF with **Import song…** in the browser app, **Open** in the
+  desktop app, or `cli.py extract`, and you get the song back to edit. A
+  PDF viewer lists it as an attachment. The TXT export has nowhere to keep
+  it, so only a PDF can be reopened. PDFs made before 0.30 have no song
+  attached.
 
 ## Where the words go
 

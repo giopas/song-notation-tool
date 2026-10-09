@@ -53,6 +53,17 @@ Writing the chart
   lick can print as tab again or just as `Riff1 (x3)`, as a handwritten
   chart would. Every named lick gets its own button in the section's
   insert strip.
+- Playing techniques on licks and tab, in the usual tab letters: `5h7`
+  hammer-on, `7p5` pull-off, `5/7` and `7\5` slides, `7b9` bend, `7b9r7`
+  bend and release, `7~` vibrato, `x` muted.
+- Dynamics and accents: `pp` to `ff` where the change happens, `5A^` for
+  an accent, and runs for what covers several notes: `[pm 5A 5A 5A]` palm
+  mute, `[cresc A D E]` and `[dim E D A]` hairpins.
+- Parts: **+ Part** adds another instrument's line to a section, such as
+  the guitar chords under the bass line. **⚙ Layout → Instruments** picks
+  which instruments print (browser app).
+- While you type a chart line, the browser app suggests the song's riffs,
+  sections (after `=`) and named licks (after `{`).
 - A tab grid is there for the occasional bar you want fully written out.
   The rest of the song stays in the chart line.
 - Free-text sections are a fourth render mode for what this notation does
@@ -61,15 +72,19 @@ Writing the chart
 - Tunings: 6-string and 7-string guitar, 4-string and 5-string bass, with
   Drop D variants.
 
-Riffs and repeated sections (desktop app)
+Riffs and repeated sections
 
-- The riff library: name a recurring riff once, use it by name in any
-  section, and edit it once to change every section that uses it. A riff
-  still in use cannot be deleted.
-- **Promote to riff** (Ctrl/Cmd+R) turns a selected run in the editor bar
-  into a named riff in place.
-- **Duplicate as reference** (Ctrl/Cmd+D) adds `=sectionname` instead of a
-  copy, so a repeated section never duplicates its content.
+- The riff library (**Riffs 🔁** in the browser, the Riffs strip in the
+  desktop app): name a recurring riff once, use it by name in any section,
+  and edit it once to change every section that uses it. Renaming a riff
+  renames it everywhere it is played. A riff still in use cannot be
+  deleted.
+- **→ riff** beside a chart line in the browser, or **Promote to riff**
+  (Ctrl/Cmd+R) in the desktop app, turns the selected part of a line into
+  a named riff in place.
+- **Duplicate as reference** (Ctrl/Cmd+D in the desktop app) adds
+  `=sectionname` instead of a copy, so a repeated section never duplicates
+  its content.
 - Drag a section, or press Alt+↑/↓, to reorder.
 - A reference prints the notes it plays. On screen it shows the target's
   current name, and the file stores an id, so renaming the target does not
@@ -109,6 +124,11 @@ Printing and export
   real save panel and tell you where the file went. Every export checks
   the song first: a chart line that no longer parses stops the export and
   says which section, and chord-shape notes are shown without stopping it.
+- Endings print as brackets over the bars they cover, and a coda as a
+  boxed coda sign, in the PDF and in the live preview.
+- Every PDF carries its song. Open the PDF with **Import song…** in the
+  browser app, **Open** in the desktop app or `cli.py extract`, and you
+  can edit the song again with nothing else to keep.
 - **Print…** goes through the system's own print panel, with a preview.
 - The PDF fills the page, or shrinks the chart to fit on one page, in one
   or two columns (portrait A4 by default). Empty strings are left out, and
@@ -236,6 +256,9 @@ python3 cli.py batch -i songs/ -e txt --out-dir exports/
 
 # Check a .sng file's chart lines without opening the GUI
 python3 cli.py lint -i song.sng
+
+# Get the song back out of a PDF the app exported, as a .sng file
+python3 cli.py extract -i "Artist - Title.pdf"
 ```
 
 The command line never replaces a file that is already there unless you

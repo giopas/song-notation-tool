@@ -174,6 +174,42 @@ def song_tab_grid_landscape():
     return doc
 
 
+def song_marks_and_techniques():
+    """Dynamics, accents, a palm-mute run, cresc and dim hairpins, ending
+    brackets carried across a line break, a coda, and lick techniques."""
+    doc = _doc("Signal Fires")
+    doc["sections"] = [
+        _sec("intro", "Intro", "Intro", "p [pm 5A 5A 5A 5A] mf 7D^ 7D"),
+        _sec("verse1", "Verse", "Verse",
+             "|: 5A 5D |1. 8F 7E :| |2. 5A // 3G 5D"),
+        _sec("chorus1", "Chorus", "Chorus",
+             "[cresc A D E] ff F^ [dim E D A] coda"),
+        _sec("solo", "Solo", "Solo",
+             "{G 5h7 7p5 5/7 7\\5 | D 7b9 7b9r7 7~ x}"),
+    ]
+    tab = _sec("fill", "Fill", "Bridge", render="tab")
+    tab["items"] = [model.make_measure(8, {"G": "5h7 - 7p5 - 5/7 - - -",
+                                           "D": "- - - - - - 7b9r7 -"})]
+    doc["sections"].append(tab)
+    return doc
+
+
+def song_parts():
+    """A guitar part under two bass sections, and a section of guitar only;
+    the Layout picks both instruments."""
+    doc = _doc("Two Hands", key="A")
+    verse = _sec("verse1", "Verse", "Verse", "5A 5A 7D 7D")
+    verse["parts"] = [model.make_part("p1", "Guitar (6-string)",
+                                      grammar.parse("A A D [pm E E]")[0])]
+    chorus = _sec("chorus1", "Chorus", "Chorus", "5D 5D 7E //", repeat=2)
+    chorus["parts"] = [model.make_part("p2", "Guitar (6-string)",
+                                       grammar.parse("D D E E^")[0])]
+    solo = _sec("solo", "Solo", "Solo", "{B 5 7 8 - | G - - - 7}",
+                instrument="Guitar (6-string)")
+    doc["sections"] = [verse, chorus, solo]
+    return doc
+
+
 SONGS = {
     "basics": (song_basics, "portrait"),
     "gutter-bw-two-columns": (song_gutter_bw_two_columns, "portrait"),
@@ -185,6 +221,8 @@ SONGS = {
     "chord-shapes-transposed": (song_chord_shapes_transposed, "portrait"),
     "fit-one-page": (song_fit_one_page, "portrait"),
     "tab-grid-landscape": (song_tab_grid_landscape, "landscape"),
+    "marks-and-techniques": (song_marks_and_techniques, "portrait"),
+    "parts": (song_parts, "portrait"),
 }
 
 

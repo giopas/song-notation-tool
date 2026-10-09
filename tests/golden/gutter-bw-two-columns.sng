@@ -19,6 +19,7 @@
   "color_mode": "bw",
   "pdf_scale": "fit",
   "pdf_columns": "2",
+  "print_instruments": [],
   "blocks": {},
   "sections": [
     {

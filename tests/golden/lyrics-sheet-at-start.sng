@@ -19,6 +19,7 @@
   "color_mode": "color",
   "pdf_scale": "fit",
   "pdf_columns": "auto",
+  "print_instruments": [],
   "blocks": {},
   "sections": [
     {

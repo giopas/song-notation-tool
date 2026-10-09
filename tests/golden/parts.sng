@@ -1,0 +1,202 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Two Hands",
+    "artist": "The Placeholders",
+    "key": "A",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "fit",
+  "pdf_columns": "auto",
+  "print_instruments": [],
+  "blocks": {},
+  "sections": [
+    {
+      "id": "verse1",
+      "name": "Verse",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 7
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 7
+        }
+      ],
+      "parts": [
+        {
+          "id": "p1",
+          "instrument": "Guitar (6-string)",
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": null
+            },
+            {
+              "kind": "group",
+              "repeat": 1,
+              "items": [
+                {
+                  "kind": "token",
+                  "symbol": "E",
+                  "fret": null
+                },
+                {
+                  "kind": "token",
+                  "symbol": "E",
+                  "fret": null
+                }
+              ],
+              "span": "pm"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 2,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        }
+      ],
+      "parts": [
+        {
+          "id": "p2",
+          "instrument": "Guitar (6-string)",
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": null,
+              "accent": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "solo",
+      "name": "Solo",
+      "type": "Solo",
+      "instrument": "Guitar (6-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "lick",
+          "lines": [
+            {
+              "string": "B",
+              "frets": [
+                "5",
+                "7",
+                "8",
+                "-"
+              ]
+            },
+            {
+              "string": "G",
+              "frets": [
+                "-",
+                "-",
+                "-",
+                "7"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "format": 2,
   "app_version": "0.16",
   "meta": {
-    "title": "Paper Lanterns",
+    "title": "Signal Fires",
     "artist": "The Placeholders",
     "key": "E",
     "time": "4/4",
@@ -36,18 +36,12 @@
       "free_text": "",
       "items": [
         {
-          "kind": "token",
-          "symbol": "A",
-          "fret": 5
-        },
-        {
-          "kind": "token",
-          "symbol": "D",
-          "fret": 5
+          "kind": "mark",
+          "mark": "dyn_p"
         },
         {
           "kind": "group",
-          "repeat": 2,
+          "repeat": 1,
           "items": [
             {
               "kind": "token",
@@ -56,81 +50,43 @@
             },
             {
               "kind": "token",
-              "symbol": "D",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": 5
+            },
+            {
+              "kind": "token",
+              "symbol": "A",
               "fret": 5
             }
-          ]
+          ],
+          "span": "pm"
+        },
+        {
+          "kind": "mark",
+          "mark": "dyn_mf"
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 7,
+          "accent": true
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 7
         }
       ]
     },
     {
       "id": "verse1",
-      "name": "Verse 1",
+      "name": "Verse",
       "type": "Verse",
-      "instrument": "Bass (4-string)",
-      "repeat": 2,
-      "transpose": 0,
-      "render": "chart",
-      "annotation": "lightly",
-      "lyrics_text": "",
-      "print_lyrics": false,
-      "free_text": "",
-      "items": [
-        {
-          "kind": "token",
-          "symbol": "A",
-          "fret": 5
-        },
-        {
-          "kind": "token",
-          "symbol": "D",
-          "fret": 5
-        },
-        {
-          "kind": "mark",
-          "mark": "line_break"
-        },
-        {
-          "kind": "token",
-          "symbol": "F",
-          "fret": 8
-        },
-        {
-          "kind": "token",
-          "symbol": "D",
-          "fret": 5
-        },
-        {
-          "kind": "token",
-          "symbol": "E",
-          "fret": 7
-        },
-        {
-          "kind": "mark",
-          "mark": "line_break",
-          "indent": 1
-        },
-        {
-          "kind": "token",
-          "symbol": "A",
-          "fret": 5
-        },
-        {
-          "kind": "token",
-          "symbol": "A",
-          "fret": 5
-        },
-        {
-          "kind": "token",
-          "symbol": "F",
-          "fret": 8
-        }
-      ]
-    },
-    {
-      "id": "chorus1",
-      "name": "Chorus 1",
-      "type": "Chorus",
       "instrument": "Bass (4-string)",
       "repeat": 1,
       "transpose": 0,
@@ -146,101 +102,6 @@
         },
         {
           "kind": "token",
-          "symbol": "B",
-          "fret": 7
-        },
-        {
-          "kind": "token",
-          "symbol": "G#",
-          "fret": 4
-        },
-        {
-          "kind": "mark",
-          "mark": "repeat_close"
-        },
-        {
-          "kind": "mark",
-          "mark": "ending_1"
-        },
-        {
-          "kind": "token",
-          "symbol": "G",
-          "fret": 3
-        },
-        {
-          "kind": "mark",
-          "mark": "ending_2"
-        },
-        {
-          "kind": "token",
-          "symbol": "D",
-          "fret": 5
-        },
-        {
-          "kind": "mark",
-          "mark": "simile"
-        },
-        {
-          "kind": "mark",
-          "mark": "rest"
-        }
-      ]
-    },
-    {
-      "id": "verse2",
-      "name": "Verse 2",
-      "type": "Verse",
-      "instrument": "Bass (4-string)",
-      "repeat": 1,
-      "transpose": 0,
-      "render": "chart",
-      "annotation": "",
-      "lyrics_text": "",
-      "print_lyrics": false,
-      "free_text": "",
-      "items": [
-        {
-          "kind": "section_ref",
-          "section": "verse1",
-          "repeat": 2,
-          "all": false,
-          "transpose": 0
-        }
-      ]
-    },
-    {
-      "id": "bridge",
-      "name": "Bridge",
-      "type": "Bridge",
-      "instrument": "Bass (4-string)",
-      "repeat": 1,
-      "transpose": 0,
-      "render": "free",
-      "annotation": "",
-      "lyrics_text": "",
-      "print_lyrics": false,
-      "free_text": "Hold the last chord.\nDrums alone for four bars.",
-      "items": []
-    },
-    {
-      "id": "outro",
-      "name": "Outro",
-      "type": "Outro",
-      "instrument": "Bass (4-string)",
-      "repeat": 1,
-      "transpose": 0,
-      "render": "chart",
-      "annotation": "",
-      "lyrics_text": "",
-      "print_lyrics": false,
-      "free_text": "",
-      "items": [
-        {
-          "kind": "mark",
-          "mark": "segno"
-        },
-        {
-          "kind": "token",
           "symbol": "A",
           "fret": 5
         },
@@ -251,11 +112,178 @@
         },
         {
           "kind": "mark",
-          "mark": "coda"
+          "mark": "ending_1"
+        },
+        {
+          "kind": "token",
+          "symbol": "F",
+          "fret": 8
+        },
+        {
+          "kind": "token",
+          "symbol": "E",
+          "fret": 7
         },
         {
           "kind": "mark",
-          "mark": "dc"
+          "mark": "repeat_close"
+        },
+        {
+          "kind": "mark",
+          "mark": "ending_2"
+        },
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "mark",
+          "mark": "line_break"
+        },
+        {
+          "kind": "token",
+          "symbol": "G",
+          "fret": 3
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 5
+        }
+      ]
+    },
+    {
+      "id": "chorus1",
+      "name": "Chorus",
+      "type": "Chorus",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "group",
+          "repeat": 1,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": null
+            }
+          ],
+          "span": "cresc"
+        },
+        {
+          "kind": "mark",
+          "mark": "dyn_ff"
+        },
+        {
+          "kind": "token",
+          "symbol": "F",
+          "fret": null,
+          "accent": true
+        },
+        {
+          "kind": "group",
+          "repeat": 1,
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "E",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "D",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "A",
+              "fret": null
+            }
+          ],
+          "span": "dim"
+        },
+        {
+          "kind": "mark",
+          "mark": "coda"
+        }
+      ]
+    },
+    {
+      "id": "solo",
+      "name": "Solo",
+      "type": "Solo",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "lick",
+          "lines": [
+            {
+              "string": "G",
+              "frets": [
+                "5h7",
+                "7p5",
+                "5/7",
+                "7\\5"
+              ]
+            },
+            {
+              "string": "D",
+              "frets": [
+                "7b9",
+                "7b9r7",
+                "7~",
+                "x"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fill",
+      "name": "Fill",
+      "type": "Bridge",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "tab",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "measure",
+          "beats": 8,
+          "strings": {
+            "G": "5h7 - 7p5 - 5/7 - - -",
+            "D": "- - - - - - 7b9r7 -"
+          }
         }
       ]
     }

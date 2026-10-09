@@ -979,7 +979,11 @@ def _maybe_reexec_into_venv(argv):
 
 
 class _ThreadingHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    allow_reuse_address = True
+    # SO_REUSEADDR lets a restarted server take its port back at once on
+    # macOS and Linux. On Windows it means something else: a second program
+    # may bind the same port while the first still has it. There the option
+    # stays off, so a taken port is reported and the next free one is used.
+    allow_reuse_address = sys.platform != "win32"
     daemon_threads = True
 
 

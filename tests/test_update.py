@@ -132,6 +132,8 @@ def test_safe_extract_refuses_escape(tmp_path):
     assert not (tmp_path / "evil.txt").exists()
 
 
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="symlinks are a macOS .app concern; Windows needs a privilege for them")
 def test_zip_symlinks_are_kept(tmp_path):
     z = tmp_path / "a.zip"
     with zipfile.ZipFile(z, "w") as zf:

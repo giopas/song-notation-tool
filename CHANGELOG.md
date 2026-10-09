@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.29.1] — 2026-10-09
+
+The first run of the release workflow built the macOS and Linux packages,
+but the Windows build stopped in the tests. This version fixes what that
+run found. There is no Windows package for v0.29.0.
+
+### Fixed
+- On Windows, a second copy of the app (or another program on port 8420)
+  could share the port with the first instead of moving to a free one,
+  because `SO_REUSEADDR` means "share this port" on Windows. The option
+  is now off there.
+- The golden-file tests failed on a Windows checkout, where Git turns text
+  files into CRLF. `.gitattributes` now keeps `tests/golden/` exactly as
+  committed, and a test checks that it does.
+- The test of symlinks inside an update archive (a macOS concern) is
+  skipped on Windows, which needs a special privilege to create them.
+
+### Changed
+- The release workflow uses the same, newer versions of the GitHub actions
+  as Swiss Knife, which run on Node.js 24 (the run warned that Node.js 20
+  is deprecated).
+
 ## [0.29.0] — 2026-10-09
 
 Standalone packages for macOS (Apple silicon and Intel), Windows and Linux,

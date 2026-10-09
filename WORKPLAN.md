@@ -7,15 +7,15 @@ the Claude project as `claude/WORKPLAN.md`.
 
 ## Where we are
 
-- Released: v0.28.0 (one export writer, golden files), pushed on 9 October
-  2026.
-- Ready on `feat/v0.29.0` (9 October): item 8, the standalone packages and
-  the update check. The Linux package was built and smoke-tested in
-  Claude's workspace; macOS and Windows are built for the first time by the
-  release workflow. Waiting for giopas to copy `release.yml` into
-  `.github/workflows/`, then merge, tag and push.
-- Test suite: 420 tests and 1 skipped (`python3 -m pytest -q`); the skipped
-  one checks `release.yml` and runs once the file is in place.
+- v0.29.0 was tagged on 9 October 2026. The release workflow built macOS
+  (both) and Linux, but Windows stopped in the tests, so its draft release
+  has no Windows files. It stays a draft and is replaced by v0.29.1.
+- Ready on `fix/v0.29.1`: the Windows fixes from that run (port sharing,
+  golden files and CRLF, a symlink test). The updated `release.yml` (newer
+  actions) was handed to giopas to copy in. Waiting for merge, tag and
+  push, and the second workflow run.
+- Test suite: 422 tests, all passing on Linux (`python3 -m pytest -q`).
+  Windows is known only from the workflow.
 
 ## What is left
 

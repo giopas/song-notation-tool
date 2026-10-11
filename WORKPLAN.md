@@ -5,72 +5,36 @@ decisions in force. A new session reads this first, then `DEVELOPMENT.md`
 for how the work is done. After a change here, the same file is copied to
 the Claude project as `claude/WORKPLAN.md`.
 
+This file is what the last session wrote down. Before relying on it, run
+`python3 tools/ground_truth.py` and correct this file where the two
+disagree. Finished items are deleted from here, not ticked: `CHANGELOG.md`
+and git hold the history.
+
 ## Where we are
 
-- Released: v0.29.1, published on 9 October 2026 with all eight files
+- Released: v0.30.0, published on 10 October 2026 with all eight files
   (macOS Apple silicon and Intel, `.dmg` and `.tar.gz` each; Windows
   installer and `.zip`; Linux `.tar.gz`; `SHA256SUMS`). The release
-  workflow built and smoke-tested all four systems and tested the Windows
-  installer.
-- On 10 October giopas installed v0.29.0 on the Mac and used **Update and
-  restart** to go to v0.29.1: it worked the first time.
-- v0.29.0 is published too, without Windows files (its Windows build
-  stopped in the tests; fixed in v0.29.1).
+  workflow and the wiki publish both succeeded. It brings seven roadmap
+  items in one release; see `CHANGELOG.md`.
 - Every release from v0.26.3 on has its GitHub release.
-- Items 1 to 8 of the first plan are done (see "Done" below).
-- v0.30.0 is built on the branch `feat/v0.30.0`, committed and not yet
-  merged or tagged: seven roadmap items in one release (see "Second plan"
-  below). Waiting for giopas to push it and run the release workflow.
-- Test suite: 479 tests, all passing (`python3 -m pytest -q`).
+- **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
+  10 October).
+- Test suite: 494 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
 Housekeeping, small:
 
-1. Done: the newer `release.yml` (actions on Node.js 24) is in
-   `.github/workflows/` (commit `14fd35d`), and v0.30.0 is its first
-   release.
-2. The three rewritten issue templates (from v0.27.1) are still not in
+1. The three rewritten issue templates (from v0.27.1) are still not in
    `.github/ISSUE_TEMPLATE/`: commit `14fd35d` names them but only changed
    `release.yml`, and the files there are the originals from v0.15. Copy
    them in and commit them.
+2. `feat/v0.30.0` was pushed to GitHub, against the working agreement.
+   It is merged, so it can go: `git push origin --delete feat/v0.30.0`.
 
-After v0.30.0, the next piece of work is giopas's choice; see
-"Candidates for the next version" below.
-
-### Second plan: v0.30.0 (10 October 2026)
-
-giopas picked seven candidates and one release for all of them, with
-these choices: standard tab letters for techniques, music words and `^`
-for dynamics and accents, extra parts per section.
-
-| Item | What |
-|---|---|
-| 1 | Round trip: every PDF carries its song (`song.sng` attached). **Import song…** in the browser, **Open** in the desktop app, `cli.py extract`. TXT cannot carry it |
-| 2 | Riff library in the browser: **Riffs 🔁**, **→ riff**, `POST /api/riffs` |
-| 3 | Techniques on licks and tab cells: `5h7 7p5 5/7 7\5 7b9 7b9r7 7~ x` |
-| 4 | Parts: **+ Part** per section, **⚙ Layout → Instruments** (`print_instruments`). Edited in the browser only |
-| 5 | Dynamics `pp`…`ff`, accent `^`, runs `[pm …]`, `[cresc …]`, `[dim …]` |
-| 6 | Ending brackets and a boxed coda in the PDF, TXT and preview |
-| 7 | Suggestions while typing a chart line (browser) |
-
-Checked by Claude: the two new golden PDFs looked at page by page, the
-browser app driven with Playwright (parts, riffs dialog, → riff,
-suggestions, Import of a PDF), and the desktop app opening a PDF under
-Xvfb. Not yet seen by giopas.
-
-### Done (first plan, 8 to 10 October 2026)
-
-| Item | Version | What |
-|---|---|---|
-| 1 | - | GitHub releases for every version from v0.26.3 |
-| 2 | v0.27.1 | Plain-language pass over the README, wiki and app texts (issue templates pending, see above) |
-| 3 | v0.28.0 | One export writer: `export.export_to_file()` / `prepare_export()` |
-| 4 | v0.28.0 | Exports never overwrite; the CLI has `--force` |
-| 5 | v0.28.0 | `export.check_document()` before every export |
-| 6 | v0.28.0 | Golden files: ten invented songs in `tests/golden/` |
-| 7 | v0.27.0 | App icon (option C) |
-| 8 | v0.29.0, v0.29.1 | Packages for macOS, Windows and Linux, release workflow, update check and **Update and restart** |
+The next piece of work is giopas's choice; see "Candidates for the next
+version" below.
 
 ### Candidates for the next version
 
@@ -103,6 +67,7 @@ Manual checks waiting for giopas (each stays here until reported back):
   `tests/golden/parts.pdf`; writing a chart with techniques, dynamics,
   a part and a riff in the app; exporting a PDF and opening it again with
   **Import song…**.
+- v0.30.0: **Update and restart** from v0.29.1 on the Mac.
 
 ## Release history
 
@@ -158,6 +123,7 @@ and readable on stage without the handwritten sheet.
 | 10 Oct 2026 | Techniques use the standard tab letters; palm mute is a run, `[pm …]`. Dynamics are lower-case words, an accent is `^`. (giopas, 10 October.) |
 | 10 Oct 2026 | Parts are extra chart lines inside a section, each with its own instrument; ⚙ Layout picks which instruments print. (giopas, 10 October.) |
 | 10 Oct 2026 | The song travels inside its PDF as an attachment, so a PDF can be opened again. TXT exports carry nothing. |
+| 11 Oct 2026 | A session starts with `tools/ground_truth.py` and corrects this plan where it disagrees. Finished items are deleted from the plan, not ticked. Ideas borrowed from truongfelix/workflow; the rest of that template is not adopted. (giopas, 11 October.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

@@ -36,20 +36,28 @@ the output toward a one-page chart is not the priority.
 
 ## Starting a piece of work
 
-1. Read `WORKPLAN.md`, then the current `DESIGN_v0_...md` if one exists for
-   the version in progress, then `CHANGELOG.md` and `ROADMAP.md`. Items
-   that were deliberately deferred are not proposed again without saying
-   so.
-2. Run the test suite (`python3 -m pytest -q`) before changing anything,
+1. Run `python3 tools/ground_truth.py`. It prints what git, the tags and
+   GitHub say now: uncommitted changes, `main` against GitHub, the version
+   against the tags, branches to clean up, whether the latest tag has a
+   published release, and whether `WORKPLAN.md` names that release. A
+   probe that could not run prints UNKNOWN and the report ends
+   INCOMPLETE; that is never read as a pass.
+2. Read `WORKPLAN.md` and correct it where it disagrees with the report,
+   before anything else. Then read the current `DESIGN_v0_...md` if one
+   exists for the version in progress, then `CHANGELOG.md` and
+   `ROADMAP.md`. Items that were deliberately deferred are not proposed
+   again without saying so.
+3. Run the test suite (`python3 -m pytest -q`) before changing anything,
    so a failure can be traced to the session that caused it.
-3. If the request is open ("add X"), ask a few multiple-choice questions
+4. If the request is open ("add X"), ask a few multiple-choice questions
    first: scope, the safe default. Do not ask what the plan already
    answers.
-4. Create the branch: `feat/vX.Y.Z` for a release, `fix/vX.Y.Z` for a
-   patch.
-5. Build in small steps with tests. After each step, say what changed and
+5. Create the branch: `feat/vX.Y.Z` for a release, `fix/vX.Y.Z` for a
+   patch, `chore/<name>` for work on the project's tooling or documents
+   that does not change the app.
+6. Build in small steps with tests. After each step, say what changed and
    what is still open.
-6. When something fails in a live test, ask for the exact output or the
+7. When something fails in a live test, ask for the exact output or the
    log instead of guessing, and say so when the cause is not known.
 
 ## Engineering rules
@@ -188,6 +196,12 @@ change to a workflow is written by Claude and copied into
 
 ## Keeping the project in step
 
+- At the end of a session, run `python3 tools/ground_truth.py` again and
+  update `WORKPLAN.md` from it: "Where we are" names the latest published
+  release on a `Released: vX.Y.Z` line (the script reads it), and finished
+  items are deleted, not ticked. `CHANGELOG.md` and git hold the history.
+- Merged branches are deleted (`git branch -d <name>`); the script lists
+  them.
 - After changing `WORKPLAN.md`, copy it to the Claude project
   (`claude/WORKPLAN.md`). The project is what a new session reads first.
 - A multi-step job starts with a task list ending in a verification step.

@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- `tools/ground_truth.py`: a read-only report of what git, the tags and
+  GitHub say about the project, run at the start and end of a session so
+  `WORKPLAN.md` is checked against the facts. A probe that cannot run is
+  reported as UNKNOWN, never as a pass. Tested in
+  `tests/test_ground_truth.py`, each check also against a case that must
+  fail. Development only; the app does not change.
+
 ## [0.30.0] — 2026-10-10
 
 Seven items from the roadmap in one release: more of what a player writes

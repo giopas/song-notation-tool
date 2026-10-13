@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.31.2] — 2026-10-13
+
+The floor sheet on one page: everything on it that is not the chart is
+made small, so the chords and notes get the room.
+
 ### Changed
 
 - **Floor** prints on one page instead of up to two. To give the chart

@@ -20,13 +20,15 @@ and git hold the history.
 - The release workflow runs `publish` even when a build fails, so a
   failed build still leaves a draft with files missing. Worth changing in
   `.github/workflows/release.yml` (giopas copies it in).
+- On `main` after v0.31.1, not released: Floor on one page with a slim
+  title and slim section names (`[Unreleased]` in `CHANGELOG.md`).
 - Previous: v0.30.0, published on 10 October 2026 with all eight files
   (macOS Apple silicon and Intel, `.dmg` and `.tar.gz` each; Windows
   installer and `.zip`; Linux `.tar.gz`; `SHA256SUMS`).
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 513 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 515 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -138,7 +140,7 @@ and readable on stage without the handwritten sheet.
 | 10 Oct 2026 | Parts are extra chart lines inside a section, each with its own instrument; ⚙ Layout picks which instruments print. (giopas, 10 October.) |
 | 10 Oct 2026 | The song travels inside its PDF as an attachment, so a PDF can be opened again. TXT exports carry nothing. |
 | 11 Oct 2026 | A session starts with `tools/ground_truth.py` and corrects this plan where it disagrees. Finished items are deleted from the plan, not ticked. Ideas borrowed from truongfelix/workflow; the rest of that template is not adopted. (giopas, 11 October.) |
-| 13 Oct 2026 | A floor sheet: Size "Floor" prints the largest type that fits on at most two pages, portrait or landscape, whichever is bigger; tab at about half size. Each section can also be Smaller or Larger than the song. (giopas, 13 October.) |
+| 13 Oct 2026 | A floor sheet: Size "Floor" prints the largest type that fits on one page (changed from two the same day), portrait or landscape, whichever is bigger; tab at about half size; a slim title (title, artist, key) and small section names. Each section can also be Smaller or Larger than the song. (giopas, 13 October.) |
 | 13 Oct 2026 | Floor may use two columns when a long song gets clearly bigger type that way; a short song keeps one column across the full width. Tab never below 75%. (Proposed by Claude while building it; giopas to confirm.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |

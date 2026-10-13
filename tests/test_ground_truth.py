@@ -169,7 +169,9 @@ def test_pushed_feature_branch_is_marked(repo, tmp_path):
 
 
 def test_failed_fetch_is_unknown_not_a_pass(repo, tmp_path):
-    shutil.rmtree(tmp_path / "origin.git")
+    # Moved away rather than deleted: git writes its objects read-only, and
+    # on Windows deleting a read-only file fails ("Access is denied").
+    (tmp_path / "origin.git").rename(tmp_path / "moved-away.git")
     code, out = run(repo)
     assert code == 2
     assert "UNKNOWN: git fetch failed" in out

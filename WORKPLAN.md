@@ -12,8 +12,14 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.31.0, tagged on 13 October 2026 (the floor sheet). The
-  release workflow's draft is to be checked and published by giopas.
+- Released: v0.31.1, tagged on 13 October 2026: the floor sheet of
+  v0.31.0, which did not build on Windows (a test of
+  `tools/ground_truth.py` deleted read-only git files). The v0.31.0 draft
+  release is to be deleted, not published; the v0.31.1 draft is to be
+  checked and published by giopas.
+- The release workflow runs `publish` even when a build fails, so a
+  failed build still leaves a draft with files missing. Worth changing in
+  `.github/workflows/release.yml` (giopas copies it in).
 - Previous: v0.30.0, published on 10 October 2026 with all eight files
   (macOS Apple silicon and Intel, `.dmg` and `.tar.gz` each; Windows
   installer and `.zip`; Linux `.tar.gz`; `SHA256SUMS`).

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.31.1] — 2026-10-13
+
+v0.31.0 did not build on Windows: one test of the development tool
+`tools/ground_truth.py` failed there. The app is the same as v0.31.0.
+
+### Fixed
+
+- `tests/test_ground_truth.py` deleted a git folder to simulate a failed
+  fetch, and Windows refuses to delete git's read-only object files. The
+  test now moves the folder away instead, so the Windows build passes.
+
 ## [0.31.0] — 2026-10-13
 
 A chart you can read off the floor at your feet. The new Floor size prints

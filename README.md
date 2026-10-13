@@ -133,6 +133,9 @@ Printing and export
 - The PDF fills the page, or shrinks the chart to fit on one page, in one
   or two columns (portrait A4 by default). Empty strings are left out, and
   a section is never split across a page break.
+- A floor sheet: the largest type that fits on two pages, to read from a
+  page at your feet, with tab printed smaller. Any section can also print
+  smaller or larger than the rest.
 - The live Preview shows the TXT and PDF output as you edit.
 
 Files
@@ -368,7 +371,17 @@ longest line would run off the edge. **Fit to one page** shrinks the type
 as far as needed to get the whole song on one sheet, which helps when the
 alternative is turning a page mid-song. If even the smallest readable size
 is not enough, the chart stays at that size and runs to two pages. The
-fixed percentages are there when you want a set size.
+fixed percentages are there when you want a set size. **Floor** is for a
+sheet on the floor at your feet: the largest type that fits on at most two
+pages. It tries portrait and landscape, one and two columns, and keeps
+whichever gives the bigger chord symbols and notes. Tab and riffs print at
+half that size, since you read them close up.
+
+Next to each section's render mode there is a size: **Smaller** or
+**Larger** prints that section below or above the rest of the song, with
+any Size setting. A long solo can go small, the part you always lose your
+place in can go large. This is in the browser app; the desktop app keeps
+the setting but has no control for it yet.
 
 **Columns** splits the page. Most chart lines are short (four chord
 symbols, a bar of tab), so a single column leaves half the page white, and

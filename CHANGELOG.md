@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Floor**, a new Size in ⚙ Layout, for a sheet laid on the floor and
+  read from standing. It prints the largest type that fits on at most two
+  pages, tries portrait and landscape and one or two columns, and keeps
+  whichever gives the bigger chart. Riff tab and tab grids print at half
+  the chart's size (never below 75%), each riff still under its name. The
+  gaps between sections and the title band stop growing at a point, so the
+  space goes to the chords and notes. Columns is greyed out while Floor is
+  on, and the Export orientation is kept only on a tie.
+- A size per section in the browser app: **Smaller** or **Larger** next to
+  the render mode prints that section at 0.75 or 1.35 times the song's
+  scale, with any Size. Stored as `print_size`; Normal is no key at all, so
+  existing songs and their PDFs do not change. Tested in
+  `tests/test_floor.py`.
+
 - `tools/ground_truth.py`: a read-only report of what git, the tags and
   GitHub say about the project, run at the start and end of a session so
   `WORKPLAN.md` is checked against the facts. A probe that cannot run is

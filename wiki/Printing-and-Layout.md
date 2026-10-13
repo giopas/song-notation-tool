@@ -88,6 +88,7 @@ white text on black, which tends to fill in.
 | Fit to page | `"fit"` (default) | Scale up until the chart fills the sheet without needing another page |
 | Fit to one page | `"one"` | Scale down as far as needed to get the whole song onto one sheet |
 | 100% / 125% / 150% / 200% | `"1.0"` … `"2.0"` | A fixed scale |
+| Floor | `"floor"` | The largest type that fits on two sheets, for a page on the floor |
 
 Fit to one page turns the rule around. With plain Fit to page, the page
 count is whatever it was at 100% and the type grows into the space left
@@ -113,6 +114,42 @@ The song title and the details line are set in a proportional font, so
 the monospaced width limit does not cover them. They limit their own size
 instead, and a long title shrinks to fit without pulling the whole chart's
 scale down.
+
+## Floor: a sheet at your feet
+
+Floor is for a chart laid on the floor and read from standing, a metre or
+two away. The type matters more than the page count, within limits:
+
+- the chart gets the largest scale that fits on at most two pages
+  (`constants.FLOOR_MAX_PAGES`), up to six times the 100% size
+  (`FLOOR_MAX_SCALE`);
+- portrait and landscape are both tried and the bigger type wins, so the
+  orientation picked in **Export** is only kept on a tie
+  (`export.resolve_orient`);
+- the columns are chosen the same way. A section gets the full width of
+  the page, unless the song is long enough that two columns on the same
+  two pages give clearly bigger type (`export._floor_columns`). The
+  Columns setting is greyed out;
+- riff tab inside a chart line and tab grids print at half the chart's
+  size (`FLOOR_TAB_RATIO`), but not below 75% (`FLOOR_TAB_MIN`). Each riff
+  still starts under its name, and its strings stay lined up;
+- the gaps between sections and the title band stop growing at 1.5 and
+  2.5 times their desk size, so the space goes to the chart.
+
+A section is still never split across a page break, so a page can end
+with some white space when the next section does not fit under it.
+
+## A section's own size
+
+Each section has a size next to its render mode in the browser app:
+Normal, **Smaller** or **Larger**. It multiplies the song's scale for that
+section only (`constants.SECTION_SIZE_FACTORS`: 0.75 and 1.35), the heading
+and gaps included. It works with every Size, Floor included, and the fit
+accounts for it: a larger section with a long line lowers the scale of the
+whole chart, the same as any long line. It is stored as `print_size` on the
+section; Normal is stored as no key at all. The TXT export ignores it. The
+desktop app keeps the setting when it opens and saves a song, but has no
+control for it yet.
 
 Scale, colour and columns only apply to the PDF; the TXT export is plain
 text and ignores all three. Scale and the number of columns are worked out

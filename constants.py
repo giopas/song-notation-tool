@@ -140,7 +140,11 @@ FLOOR_TAB_MIN = 0.75
 # Spaces between things grow with the type up to this scale, no further.
 FLOOR_GAP_MAX = 1.5
 # Points, fixed whatever the chart's size.
-FLOOR_BAND_H = 24          # the title band
+FLOOR_BAND_H = 40          # the title band, from the top edge of the sheet
+# Where the title's baseline sits, measured down from the top edge. Most
+# printers cannot print the first 5 mm or so of the sheet, so the title
+# keeps clear of it, the same distance down as on a desk sheet.
+FLOOR_TITLE_DROP = 28
 FLOOR_TITLE_SZ = 12        # the title in it
 FLOOR_HEAD_SZ = 11         # section names (smaller still if the chart is)
 FLOOR_HEAD_GAP = 8         # under a section name, above the first letters

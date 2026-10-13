@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- On a printed floor sheet the title was cut off: it sat in the top few
+  millimetres of the page, which most printers leave blank. It now starts
+  28pt (about 1 cm) down, as on a normal sheet, and its band is a little
+  taller to hold it.
+
 ## [0.31.2] — 2026-10-13
 
 The floor sheet on one page: everything on it that is not the chart is

@@ -39,7 +39,8 @@ from constants import (APP_VERSION, APP_URL, INSTRUMENT_STRINGS, LICK_RGB, REST_
                         FRET_SIZE_RATIO, FRET_LINE_RATIO,
                         FLOOR_MAX_PAGES, FLOOR_MAX_SCALE, FLOOR_TAB_RATIO,
                         FLOOR_TAB_MIN, FLOOR_GAP_MAX, FLOOR_BAND_H,
-                        FLOOR_TITLE_SZ, FLOOR_HEAD_SZ, FLOOR_HEAD_GAP,
+                        FLOOR_TITLE_SZ, FLOOR_TITLE_DROP, FLOOR_HEAD_SZ,
+                        FLOOR_HEAD_GAP,
                         FLOOR_SECTION_GAP,
                         SECTION_SIZE_FACTORS,
                         section_color, heading_fill, title_fill)
@@ -1505,7 +1506,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     # and shrinks on its own rather than dragging the whole chart down
     # with it.
     if FLOOR:
-        txt(MARGIN, H - band_h + (band_h - FLOOR_TITLE_SZ) / 2 + 2, hdr_txt,
+        txt(MARGIN, H - FLOOR_TITLE_DROP, hdr_txt,
             sz=_fit_text_size(hdr_txt, W - 2 * MARGIN, FLOOR_TITLE_SZ), bold=True)
     else:
         txt(MARGIN, H - 28 * HS, hdr_txt,

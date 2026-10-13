@@ -271,3 +271,18 @@ def test_floor_title_is_one_slim_line_without_tempo_or_time():
     assert b"BPM" not in body and b"Time:" not in body
     doc["pdf_scale"] = "fit"
     assert b"BPM: 97" in _body(export.build_pdf(doc))
+
+
+def test_floor_title_keeps_clear_of_the_unprintable_top_edge():
+    """Printers leave the top 5 mm or so blank (about 14pt). The title's
+    letters have to start below that."""
+    doc = _short_song()
+    doc["pdf_scale"] = "floor"
+    pdf = export.build_pdf(doc)
+    body = _body(pdf).decode("latin-1")
+    m = re.search(r"/F2 ([\d.]+) Tf [\d.]+ ([\d.]+) Td \(PAPER LANTERNS", body)
+    size, y = float(m.group(1)), float(m.group(2))
+    page_h = max(export.page_size(o)[1] for o in ("portrait", "landscape")
+                 if abs(export.page_size(o)[1] - y) < 60)
+    top_of_letters = y + size * 0.75
+    assert page_h - top_of_letters >= 14

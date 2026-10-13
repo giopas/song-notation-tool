@@ -33,10 +33,11 @@ Housekeeping, small:
 2. `feat/v0.30.0` was pushed to GitHub, against the working agreement.
    It is merged, so it can go: `git push origin --delete feat/v0.30.0`.
 
-In progress on `feat/v0.31.0` (not released): the floor sheet (Size:
-Floor) and a size per section, under `[Unreleased]` in `CHANGELOG.md`.
-Still to do for it: a per-section size control in the desktop app, if
-wanted, and giopas's check of a printed floor sheet.
+On `main`, not released yet: the floor sheet (Size: Floor), a size per
+section, tighter rests on a floor sheet, and Recalled licks: Name only
+printing a riff's tab once in the whole song. All under `[Unreleased]` in
+`CHANGELOG.md`, for v0.31.0. Still open: a per-section size control in the
+desktop app, if wanted, and giopas's check of a printed floor sheet.
 
 The next piece of work after that is giopas's choice; see "Candidates for
 the next version" below.
@@ -73,10 +74,11 @@ Manual checks waiting for giopas (each stays here until reported back):
   a part and a riff in the app; exporting a PDF and opening it again with
   **Import song…**.
 - v0.30.0: **Update and restart** from v0.29.1 on the Mac.
-- Floor sheet (`feat/v0.31.0`): print a real song with Size: Floor, lay it
+- Floor sheet (unreleased, on `main`): print a real song with Size: Floor, lay it
   on the floor and read it from standing; say whether half-size tab is
   readable enough and whether the type is big enough. Try **Larger** and
-  **Smaller** on a section.
+  **Smaller** on a section, and **Recalled licks: Name only** on a song
+  with a riff inside a referenced section.
 
 ## Release history
 

@@ -672,7 +672,9 @@ class SongNotationApp(tk.Tk):
         ("Page", [
             ("pdf_scale", "Size", PDF_SCALE_LABELS, "fit",
              "Fit to page enlarges the type to fill the paper. Fit to one page "
-             "shrinks it as far as needed to get the song on one sheet."),
+             "shrinks it as far as needed to get the song on one sheet. Floor "
+             "prints the largest type that fits on two sheets, for a page on "
+             "the floor: it picks columns and orientation, tab at half size."),
             ("pdf_columns", "Columns", PDF_COLUMN_LABELS, "auto",
              "Two columns halve the height a chart needs. Auto only splits the "
              "page when that helps."),
@@ -725,7 +727,7 @@ class SongNotationApp(tk.Tk):
         d = self.doc or {}
         lyr = d.get("lyrics_layout", "none")
         bits = [PDF_SCALE_LABELS.get(str(d.get("pdf_scale", "fit")), "")]
-        if lyr != "side":
+        if lyr != "side" and d.get("pdf_scale") != "floor":
             bits.append(PDF_COLUMN_LABELS.get(str(d.get("pdf_columns", "auto")),
                                               "").split(" (")[0])
         bits.append("no lyrics" if lyr == "none" else "lyrics: " + {
@@ -750,10 +752,14 @@ class SongNotationApp(tk.Tk):
             # column whatever Columns says — so the control says so rather
             # than sitting there doing nothing.
             side = lyr == "side"
-            widgets["pdf_columns"].configure(state="disabled" if side else "readonly")
+            floor = self.doc.get("pdf_scale") == "floor"
+            widgets["pdf_columns"].configure(
+                state="disabled" if side or floor else "readonly")
             cols_hint.configure(text=(
                 "Set by the lyrics: their column on the left, one chart column beside it."
-                if side else self._LAYOUT_SETTINGS[0][1][1][4]))
+                if side else
+                "Set by Floor: one column, or two when a long song gets bigger "
+                "type that way." if floor else self._LAYOUT_SETTINGS[0][1][1][4]))
             self.lbl_layout.configure(text=self._layout_summary())
             self.dirty = True
             self._refresh_page_indicator()
@@ -793,7 +799,9 @@ class SongNotationApp(tk.Tk):
         lyr_hint.configure(text=self._LYRICS_HINTS.get(
             self.doc.get("lyrics_layout", "none"), ""))
         side = self.doc.get("lyrics_layout", "none") == "side"
-        widgets["pdf_columns"].configure(state="disabled" if side else "readonly")
+        floor = self.doc.get("pdf_scale") == "floor"
+        widgets["pdf_columns"].configure(
+            state="disabled" if side or floor else "readonly")
 
     def _build_riff_strip(self):
         outer = tk.Frame(self)

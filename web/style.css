@@ -360,6 +360,7 @@ button {
 .sec-type { flex: 0 0 auto; }
 .sec-instrument { flex: 0 0 auto; max-width: 160px; }
 .sec-repeat { width: 54px; }
+.sec-size { flex: 0 0 auto; }
 
 .sec-chart-line {
   width: 100%; background: var(--input-bg); color: var(--fg);

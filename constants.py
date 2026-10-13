@@ -122,6 +122,34 @@ PDF_SCALE_LABELS = {
     "1.25": "125%",
     "1.5": "150%",
     "2.0": "200%",
+    "floor": "Floor (largest, up to 2 pages)",
+}
+
+# "Floor" is for a sheet read off the floor at your feet, a metre or two
+# away: one column across the full width, the largest type that fits on
+# at most FLOOR_MAX_PAGES sheets, portrait or landscape (whichever gives
+# the bigger type). Tab is read close up, if at all, so tab grids and riff
+# tabs print at FLOOR_TAB_RATIO of the chart's size, but never smaller
+# than FLOOR_TAB_MIN (75%).
+FLOOR_MAX_PAGES = 2
+FLOOR_MAX_SCALE = 6.0
+FLOOR_TAB_RATIO = 0.5
+FLOOR_TAB_MIN = 0.75
+# Spaces between sections grow with the type up to this scale, no further.
+FLOOR_GAP_MAX = 1.5
+
+# A section can print smaller or larger than the rest of the song, on top
+# of the song's Size: a long solo in small type, the chorus you always
+# lose your place in a size up. The values multiply the song's scale.
+SECTION_SIZE_FACTORS = {
+    "smaller": 0.75,
+    "normal": 1.0,
+    "larger": 1.35,
+}
+SECTION_SIZE_LABELS = {
+    "normal": "Normal size",
+    "smaller": "Smaller",
+    "larger": "Larger",
 }
 
 # Two-column printing. Most chart lines are short — a few chord symbols,

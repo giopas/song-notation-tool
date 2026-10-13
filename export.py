@@ -37,6 +37,9 @@ from constants import (APP_VERSION, APP_URL, INSTRUMENT_STRINGS, LICK_RGB, REST_
                         TAB_BEATS_DEFAULT, MAX_PDF_COLUMNS, PDF_COLUMN_GAP,
                         PDF_COLUMN_RULE_GRAY, FRET_RGB, FRET_BW_RGB,
                         FRET_SIZE_RATIO, FRET_LINE_RATIO,
+                        FLOOR_MAX_PAGES, FLOOR_MAX_SCALE, FLOOR_TAB_RATIO,
+                        FLOOR_TAB_MIN, FLOOR_GAP_MAX,
+                        SECTION_SIZE_FACTORS,
                         section_color, heading_fill, title_fill)
 
 DEFAULT_TXT_WIDTH = 100
@@ -147,6 +150,52 @@ def column_width(orient: str, columns: int = 1) -> float:
     return (W - 2 * PAGE_MARGIN - PDF_COLUMN_GAP * (n - 1)) / n
 
 
+def is_floor(doc: dict) -> bool:
+    """True when the song's Size is "floor": big type for a sheet read off
+    the floor, one column, at most FLOOR_MAX_PAGES pages."""
+    return str(doc.get("pdf_scale", "")).strip().lower() == "floor"
+
+
+def section_size_factor(sec: dict) -> float:
+    """How much bigger or smaller this section prints than the rest of the
+    song: its `print_size` ("smaller", "normal", "larger") as a factor."""
+    return SECTION_SIZE_FACTORS.get(
+        str(sec.get("print_size") or "normal").strip().lower(), 1.0)
+
+
+def tab_scale(scale: float, floor: bool) -> float:
+    """The scale tab is drawn at (a tab grid, or a riff's tab inside a
+    chart line), given the scale of the section around it.
+
+    Normally the same. On a floor sheet the chords and notes are what you
+    read from a distance, and tab is read close up, so it gets
+    FLOOR_TAB_RATIO of the size, but never less than FLOOR_TAB_MIN: past
+    that it stops being readable at all."""
+    if not floor:
+        return scale
+    return max(scale * FLOOR_TAB_RATIO, min(scale, FLOOR_TAB_MIN))
+
+
+def lick_segments(text: str, starts) -> list:
+    """A riff's tab row cut into the pieces that belong to each riff on the
+    line: [(column, piece), ...].
+
+    `starts` are the columns the riffs start at on the symbol row above.
+    Drawn smaller than the chart, each piece still has to start under its
+    own riff name, so it is placed at its column at the chart's size and
+    only the piece itself shrinks. Every row of a riff is cut at the same
+    columns, so its strings stay lined up. A riff on a line of its own
+    (no symbol row above it) is one piece from the left edge."""
+    n = len(text)
+    cuts = sorted({c for c in starts if 0 <= c < n} | {0})
+    out = []
+    for a, b in zip(cuts, cuts[1:] + [n]):
+        piece = text[a:b].rstrip()
+        if piece.strip():
+            out.append((a, piece))
+    return out
+
+
 # ==============================================================================
 #  Fit-to-page
 #
@@ -220,13 +269,94 @@ def _body_lines_for_width(doc: dict, instruments) -> list[str]:
     return out
 
 
+def _row_units(rows, ratio: float) -> list:
+    """Widths of rendered chart rows, in characters at the section's size.
+    A riff's tab row drawn at `ratio` of that size is narrower: each piece
+    starts at its riff's column and only the piece shrinks."""
+    out, starts = [], []
+    for r in rows:
+        text, role = r["text"], r.get("role")
+        if role == render.ROLE_SYM:
+            starts = [a for a, _b, rl in (r.get("spans") or [])
+                      if rl == render.ROLE_LICK]
+        if role == render.ROLE_LICK and ratio != 1.0:
+            out.append(max((a + ratio * len(piece)
+                            for a, piece in lick_segments(text, starts)),
+                           default=0))
+        else:
+            out.append(len(text))
+    return out
+
+
+def _line_units(doc: dict, instruments, scale: float = 1.0) -> list:
+    """The width of every line the PDF will draw, in characters at the
+    song's scale: `_body_lines_for_width`, with each section's own size
+    (Smaller / Larger) and, on a floor sheet, the smaller riff tab taken
+    into account. `scale` matters only for the floor sheet, where how much
+    smaller the tab is depends on how big the chart is."""
+    floor = is_floor(doc)
+    gutter = doc.get("section_layout") == "gutter"
+    gutter_w = 0
+    if gutter:
+        gutter_w = max((len(_gutter_label(s)) for s in doc.get("sections", [])),
+                        default=0) + 2
+    one = uniform_instrument(doc, instruments)
+    out = []
+    for sec in doc.get("sections", []):
+        if not _section_prints(sec, instruments):
+            continue
+        f = section_size_factor(sec)
+        sec_s = max(1e-6, scale * f)
+        ratio = tab_scale(sec_s, floor) / sec_s
+        units = []
+        units += _row_units(render.printed_part_rows(doc, sec, instruments, 0), ratio)
+        chart_n = 0
+        if sec.get("render") == "free":
+            units += [len(ln) for ln in (sec.get("free_text") or "").splitlines()]
+        else:
+            eff = transpose.effective_transpose(
+                doc.get("transpose", 0), sec.get("transpose", 0))
+            chart = render.resolve_references(songmap.chart_items(sec), doc)
+            if chart:
+                rows = render.chart_body_rows(
+                    render.resolve_display_items(chart, eff), "", 0)
+                chart_n = len(rows)
+                units += _row_units(rows, ratio)
+        if sec.get("annotation"):
+            units.append(len(f'"{sec["annotation"]}"'))
+        lyric_lines = render.section_lyric_lines(doc, sec)
+        if render.lyrics_beside(doc) and lyric_lines and chart_n:
+            col = render.shared_lyric_column(doc, instruments)
+            units += [col + len(ln) for ln in lyric_lines]
+        else:
+            units += [len(ln) for ln in lyric_lines]
+        out += [(gutter_w + u) * f for u in units]
+        if not gutter:
+            rep = sec.get("repeat", 1)
+            rep_str = f" (x{rep})" if rep and rep != 1 else ""
+            instr = "" if one else f"   {sec.get('instrument', '')}"
+            out.append(len(f"{sec.get('name', '')}{rep_str}{instr}") * f)
+    out += [len(ln) for ln in chords_mod.sheet_lines(doc, width=DEFAULT_TXT_WIDTH)]
+    return out
+
+
 def _width_limited_scale(doc: dict, instruments, orient: str,
                           columns: int = 1) -> float:
     usable = column_width(orient, columns)
-    longest = max((len(ln) for ln in _body_lines_for_width(doc, instruments)), default=0)
-    if longest <= 0:
-        return MAX_FIT_SCALE
-    return usable / (longest * MONO_CHAR_W)
+
+    def cap(scale):
+        longest = max(_line_units(doc, instruments, scale), default=0)
+        return MAX_FIT_SCALE if longest <= 0 else usable / (longest * MONO_CHAR_W)
+
+    s = cap(1.0)
+    if not is_floor(doc):
+        return s
+    # On a floor sheet the riff tab shrinks as the chart grows, so the
+    # width a line needs depends on the scale being worked out. A few
+    # rounds settle it; the smaller of the last two is the safe answer.
+    for _ in range(4):
+        prev, s = s, cap(s)
+    return min(s, prev)
 
 
 def _tab_block_units(doc: dict, instruments) -> float:
@@ -278,7 +408,8 @@ def _fit_scale(doc: dict, instruments, orient: str, columns: int = 1) -> float:
 
 
 def _one_page_scale(doc: dict, instruments, orient: str,
-                     columns: int = 1) -> float:
+                     columns: int = 1, max_pages: int = 1,
+                     max_scale: float = MAX_FIT_SCALE) -> float:
     """Largest scale that gets the whole chart onto a single page.
 
     Unlike `_fit_scale`, which keeps the page count it already had and
@@ -288,17 +419,17 @@ def _one_page_scale(doc: dict, instruments, orient: str,
     is what comes back — the chart is as small as it is allowed to get,
     and the export says two pages rather than pretending otherwise.
     """
-    hi = min(MAX_FIT_SCALE,
+    hi = min(max_scale,
              max(_width_limited_scale(doc, instruments, orient, columns),
                  MIN_ONE_PAGE_SCALE))
-    if _build_pdf(doc, instruments, orient, hi, columns)[1] <= 1:
+    if _build_pdf(doc, instruments, orient, hi, columns)[1] <= max_pages:
         return hi
     lo = MIN_ONE_PAGE_SCALE
-    if _build_pdf(doc, instruments, orient, lo, columns)[1] > 1:
+    if _build_pdf(doc, instruments, orient, lo, columns)[1] > max_pages:
         return lo
     for _ in range(_FIT_ITERATIONS):
         mid = (lo + hi) / 2
-        if _build_pdf(doc, instruments, orient, mid, columns)[1] <= 1:
+        if _build_pdf(doc, instruments, orient, mid, columns)[1] <= max_pages:
             lo = mid
         else:
             hi = mid
@@ -324,6 +455,10 @@ def resolve_scale(doc: dict, instruments=None, orient: str = "portrait",
         return _fit_scale(doc, instruments, orient, columns)
     if raw in ("one", "one page", "onepage"):
         return _one_page_scale(doc, instruments, orient, columns)
+    if raw == "floor":
+        return _one_page_scale(doc, instruments, orient, columns,
+                               max_pages=FLOOR_MAX_PAGES,
+                               max_scale=FLOOR_MAX_SCALE)
     if raw in ("normal", "100%"):
         return 1.0
     try:
@@ -376,6 +511,24 @@ def _auto_columns(doc: dict, instruments, orient: str) -> int:
     return 2 if two >= one * _AUTO_COLUMN_GAIN else 1
 
 
+def _floor_columns(doc: dict, instruments, orient: str) -> int:
+    """Columns for a floor sheet: whichever gives the bigger type.
+
+    A section across the full width is the first choice. A long song with
+    short lines (a dozen sections of four chords) runs out of height
+    first, and two columns on the same two pages hold twice as many
+    lines, so it gets two when they buy clearly bigger type."""
+    if MAX_PDF_COLUMNS < 2 or not doc.get("sections"):
+        return 1
+    if instruments is None:
+        instruments = instruments_to_print(doc)
+    one = resolve_scale(doc, instruments, orient, columns=1)
+    two = resolve_scale(doc, instruments, orient, columns=2)
+    if _tab_block_units(doc, instruments) * tab_scale(two, True) > column_width(orient, 2):
+        return 1
+    return 2 if two >= one * _AUTO_COLUMN_GAIN else 1
+
+
 def resolve_columns(doc: dict, instruments=None, orient: str = "portrait") -> int:
     """How many text columns a document's `pdf_columns` setting asks for.
     Unknown or missing values fall back to auto."""
@@ -384,6 +537,8 @@ def resolve_columns(doc: dict, instruments=None, orient: str = "portrait") -> in
     # two — the setting steps aside rather than fighting the lyrics for it.
     if render.gathered_lyrics(doc)[0] == "side":
         return 2
+    if is_floor(doc):
+        return _floor_columns(doc, instruments, orient)
     raw = doc.get("pdf_columns", "auto")
     if isinstance(raw, (int, float)):
         return max(1, min(MAX_PDF_COLUMNS, int(raw)))
@@ -598,9 +753,29 @@ def build_pdf(doc: dict, instruments=None, orient: str = "portrait",
     """
     if instruments is None:
         instruments = instruments_to_print(doc)
+    orient = resolve_orient(doc, instruments, orient)
     columns = resolve_columns(doc, instruments, orient)
     scale = resolve_scale(doc, instruments, orient, columns=columns)
     return _build_pdf(doc, instruments, orient, scale, columns, date=date)[0]
+
+
+def resolve_orient(doc: dict, instruments=None, orient: str = "portrait") -> str:
+    """The page orientation a PDF is printed in.
+
+    What the caller asked for, except on a floor sheet, where the type size
+    is the whole point: both orientations are tried and the one that gives
+    the bigger chart wins. A tie keeps the one asked for."""
+    if not is_floor(doc):
+        return orient
+    if instruments is None:
+        instruments = instruments_to_print(doc)
+    other = "portrait" if orient == "landscape" else "landscape"
+
+    def scale_for(o):
+        return resolve_scale(doc, instruments, o,
+                             columns=resolve_columns(doc, instruments, o))
+
+    return other if scale_for(other) > scale_for(orient) * 1.02 else orient
 
 
 def _gutter_label(sec: dict) -> str:
@@ -876,6 +1051,20 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     FRET_SZ = MONO_SZ * FRET_SIZE_RATIO
     FRET_LINE_H = LINE_H * FRET_LINE_RATIO
     TOKEN_W, CHAR_W, SN_W = 3, MONO_CHAR_W * S, STRING_LABEL_W * S
+    FLOOR = is_floor(doc)
+    # The scale the next thing is drawn at. It starts as the song's and
+    # moves for a section printed Smaller or Larger, and for tab on a
+    # floor sheet; everything sized by the type follows it.
+    SS = S
+
+    def use_scale(s):
+        nonlocal SS, LINE_H, MONO_SZ, HEAD_SZ, FRET_SZ, FRET_LINE_H, CHAR_W, SN_W
+        SS = s
+        LINE_H = 12 * s
+        MONO_SZ, HEAD_SZ = MONO_SIZE * s, 10.5 * s
+        FRET_SZ = MONO_SZ * FRET_SIZE_RATIO
+        FRET_LINE_H = LINE_H * FRET_LINE_RATIO
+        CHAR_W, SN_W = MONO_CHAR_W * s, STRING_LABEL_W * s
 
     colors = doc.get("color_mode", "color")
     def sec_rgb(sec):
@@ -903,7 +1092,8 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         s = s.encode("latin-1", errors="replace").decode("latin-1")
         return s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
-    def txt(x, y, s, sz=MONO_SZ, bold=False):
+    def txt(x, y, s, sz=None, bold=False):
+        sz = MONO_SZ if sz is None else sz
         font = "/F2" if bold else "/F1"
         cur_ln.append(f"BT {font} {sz} Tf {x:.1f} {y:.1f} Td ({_esc(s)}) Tj ET")
 
@@ -1104,7 +1294,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                 if label:
                     stroke(black, lw, (x1 + 1, y - MONO_SZ * 0.15), (x1 + 1, top))
                     color(*black)
-                    txt(x1 + 3 * S, y, label, sz=small, bold=True)
+                    txt(x1 + 3 * SS, y, label, sz=small, bold=True)
             elif role == render.ROLE_PM:
                 color(*black)
                 lx = x1
@@ -1112,7 +1302,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                     txt(x1, y, label, sz=small)
                     lx = x1 + (len(label) + 0.5) * CHAR_W
                 mid = y + MONO_SZ * 0.3
-                dash = 2.0 * S
+                dash = 2.0 * SS
                 xx = lx
                 while xx < x2 - 1:
                     stroke(black, lw * 0.8, (xx, mid), (min(xx + dash, x2 - 1), mid))
@@ -1262,7 +1452,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         cy -= LINE_H
         color(0.16, 0.24, 0.42)
         txt(col_x0(), cy, "LYRICS", sz=HEAD_SZ, bold=True)
-        cy -= LINE_H + 2 * S
+        cy -= LINE_H + 2 * SS
         for kind, text in items:
             if cy < FOOTER_H + LINE_H:
                 cy = next_column()
@@ -1287,7 +1477,11 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         meas_w = tok_w * max_beats * CHAR_W + CHAR_W
         return max(1, min(n_measures, int(usable / meas_w)))
 
-    band_h = 46 * S
+    # The banner grows with the chart, up to a point: on a floor sheet the
+    # chart may be four times its desk size, and a title band to match
+    # would spend a quarter of the page saying what you already know.
+    HS = min(S, 2.5) if FLOOR else S
+    band_h = 46 * HS
     band_rgb, band_text = title_fill(colors)
     rfill(0, H - band_h, W, band_h, *band_rgb)
     color(*band_text)
@@ -1297,8 +1491,8 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     # scale would simply run off the right edge — so it gets its own cap
     # and shrinks on its own rather than dragging the whole chart down
     # with it.
-    txt(MARGIN, H - 28 * S, hdr_txt,
-        sz=_fit_text_size(hdr_txt, W - 2 * MARGIN, TITLE_SZ), bold=True)
+    txt(MARGIN, H - 28 * HS, hdr_txt,
+        sz=_fit_text_size(hdr_txt, W - 2 * MARGIN, TITLE_SZ * HS / S), bold=True)
     meta_parts = []
     if meta.get("key"):
         meta_parts.append(f"Key: {meta['key']}")
@@ -1311,10 +1505,10 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         meta_parts.append(one_instrument)
     if meta_parts:
         meta_line = "   |   ".join(meta_parts)
-        txt(MARGIN, H - 41 * S, meta_line,
-            sz=_fit_text_size(meta_line, W - 2 * MARGIN, 7.5 * S))
+        txt(MARGIN, H - 41 * HS, meta_line,
+            sz=_fit_text_size(meta_line, W - 2 * MARGIN, 7.5 * HS))
     # The banner spans the sheet, so both columns start below it.
-    top_holder[0] = H - 54 * S
+    top_holder[0] = H - 54 * HS
     cy_holder[0] = top_holder[0]
 
     if side:
@@ -1344,7 +1538,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             cy = next_column()
         color(0.16, 0.24, 0.42)
         txt(col_x0(), cy, "CHORDS", sz=HEAD_SZ, bold=True)
-        cy -= LINE_H + 2 * S
+        cy -= LINE_H + 2 * SS
         color(0, 0, 0)
         for ln in body:
             if cy < FOOTER_H + LINE_H:
@@ -1371,11 +1565,48 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         gutter the section names sit in when the layout asks for one."""
         return col_x0() + gutter_w * CHAR_W
 
+    def gap(v):
+        """A space between things (under a heading, between sections). On
+        a floor sheet it stops growing with the type at FLOOR_GAP_MAX: the
+        space is there to separate, and past a point it only costs the
+        chart a page."""
+        return v * (min(SS, FLOOR_GAP_MAX) if FLOOR else SS)
+
+    def small_row(rows, idx):
+        """True for a row drawn at the tab's size: a riff's tab row. The
+        blank rows around a riff keep the chart's size, so the chord line
+        after it does not sit on the tab."""
+        return TAB_S != SEC_S and rows[idx].get("role") == render.ROLE_LICK
+
+    def sym_lick_starts(row):
+        """Columns the riffs on a symbol row start at."""
+        return [a for a, _b, rl in (row.get("spans") or [])
+                if rl == render.ROLE_LICK]
+
+    def draw_small_lick_row(x, y, row, starts, sec_s, tab_s):
+        """A riff's tab row, drawn at the tab's smaller size (floor sheet).
+        Each riff's piece starts under its name, at the chart's column
+        grid; only the piece is smaller. Returns the y of the next row."""
+        text, spans = row["text"], row.get("spans") or []
+        full_cw = CHAR_W
+        use_scale(tab_s)
+        for a, piece in lick_segments(text, starts):
+            sub = [(max(0, st - a), min(len(piece), en - a), rl)
+                   for st, en, rl in spans if en > a and st < a + len(piece)]
+            draw_chart_row(x + a * full_cw, y,
+                           {"text": piece, "role": row.get("role"), "spans": sub})
+        step = LINE_H
+        use_scale(sec_s)
+        return y - step
+
     for sec in sections:
         if not _section_prints(sec, instruments):
             continue
         main_prints = sec.get("instrument") in instruments
         cy = cy_holder[0]
+        SEC_S = S * section_size_factor(sec)
+        TAB_S = tab_scale(SEC_S, FLOOR)
+        use_scale(SEC_S)
 
         all_strings = INSTRUMENT_STRINGS.get(
             sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
@@ -1409,7 +1640,12 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         # and splits across the break anyway. The pad covers the vertical
         # space the heading band and the inter-section gap add.
         needed_h = (render.estimate_section_lines(sec, strings or all_strings, doc)
-                    * LINE_H + 34 * S)
+                    * LINE_H + gap(34))
+        # Riff tab drawn smaller takes less room than the estimate, which
+        # counts every row at the section's size.
+        n_small = sum(small_row(rows, i) for rows in (chart_rows, part_rows)
+                      for i in range(len(rows)))
+        needed_h -= n_small * 12 * (SEC_S - TAB_S)
         if cy - needed_h < FOOTER_H + LINE_H * 2:
             cy = next_column()
 
@@ -1425,11 +1661,11 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
             sec_label = f"{sec['name']}{rep_str}{instr}"
             fill_rgb, label_rgb = heading_fill(sec.get("type", ""), colors)
-            rfill(col_x0(), cy - LINE_H, COL_W_TEXT, LINE_H + 2 * S, *fill_rgb)
+            rfill(col_x0(), cy - LINE_H, COL_W_TEXT, LINE_H + 2 * SS, *fill_rgb)
             color(*label_rgb)
-            txt(col_x0() + 4 * S, cy - LINE_H + 3 * S, sec_label,
+            txt(col_x0() + 4 * SS, cy - LINE_H + 3 * SS, sec_label,
                 sz=HEAD_SZ, bold=True)
-            cy -= LINE_H + 14 * S
+            cy -= LINE_H + gap(14)
 
         if free_mode and (sec.get("free_text") or "").strip():
             # The notes are always black. Colour is a label — it tells you
@@ -1441,7 +1677,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                 cy -= LINE_H
                 if cy < FOOTER_H + LINE_H:
                     cy = next_column()
-            cy -= 2 * S
+            cy -= 2 * SS
 
         lyric_lines = render.section_lyric_lines(doc, sec)
         beside = render.lyrics_beside(doc) and bool(chart_rows) and bool(lyric_lines)
@@ -1455,9 +1691,15 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             lyric_x = body_x() + lyric_col * CHAR_W
             lyric_cy = cy
             row_ys = []
+            lick_starts = []
             for idx, row in enumerate(chart_rows):
                 row_ys.append(cy)
-                if row.get("role") == render.ROLE_MARKS:
+                if row.get("role") == render.ROLE_SYM:
+                    lick_starts = sym_lick_starts(row)
+                if small_row(chart_rows, idx):
+                    cy = draw_small_lick_row(body_x(), cy, row, lick_starts,
+                                             SEC_S, TAB_S)
+                elif row.get("role") == render.ROLE_MARKS:
                     draw_marks_row(body_x(), cy, row)
                     cy -= marks_step(chart_rows, idx)
                 elif row.get("role") == render.ROLE_FRET:
@@ -1474,16 +1716,22 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                     lyric_cy -= LINE_H
                 cy = min(cy, lyric_cy)
                 lyric_lines = []
-            cy -= 2 * S
+            cy -= 2 * SS
 
         if part_rows:
             # Each part: its instrument as a small grey heading, then its
             # chart drawn the way the section's own line is.
             row_ys = []
+            lick_starts = []
             for idx, row in enumerate(part_rows):
                 row_ys.append(cy)
                 role = row.get("role")
-                if role == render.ROLE_PART:
+                if role == render.ROLE_SYM:
+                    lick_starts = sym_lick_starts(row)
+                if small_row(part_rows, idx):
+                    cy = draw_small_lick_row(body_x(), cy, row, lick_starts,
+                                             SEC_S, TAB_S)
+                elif role == render.ROLE_PART:
                     color(0.35, 0.35, 0.35)
                     txt(body_x(), cy, row["text"].strip(), sz=MONO_SZ * 0.9, bold=True)
                     cy -= LINE_H
@@ -1497,7 +1745,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                     draw_chart_row(body_x(), cy, row)
                     cy -= LINE_H
             draw_bracket_runs(part_rows, row_ys)
-            cy -= 2 * S
+            cy -= 2 * SS
 
         if sec.get("annotation"):
             color(0.3, 0.3, 0.3)
@@ -1509,8 +1757,10 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             for ln in lyric_lines:
                 txt(body_x(), cy, ln, sz=MONO_SZ)
                 cy -= LINE_H
-            cy -= 2 * S
+            cy -= 2 * SS
 
+        use_scale(TAB_S)
+        mpl = mpl_for(len(measures), tok_w) if measures else 1
         for bs in range(0, len(measures), mpl):
             batch = list(range(bs, min(bs + mpl, len(measures))))
 
@@ -1522,7 +1772,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
 
             color(*_mix(rgb, 0.5))
             for i, m_idx in enumerate(batch):
-                txt(col_x(i), cy, f"M{m_idx + 1}", sz=7 * S)
+                txt(col_x(i), cy, f"M{m_idx + 1}", sz=7 * SS)
             cy -= LINE_H
 
             for st in strings:
@@ -1543,10 +1793,12 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                     cy = next_column()
 
             hline(col_x0(), cy, col_x1(), gray=0.82)
-            cy -= 3 * S
+            cy -= 3 * SS
+        use_scale(SEC_S)
 
-        cy -= 18 * S
+        cy -= gap(18)
         cy_holder[0] = cy
+        use_scale(S)
 
     if gathered_at == "end":
         cy_holder[0] = draw_lyrics_block(cy_holder[0], gathered)

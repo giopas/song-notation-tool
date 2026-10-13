@@ -284,15 +284,18 @@ function refreshLayoutPanel() {
   // screen that silently does nothing.
   const cols = document.getElementById("meta-columns");
   const side = lyr === "side";
-  cols.disabled = side;
+  const floor = (currentDoc.pdf_scale || "fit") === "floor";
+  cols.disabled = side || floor;
   document.getElementById("layout-columns-hint").textContent = side
     ? "Set by the lyrics: their column on the left, one chart column beside it."
+    : floor
+    ? "Set by Floor: one column across the page, or two when a long song gets bigger type that way. Portrait or landscape, whichever is bigger."
     : "Two columns halve the height a chart needs, and the fit uses the space for bigger type. Auto only splits the page when that helps.";
 
   renderLayoutInstruments();
 
   const bits = [optionLabel("meta-scale")];
-  if (!side) bits.push(optionLabel("meta-columns").replace(/\s*\(.*\)$/, ""));
+  if (!side && !floor) bits.push(optionLabel("meta-columns").replace(/\s*\(.*\)$/, ""));
   bits.push(lyr === "none" ? "no lyrics" : `lyrics: ${({
     start: "at the start", end: "at the end", side: "left column",
     beside: "beside", below: "under" })[lyr]}`);
@@ -428,6 +431,7 @@ function buildSectionCard(sec, idx) {
 
   const renderSel = node.querySelector(".sec-render");
   renderSel.value = sec.render || "chart";
+  node.querySelector(".sec-size").value = sec.print_size || "normal";
 
   const lineInput = node.querySelector(".sec-chart-line");
   lineInput.value = sec.chart_line || "";
@@ -489,6 +493,15 @@ function wireSectionEvents(node, sec, idx) {
     s.render = e.target.value;
     updateTabGridVisibility(node, s);
     refreshReferencingPreviews(sec.id);
+    schedulePreviewUpdate();
+  });
+
+  // Printed size of this section against the rest of the song. "Normal"
+  // is stored as no key at all, so a song that never used it is unchanged.
+  node.querySelector(".sec-size").addEventListener("change", (e) => {
+    const s = byId();
+    if (e.target.value === "normal") delete s.print_size;
+    else s.print_size = e.target.value;
     schedulePreviewUpdate();
   });
 

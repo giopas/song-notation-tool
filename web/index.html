@@ -160,7 +160,7 @@
       <div class="layout-group">
         <div class="layout-group-title">Page</div>
         <label>Size <select id="meta-scale"></select></label>
-        <p class="layout-hint">Fit to page enlarges the type to fill the paper. Fit to one page shrinks it as far as needed to get the whole song on one sheet.</p>
+        <p class="layout-hint">Fit to page enlarges the type to fill the paper. Fit to one page shrinks it as far as needed to get the whole song on one sheet. Floor prints the largest type that fits on two sheets, for a page on the floor at your feet: it picks the columns and the orientation itself, and prints tab at half size.</p>
         <label>Columns <select id="meta-columns"></select></label>
         <p class="layout-hint" id="layout-columns-hint">Two columns halve the height a chart needs, and the fit uses the space for bigger type. Auto only splits the page when that helps.</p>
         <label>Colour <select id="meta-color"></select></label>
@@ -657,6 +657,11 @@
           <option value="tab">Tab</option>
           <option value="both">Both</option>
           <option value="free">Free</option>
+        </select>
+        <select class="sec-size" title="Print this section smaller or larger than the rest of the song">
+          <option value="normal">Size</option>
+          <option value="smaller">Smaller</option>
+          <option value="larger">Larger</option>
         </select>
         <button class="btn icon-btn sec-up" title="Move up">↑</button>
         <button class="btn icon-btn sec-down" title="Move down">↓</button>

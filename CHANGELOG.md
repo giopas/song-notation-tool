@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.31.0] — 2026-10-13
+
+A chart you can read off the floor at your feet. The new Floor size prints
+the biggest chords and notes that fit on two sheets, with tab smaller,
+since it is read close up. A section can print smaller or larger than the
+rest, and a riff's tab prints once with Name only.
+
 ### Added
 
 - **Floor**, a new Size in ⚙ Layout, for a sheet laid on the floor and
@@ -28,7 +35,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   scale, with any Size. Stored as `print_size`; Normal is no key at all, so
   existing songs and their PDFs do not change. Tested in
   `tests/test_floor.py`.
-
 - `tools/ground_truth.py`: a read-only report of what git, the tags and
   GitHub say about the project, run at the start and end of a session so
   `WORKPLAN.md` is checked against the facts. A probe that cannot run is

@@ -35,6 +35,7 @@ serves that, not by difficulty.
 
 | **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.31.0** | **Floor sheet** — a Size for a page on the floor: the largest type on two sheets, portrait or landscape, one or two columns, tab at half size; a size per section; a riff's tab printed once with Name only. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.30.0** | **Notation and round trip** — techniques on licks and tab, dynamics, accents and runs (palm mute, cresc., dim.), ending brackets and a boxed coda in the PDF, parts for several instruments in one section, the riff library and suggestions while typing in the browser, and every PDF carries its song so it can be opened again. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.29.0** | **Standalone packages** — macOS (Apple silicon and Intel), Windows (installer and zip) and Linux, built by a release workflow, with an update check and Update and restart. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.28.0** | **One export writer** — every front end checks, builds and writes exports through `export.py`; the command line never replaces an existing file without `--force`; golden-file tests for ten invented songs. See [CHANGELOG.md](CHANGELOG.md). |

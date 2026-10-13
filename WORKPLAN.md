@@ -12,15 +12,15 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.30.0, published on 10 October 2026 with all eight files
+- Released: v0.31.0, tagged on 13 October 2026 (the floor sheet). The
+  release workflow's draft is to be checked and published by giopas.
+- Previous: v0.30.0, published on 10 October 2026 with all eight files
   (macOS Apple silicon and Intel, `.dmg` and `.tar.gz` each; Windows
-  installer and `.zip`; Linux `.tar.gz`; `SHA256SUMS`). The release
-  workflow and the wiki publish both succeeded. It brings seven roadmap
-  items in one release; see `CHANGELOG.md`.
+  installer and `.zip`; Linux `.tar.gz`; `SHA256SUMS`).
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 494 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 513 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -33,11 +33,8 @@ Housekeeping, small:
 2. `feat/v0.30.0` was pushed to GitHub, against the working agreement.
    It is merged, so it can go: `git push origin --delete feat/v0.30.0`.
 
-On `main`, not released yet: the floor sheet (Size: Floor), a size per
-section, tighter rests on a floor sheet, and Recalled licks: Name only
-printing a riff's tab once in the whole song. All under `[Unreleased]` in
-`CHANGELOG.md`, for v0.31.0. Still open: a per-section size control in the
-desktop app, if wanted, and giopas's check of a printed floor sheet.
+Still open from v0.31.0: a per-section size control in the desktop app,
+if wanted, and giopas's check of a printed floor sheet.
 
 The next piece of work after that is giopas's choice; see "Candidates for
 the next version" below.
@@ -74,7 +71,7 @@ Manual checks waiting for giopas (each stays here until reported back):
   a part and a riff in the app; exporting a PDF and opening it again with
   **Import song…**.
 - v0.30.0: **Update and restart** from v0.29.1 on the Mac.
-- Floor sheet (unreleased, on `main`): print a real song with Size: Floor, lay it
+- v0.31.0 floor sheet: print a real song with Size: Floor, lay it
   on the floor and read it from standing; say whether half-size tab is
   readable enough and whether the type is big enough. Try **Larger** and
   **Smaller** on a section, and **Recalled licks: Name only** on a song

@@ -474,7 +474,8 @@ def bracket_runs(rows):
     return runs
 
 
-def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):
+def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT,
+                      tight=False):
     """
     render_chart_row's rows, each as a dict:
 
@@ -502,15 +503,15 @@ def render_chart_rows(items, label: str = "", indent: int = BODY_INDENT):
             step = level * INDENT_STEP
             before = len(out)
             if i == 0:
-                out.extend(_render_one_row(run, label, indent + step, state))
+                out.extend(_render_one_row(run, label, indent + step, state, tight))
             else:
-                out.extend(_render_one_row(run, "", cont_indent + step, state))
+                out.extend(_render_one_row(run, "", cont_indent + step, state, tight))
             run_ranges.append((before, len(out) - 1, run))
         out = _apply_group_brackets(out, run_ranges)
         return out or ([_row(label.rstrip(), ROLE_SYM)] if label else [])
     _, one_run = runs[0]
 
-    rows = _render_one_row(one_run, label, indent, {})
+    rows = _render_one_row(one_run, label, indent, {}, tight)
     return _apply_group_brackets(rows, [(0, len(rows) - 1, one_run)])
 
 
@@ -608,8 +609,10 @@ def _marks_rows(items, starts, widths, state):
     return out
 
 
-def _render_one_row(items, label: str, indent: int, state=None):
-    """One block of a chart row — see render_chart_row."""
+def _render_one_row(items, label: str, indent: int, state=None, tight=False):
+    """One block of a chart row — see render_chart_row. `tight` puts one
+    space after a rest instead of two (the floor sheet, where width is
+    type size)."""
     if not items:
         return []
     state = {} if state is None else state
@@ -637,8 +640,10 @@ def _render_one_row(items, label: str, indent: int, state=None):
     n_lick_rows = max((len(l) for l in licks), default=0)
 
     label_w = max(len(label) + 2, 4) if label else indent
-    cols = [max(len(f), len(s), *(len(x) for x in lk) if lk else (0,)) + 2
-            for f, s, lk in zip(frets, symbols, licks)]
+    cols = [max(len(f), len(s), *(len(x) for x in lk) if lk else (0,))
+            + (1 if tight and it.get("kind") == "mark" and it.get("mark") == "rest"
+               else 2)
+            for it, f, s, lk in zip(items, frets, symbols, licks)]
 
     fret_line = " " * label_w + "".join(f"{f:<{w}}" for f, w in zip(frets, cols))
     sym_line = f"{label:<{label_w}}" + "".join(f"{s:<{w}}" for s, w in zip(symbols, cols))
@@ -729,6 +734,37 @@ def make_text(text: str, repeat: int = 1):
     section's text, which by definition isn't chart items at all.
     """
     return {"kind": "text", "text": text or "", "repeat": repeat}
+
+
+def name_repeated_licks(items, doc: dict, seen: set):
+    """With "Recalled licks: Name only", a named lick prints its tab once
+    in the whole song. Every later copy of it, also one that comes in
+    through a section reference (a chorus that is "same as the first
+    chorus"), prints as its name and count, like a recall.
+
+    `seen` holds the names already printed, in print order, and is
+    updated; the caller keeps one set for the whole song. Returns new
+    items; `items` is not changed. With "Tab again" nothing changes."""
+    if (doc.get("lick_refs") or "tab") != "name":
+        return items
+    import songmap
+    out = []
+    for it in items or []:
+        kind = it.get("kind")
+        if kind == "group":
+            g = dict(it)
+            g["items"] = name_repeated_licks(it.get("items", []), doc, seen)
+            out.append(g)
+            continue
+        if kind == "lick" and it.get("name"):
+            key = songmap._ident(it["name"])
+            if key in seen:
+                out.append({"kind": "lick_ref", "lick": it["name"],
+                            "repeat": it.get("repeat", 1), "resolved": True})
+                continue
+            seen.add(key)
+        out.append(it)
+    return out
 
 
 def _expanded(items, repeat, shift):
@@ -858,7 +894,8 @@ def chart_body_lines(items, label: str = "", indent: int = BODY_INDENT):
     return [r["text"] for r in chart_body_rows(items, label, indent)]
 
 
-def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT):
+def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT,
+                    tight=False):
     """chart_body_lines' output, tagged — see render_chart_rows."""
     lines = []
     run = []
@@ -872,7 +909,7 @@ def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT):
 
     def flush():
         if run:
-            lines.extend(render_chart_rows(run, take_label(), indent))
+            lines.extend(render_chart_rows(run, take_label(), indent, tight))
             run.clear()
 
     for it in (items or []):
@@ -906,7 +943,8 @@ def section_parts(sec: dict) -> list:
     return [p for p in (sec.get("parts") or []) if p.get("items")]
 
 
-def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT):
+def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT,
+              tight=False, seen=None):
     """One part's printed rows: a heading with its instrument, then its
     chart, with references expanded and the section's transpose applied."""
     import transpose
@@ -914,21 +952,23 @@ def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT):
                                         sec.get("transpose", 0))
     items = resolve_references(
         [i for i in part.get("items", []) if i.get("kind") != "measure"], doc or {})
+    if seen is not None:
+        items = name_repeated_licks(items, doc or {}, seen)
     if not items:
         return []
-    rows = chart_body_rows(resolve_display_items(items, eff), "", indent)
+    rows = chart_body_rows(resolve_display_items(items, eff), "", indent, tight)
     head = _row(" " * indent + (part.get("instrument") or "Part") + ":", ROLE_PART)
     return [head] + rows
 
 
 def printed_part_rows(doc: dict, sec: dict, instruments=None,
-                      indent: int = BODY_INDENT):
+                      indent: int = BODY_INDENT, tight=False, seen=None):
     """Every part of `sec` that prints for `instruments` (None: all)."""
     out = []
     for p in section_parts(sec):
         if instruments is not None and p.get("instrument") not in instruments:
             continue
-        out += part_rows(doc, sec, p, indent)
+        out += part_rows(doc, sec, p, indent, tight, seen)
     return out
 
 

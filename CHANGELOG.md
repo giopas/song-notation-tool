@@ -15,7 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   the chart's size (never below 75%), each riff still under its name. The
   gaps between sections and the title band stop growing at a point, so the
   space goes to the chords and notes. Columns is greyed out while Floor is
-  on, and the Export orientation is kept only on a tie.
+  on, and the Export orientation is kept only on a tie. On a floor sheet
+  a rest is followed by one space instead of two, and the space under a
+  section's band is measured from the top of the letters so big notes do
+  not touch it.
+- **Recalled licks: Name only** now prints a riff's tab once in the whole
+  song. A riff that comes back inside a referenced section (a chorus
+  written as `=Chorus_1`) prints as its name too, where it used to repeat
+  the tab.
 - A size per section in the browser app: **Smaller** or **Larger** next to
   the render mode prints that section at 0.75 or 1.35 times the song's
   scale, with any Size. Stored as `print_size`; Normal is no key at all, so

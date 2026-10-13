@@ -357,7 +357,10 @@ recall it.
 
 If you want the notes printed only once, where the lick was written, with
 every recall showing just `Riff1 (x3)`, set **⚙ Layout** → Recalled licks
-→ Name only (`lick_refs: "name"`; the default is `"tab"`). A reference
+→ Name only (`lick_refs: "name"`; the default is `"tab"`). With Name
+only the tab prints once in the whole song: a lick that comes back inside
+a referenced section (a chorus written as `=Chorus_1`) also prints as its
+name after the first time (`render.name_repeated_licks`). A reference
 that finds no lick keeps its braces on paper, so a misspelt name shows. In
 both cases the lick's name prints in the lick blue.
 

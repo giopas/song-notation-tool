@@ -31,7 +31,8 @@ def _short_song():
     """Four short sections: the kind of song that fits one page easily."""
     doc = model.new_document(title="Paper Lanterns", artist="The Placeholders",
                              key="E", time="4/4")
-    for i, line in enumerate(["3E 5E 3E", "3E 12E 3E 5E", "3E 12E", "3E 5E"]):
+    for i, line in enumerate(["3E 5E 3E 5E 3E 5E 7E 5E", "3E 12E 3E 5E 3E 12E 3E 5E",
+                              "3E 12E 3E 12E 3E 12E", "3E 5E 3E 5E 3E 5E"]):
         doc["sections"].append(_section(f"s{i}", f"Part_{i}", line))
     return doc
 
@@ -188,3 +189,53 @@ def test_floor_stays_inside_the_page_width():
     orient, cols, scale, _ = _resolved(doc)
     longest = max(export._line_units(doc, None, scale))
     assert longest * export.MONO_CHAR_W * scale <= export.column_width(orient, cols) + 0.5
+
+
+def test_floor_sets_rests_closer_together():
+    items = grammar.parse_items("rest rest rest 5A")
+    import render
+    wide = render.chart_body_rows(items, "", 0)[-1]["text"]
+    tight = render.chart_body_rows(items, "", 0, tight=True)[-1]["text"]
+    assert wide.index("A") - tight.index("A") == 3        # one space less per rest
+
+
+def test_rests_closer_together_give_a_rest_heavy_song_bigger_type():
+    doc = _short_song()
+    doc["sections"][0]["items"] = grammar.parse_items(
+        "rest rest rest rest rest rest rest rest 8F 8F 5D")
+    doc["pdf_scale"] = "floor"
+    ins = export.instruments_to_print(doc)
+    longest_floor = max(export._line_units(doc, ins, 2.0))
+    doc["pdf_scale"] = "fit"
+    assert longest_floor < max(export._line_units(doc, ins, 2.0))
+
+
+def _song_with_a_repeated_chorus(mode):
+    doc = model.new_document(title="Tin Weather", artist="The Placeholders")
+    first = _section("c1", "Chorus_1", f"[C] [F] // {RIFF} // [F] {{Hook}}", "Chorus")
+    again = _section("c2", "Chorus_2", "", "Chorus")
+    again["items"] = [model.make_section_ref("c1")]
+    doc["sections"] = [first, _section("v", "Verse", "5A 5D"), again]
+    doc["lick_refs"] = mode
+    return doc
+
+
+def test_name_only_prints_a_riffs_tab_once_in_the_whole_song():
+    """With Name only, a chorus that repeats an earlier chorus by
+    reference shows the riff's name, not its tab again."""
+    txt = "\n".join(export.build_song_lines(_song_with_a_repeated_chorus("name")))
+    assert txt.count("|A|") == 1
+    assert txt.count("Hook") == 4       # the tab's label, then three names
+
+
+def test_tab_again_still_prints_every_copy():
+    txt = "\n".join(export.build_song_lines(_song_with_a_repeated_chorus("tab")))
+    assert txt.count("|A|") == 4
+
+
+def test_name_only_in_the_pdf_too():
+    """The PDF draws each tab string's letter once per printed riff."""
+    name = export.build_pdf(_song_with_a_repeated_chorus("name"))
+    tab = export.build_pdf(_song_with_a_repeated_chorus("tab"))
+    assert len(_font_sizes(name, "E")) == 1
+    assert len(_font_sizes(tab, "E")) == 4

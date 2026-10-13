@@ -383,6 +383,10 @@ any Size setting. A long solo can go small, the part you always lose your
 place in can go large. This is in the browser app; the desktop app keeps
 the setting but has no control for it yet.
 
+For a floor sheet, set **Recalled licks** to **Name only** as well: a riff's
+tab then prints once, and every later time just as `Riff1`, in chart-size
+type you can read from standing.
+
 **Columns** splits the page. Most chart lines are short (four chord
 symbols, a bar of tab), so a single column leaves half the page white, and
 Fit to page can only grow the type until that column is full. Two columns

@@ -134,7 +134,15 @@ two away. The type matters more than the page count, within limits:
   size (`FLOOR_TAB_RATIO`), but not below 75% (`FLOOR_TAB_MIN`). Each riff
   still starts under its name, and its strings stay lined up;
 - the gaps between sections and the title band stop growing at 1.5 and
-  2.5 times their desk size, so the space goes to the chart.
+  2.5 times their desk size, so the space goes to the chart. The space
+  under a section's band is measured from the top of the letters, so big
+  notes do not touch it;
+- a rest is followed by one space instead of two, which narrows lines
+  like `rest rest rest rest 8F 8F 5D` and lets the type grow;
+- with **Recalled licks: Name only** a riff's tab prints once, and every
+  later copy, also inside a referenced section, prints as its name. On a
+  floor sheet that name is at the chart's size, so it reads from a
+  distance where the tab would not.
 
 A section is still never split across a page break, so a page can end
 with some white space when the next section does not fit under it.

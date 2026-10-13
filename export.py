@@ -302,6 +302,7 @@ def _line_units(doc: dict, instruments, scale: float = 1.0) -> list:
                         default=0) + 2
     one = uniform_instrument(doc, instruments)
     out = []
+    seen = set()
     for sec in doc.get("sections", []):
         if not _section_prints(sec, instruments):
             continue
@@ -309,7 +310,6 @@ def _line_units(doc: dict, instruments, scale: float = 1.0) -> list:
         sec_s = max(1e-6, scale * f)
         ratio = tab_scale(sec_s, floor) / sec_s
         units = []
-        units += _row_units(render.printed_part_rows(doc, sec, instruments, 0), ratio)
         chart_n = 0
         if sec.get("render") == "free":
             units += [len(ln) for ln in (sec.get("free_text") or "").splitlines()]
@@ -317,11 +317,16 @@ def _line_units(doc: dict, instruments, scale: float = 1.0) -> list:
             eff = transpose.effective_transpose(
                 doc.get("transpose", 0), sec.get("transpose", 0))
             chart = render.resolve_references(songmap.chart_items(sec), doc)
+            if (sec.get("instrument") in (instruments or [sec.get("instrument")])
+                    and sec.get("render", "chart") in ("chart", "both")):
+                chart = render.name_repeated_licks(chart, doc, seen)
             if chart:
                 rows = render.chart_body_rows(
-                    render.resolve_display_items(chart, eff), "", 0)
+                    render.resolve_display_items(chart, eff), "", 0, tight=floor)
                 chart_n = len(rows)
                 units += _row_units(rows, ratio)
+        units += _row_units(render.printed_part_rows(
+            doc, sec, instruments, 0, tight=floor, seen=seen), ratio)
         if sec.get("annotation"):
             units.append(len(f'"{sec["annotation"]}"'))
         lyric_lines = render.section_lyric_lines(doc, sec)
@@ -845,6 +850,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         gutter_w = max((len(_gutter_label(s)) for s in doc.get("sections", [])),
                         default=0) + 2
 
+    seen = set()   # named licks whose tab has printed (Name only)
     for sec in doc.get("sections", []):
         if not _section_prints(sec, instruments):
             continue
@@ -883,6 +889,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         beside = render.lyrics_beside(doc)
 
         if main_prints and sec.get("render", "chart") in ("chart", "both") and chart:
+            chart = render.name_repeated_licks(chart, doc, seen)
             resolved = render.resolve_display_items(chart, eff)
             chart_lines = render.chart_body_lines(resolved, label, body_indent)
             if beside and lyric_lines:
@@ -898,7 +905,8 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
             label = ""
 
         part_lines = [r["text"] for r in
-                      render.printed_part_rows(doc, sec, instruments, body_indent)]
+                      render.printed_part_rows(doc, sec, instruments, body_indent,
+                                               seen=seen)]
         if part_lines:
             if label:
                 part_lines[0] = f"{label:<{body_indent}}" + part_lines[0][body_indent:]
@@ -1578,6 +1586,8 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         after it does not sit on the tab."""
         return TAB_S != SEC_S and rows[idx].get("role") == render.ROLE_LICK
 
+    licks_seen = set()   # named licks whose tab has printed (Name only)
+
     def sym_lick_starts(row):
         """Columns the riffs on a symbol row start at."""
         return [a for a, _b, rl in (row.get("spans") or [])
@@ -1620,10 +1630,15 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         mode = sec.get("render", "chart")
         free_mode = mode == "free"
         chart = render.resolve_references(songmap.chart_items(sec), doc)
+        prints_chart = main_prints and chart and mode in ("chart", "both")
+        if prints_chart:
+            chart = render.name_repeated_licks(chart, doc, licks_seen)
         chart_rows = (render.chart_body_rows(
-                          render.resolve_display_items(chart, eff), "", 0)
-                      if main_prints and chart and mode in ("chart", "both") else [])
-        part_rows = render.printed_part_rows(doc, sec, instruments, 0)
+                          render.resolve_display_items(chart, eff), "", 0,
+                          tight=FLOOR)
+                      if prints_chart else [])
+        part_rows = render.printed_part_rows(doc, sec, instruments, 0,
+                                             tight=FLOOR, seen=licks_seen)
         measures = (songmap.measure_items(sec)
                     if main_prints and mode in ("tab", "both") else [])
         strings = (render.active_strings(
@@ -1665,7 +1680,11 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             color(*label_rgb)
             txt(col_x0() + 4 * SS, cy - LINE_H + 3 * SS, sec_label,
                 sz=HEAD_SZ, bold=True)
-            cy -= LINE_H + gap(14)
+            # Under the band. On a floor sheet the gap stops growing and
+            # the type does not, so the gap is measured from the top of
+            # the letters instead: big notes otherwise sat right on the
+            # band's lower edge.
+            cy -= LINE_H + (MONO_SZ * 0.75 + gap(12) if FLOOR else gap(14))
 
         if free_mode and (sec.get("free_text") or "").strip():
             # The notes are always black. Colour is a label — it tells you

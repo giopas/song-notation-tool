@@ -122,6 +122,7 @@ and readable on stage without the handwritten sheet.
 | Sep 2026 | Lyrics come from a local file or a paste. No automatic fetching from the web (copyright). |
 | 8 Oct 2026 | Work follows the working agreements in `DEVELOPMENT.md` (branches, Conventional Commits, tests with every change, plain writing). |
 | 8 Oct 2026 | Release notes are the version's `CHANGELOG.md` section. No separate release-notes files. |
+| 13 Oct 2026 | Every GitHub release is titled `vX.Y.Z (a few words on the main change)`, for example `v0.31.2 (Floor sheet on one page)`. Claude proposes the title with each release; giopas sets it on the draft before publishing. (giopas, 13 October.) |
 | 8 Oct 2026 | The PDF footer keeps the print date. `build_pdf` takes an optional date so tests compare bytes. |
 | 8 Oct 2026 | The `.sng` song file is saved in place, atomically, and renamed on Save without overwriting another song. Exports and imports never overwrite an existing file. |
 | 8 Oct 2026 | The interface is English only for now. No translation checks in releases. |

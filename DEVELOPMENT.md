@@ -174,9 +174,11 @@ re-run the workflow from the Actions tab.
    Linux, smoke-tests each one, tests the Windows installer, and leaves a
    draft release with the files, `SHA256SUMS`, and that version's
    `CHANGELOG.md` section as its text.
-6. Check the draft (title, text, only this version's files plus
-   `SHA256SUMS`), mark it *Latest* and publish it. Only a published
-   release is offered by **Update and restart**.
+6. Check the draft (text, only this version's files plus `SHA256SUMS`)
+   and set its title to `vX.Y.Z (a few words on the main change)`, for
+   example `v0.31.2 (Floor sheet on one page)`; Claude proposes the words
+   with each release. Then mark it *Latest* and publish it. Only a
+   published release is offered by **Update and restart**.
 7. Try **Update and restart** from the previous installed version.
 8. Small fixes are patch versions (0.26.3, 0.26.4).
 

@@ -38,7 +38,9 @@ from constants import (APP_VERSION, APP_URL, INSTRUMENT_STRINGS, LICK_RGB, REST_
                         PDF_COLUMN_RULE_GRAY, FRET_RGB, FRET_BW_RGB,
                         FRET_SIZE_RATIO, FRET_LINE_RATIO,
                         FLOOR_MAX_PAGES, FLOOR_MAX_SCALE, FLOOR_TAB_RATIO,
-                        FLOOR_TAB_MIN, FLOOR_GAP_MAX,
+                        FLOOR_TAB_MIN, FLOOR_GAP_MAX, FLOOR_BAND_H,
+                        FLOOR_TITLE_SZ, FLOOR_HEAD_SZ, FLOOR_HEAD_GAP,
+                        FLOOR_SECTION_GAP,
                         SECTION_SIZE_FACTORS,
                         section_color, heading_fill, title_fill)
 
@@ -152,7 +154,7 @@ def column_width(orient: str, columns: int = 1) -> float:
 
 def is_floor(doc: dict) -> bool:
     """True when the song's Size is "floor": big type for a sheet read off
-    the floor, one column, at most FLOOR_MAX_PAGES pages."""
+    the floor, on at most FLOOR_MAX_PAGES pages (one)."""
     return str(doc.get("pdf_scale", "")).strip().lower() == "floor"
 
 
@@ -521,8 +523,8 @@ def _floor_columns(doc: dict, instruments, orient: str) -> int:
 
     A section across the full width is the first choice. A long song with
     short lines (a dozen sections of four chords) runs out of height
-    first, and two columns on the same two pages hold twice as many
-    lines, so it gets two when they buy clearly bigger type."""
+    first, and two columns on the same page hold twice as many lines,
+    so it gets two when they buy clearly bigger type."""
     if MAX_PDF_COLUMNS < 2 or not doc.get("sections"):
         return 1
     if instruments is None:
@@ -1485,22 +1487,29 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         meas_w = tok_w * max_beats * CHAR_W + CHAR_W
         return max(1, min(n_measures, int(usable / meas_w)))
 
-    # The banner grows with the chart, up to a point: on a floor sheet the
-    # chart may be four times its desk size, and a title band to match
-    # would spend a quarter of the page saying what you already know.
-    HS = min(S, 2.5) if FLOOR else S
-    band_h = 46 * HS
+    # A floor sheet has one page and spends it on the chart: the banner is
+    # one slim line, title, artist and key, at a fixed small size. Tempo,
+    # time signature and instrument are for the desk, not for reading off
+    # the floor mid-song.
+    HS = S
+    band_h = FLOOR_BAND_H if FLOOR else 46 * S
     band_rgb, band_text = title_fill(colors)
     rfill(0, H - band_h, W, band_h, *band_rgb)
     color(*band_text)
     hdr_txt = title.upper() + (f"  -  {artist}" if artist else "")
+    if FLOOR and meta.get("key"):
+        hdr_txt += f"   (Key: {meta['key']})"
     # The title is set in a proportional face, so it isn't covered by the
     # monospace width bound that sizes the body. A long title at a high
     # scale would simply run off the right edge — so it gets its own cap
     # and shrinks on its own rather than dragging the whole chart down
     # with it.
-    txt(MARGIN, H - 28 * HS, hdr_txt,
-        sz=_fit_text_size(hdr_txt, W - 2 * MARGIN, TITLE_SZ * HS / S), bold=True)
+    if FLOOR:
+        txt(MARGIN, H - band_h + (band_h - FLOOR_TITLE_SZ) / 2 + 2, hdr_txt,
+            sz=_fit_text_size(hdr_txt, W - 2 * MARGIN, FLOOR_TITLE_SZ), bold=True)
+    else:
+        txt(MARGIN, H - 28 * HS, hdr_txt,
+            sz=_fit_text_size(hdr_txt, W - 2 * MARGIN, TITLE_SZ), bold=True)
     meta_parts = []
     if meta.get("key"):
         meta_parts.append(f"Key: {meta['key']}")
@@ -1511,12 +1520,12 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     one_instrument = uniform_instrument(doc, instruments)
     if one_instrument:
         meta_parts.append(one_instrument)
-    if meta_parts:
+    if meta_parts and not FLOOR:
         meta_line = "   |   ".join(meta_parts)
         txt(MARGIN, H - 41 * HS, meta_line,
             sz=_fit_text_size(meta_line, W - 2 * MARGIN, 7.5 * HS))
     # The banner spans the sheet, so both columns start below it.
-    top_holder[0] = H - 54 * HS
+    top_holder[0] = H - band_h - 8 if FLOOR else H - 54 * HS
     cy_holder[0] = top_holder[0]
 
     if side:
@@ -1579,6 +1588,11 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         space is there to separate, and past a point it only costs the
         chart a page."""
         return v * (min(SS, FLOOR_GAP_MAX) if FLOOR else SS)
+
+    def floor_head_h():
+        """How far a floor sheet's section heading moves the pen down: the
+        slim band, then a gap above the first line's letters."""
+        return min(HEAD_SZ, FLOOR_HEAD_SZ) + 6 + MONO_SZ * 0.75 + FLOOR_HEAD_GAP
 
     def small_row(rows, idx):
         """True for a row drawn at the tab's size: a riff's tab row. The
@@ -1654,14 +1668,21 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
         # does, or a section that is only "=Chorus_1" measures one line
         # and splits across the break anyway. The pad covers the vertical
         # space the heading band and the inter-section gap add.
-        needed_h = (render.estimate_section_lines(sec, strings or all_strings, doc)
-                    * LINE_H + gap(34))
+        est_lines = render.estimate_section_lines(sec, strings or all_strings, doc)
+        if FLOOR:
+            # One line of the estimate is the heading, which is a slim band
+            # here; the rest are chart lines at the section's size, the last
+            # one needing only room for its descenders.
+            needed_h = (max(0, est_lines - 1) * LINE_H + floor_head_h()
+                        + MONO_SZ * 0.3)
+        else:
+            needed_h = est_lines * LINE_H + gap(34)
         # Riff tab drawn smaller takes less room than the estimate, which
         # counts every row at the section's size.
         n_small = sum(small_row(rows, i) for rows in (chart_rows, part_rows)
                       for i in range(len(rows)))
         needed_h -= n_small * 12 * (SEC_S - TAB_S)
-        if cy - needed_h < FOOTER_H + LINE_H * 2:
+        if cy - needed_h < FOOTER_H + (4 if FLOOR else LINE_H * 2):
             cy = next_column()
 
         rep = sec.get("repeat", 1)
@@ -1676,15 +1697,23 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             instr = "" if one_instrument else f"   {sec.get('instrument', '')}"
             sec_label = f"{sec['name']}{rep_str}{instr}"
             fill_rgb, label_rgb = heading_fill(sec.get("type", ""), colors)
-            rfill(col_x0(), cy - LINE_H, COL_W_TEXT, LINE_H + 2 * SS, *fill_rgb)
-            color(*label_rgb)
-            txt(col_x0() + 4 * SS, cy - LINE_H + 3 * SS, sec_label,
-                sz=HEAD_SZ, bold=True)
-            # Under the band. On a floor sheet the gap stops growing and
-            # the type does not, so the gap is measured from the top of
-            # the letters instead: big notes otherwise sat right on the
-            # band's lower edge.
-            cy -= LINE_H + (MONO_SZ * 0.75 + gap(12) if FLOOR else gap(14))
+            if FLOOR:
+                # A slim band at a fixed size: the name is there to find
+                # your place, the chords are what you read. The space under
+                # it is measured from the top of the letters below, so big
+                # notes never sit on the band.
+                hsz = min(HEAD_SZ, FLOOR_HEAD_SZ)
+                bh = hsz + 6
+                rfill(col_x0(), cy - bh, COL_W_TEXT, bh, *fill_rgb)
+                color(*label_rgb)
+                txt(col_x0() + 4, cy - bh + 4, sec_label, sz=hsz, bold=True)
+                cy -= floor_head_h()
+            else:
+                rfill(col_x0(), cy - LINE_H, COL_W_TEXT, LINE_H + 2 * SS, *fill_rgb)
+                color(*label_rgb)
+                txt(col_x0() + 4 * SS, cy - LINE_H + 3 * SS, sec_label,
+                    sz=HEAD_SZ, bold=True)
+                cy -= LINE_H + gap(14)
 
         if free_mode and (sec.get("free_text") or "").strip():
             # The notes are always black. Colour is a label — it tells you
@@ -1815,7 +1844,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
             cy -= 3 * SS
         use_scale(SEC_S)
 
-        cy -= gap(18)
+        cy -= FLOOR_SECTION_GAP if FLOOR else gap(18)
         cy_holder[0] = cy
         use_scale(S)
 

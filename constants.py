@@ -122,21 +122,29 @@ PDF_SCALE_LABELS = {
     "1.25": "125%",
     "1.5": "150%",
     "2.0": "200%",
-    "floor": "Floor (largest, up to 2 pages)",
+    "floor": "Floor (largest type on one page)",
 }
 
 # "Floor" is for a sheet read off the floor at your feet, a metre or two
-# away: one column across the full width, the largest type that fits on
-# at most FLOOR_MAX_PAGES sheets, portrait or landscape (whichever gives
-# the bigger type). Tab is read close up, if at all, so tab grids and riff
-# tabs print at FLOOR_TAB_RATIO of the chart's size, but never smaller
-# than FLOOR_TAB_MIN (75%).
-FLOOR_MAX_PAGES = 2
+# away: the largest type that fits on one page, portrait or landscape, in
+# one or two columns, whichever gives the bigger type. Everything that is
+# not the chart is made small to leave it room: the title is one slim band
+# (title, artist and key, no tempo, time or instrument) and the section
+# names sit in slim bands of a fixed size. Tab is read close up, if at all,
+# so tab grids and riff tabs print at FLOOR_TAB_RATIO of the chart's size,
+# but never smaller than FLOOR_TAB_MIN (75%).
+FLOOR_MAX_PAGES = 1
 FLOOR_MAX_SCALE = 6.0
 FLOOR_TAB_RATIO = 0.5
 FLOOR_TAB_MIN = 0.75
-# Spaces between sections grow with the type up to this scale, no further.
+# Spaces between things grow with the type up to this scale, no further.
 FLOOR_GAP_MAX = 1.5
+# Points, fixed whatever the chart's size.
+FLOOR_BAND_H = 24          # the title band
+FLOOR_TITLE_SZ = 12        # the title in it
+FLOOR_HEAD_SZ = 11         # section names (smaller still if the chart is)
+FLOOR_HEAD_GAP = 8         # under a section name, above the first letters
+FLOOR_SECTION_GAP = 14     # between sections
 
 # A section can print smaller or larger than the rest of the song, on top
 # of the song's Size: a long solo in small type, the chorus you always

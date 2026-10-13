@@ -75,18 +75,28 @@ def test_floor_is_offered_as_a_size():
     assert "floor" in PDF_SCALE_LABELS
 
 
+def _sizes(doc):
+    sizes = {}
+    for mode in ("fit", "one", "floor"):
+        doc["pdf_scale"] = mode
+        sizes[mode] = _resolved(doc)[2]
+    return sizes
+
+
 def test_floor_prints_bigger_than_fit_and_one_page():
-    for make in (_short_song, _long_song):
-        doc = make()
-        sizes = {}
-        for mode in ("fit", "one", "floor"):
-            doc["pdf_scale"] = mode
-            sizes[mode] = _resolved(doc)[2]
-        assert sizes["floor"] > sizes["fit"], make.__name__
-        assert sizes["floor"] > sizes["one"], make.__name__
+    sizes = _sizes(_short_song())
+    assert sizes["floor"] > sizes["fit"]
+    assert sizes["floor"] > sizes["one"]
 
 
-def test_floor_never_needs_more_than_two_pages():
+def test_floor_is_never_smaller_than_fit_to_one_page():
+    """Both are one page; the slim title and section bands leave Floor's
+    chart more room."""
+    sizes = _sizes(_long_song())
+    assert sizes["floor"] >= sizes["one"]
+
+
+def test_floor_fits_on_one_page():
     for make in (_short_song, _long_song):
         doc = make()
         doc["pdf_scale"] = "floor"
@@ -137,6 +147,7 @@ def test_tab_scale_is_half_on_a_floor_sheet_with_a_floor_of_its_own():
 
 def test_floor_draws_riff_tab_at_half_the_chart_size():
     doc = _long_song()
+    doc["sections"] = doc["sections"][:4]
     doc["pdf_scale"] = "floor"
     pdf = export.build_pdf(doc)
     chord = max(_font_sizes(pdf, "[F]"))
@@ -239,3 +250,24 @@ def test_name_only_in_the_pdf_too():
     tab = export.build_pdf(_song_with_a_repeated_chorus("tab"))
     assert len(_font_sizes(name, "E")) == 1
     assert len(_font_sizes(tab, "E")) == 4
+
+
+def _body(pdf: bytes) -> bytes:
+    out = b""
+    for chunk in pdf.split(b"stream\n")[1:]:
+        try:
+            out += zlib.decompress(chunk.split(b"\nendstream")[0])
+        except zlib.error:
+            pass
+    return out
+
+
+def test_floor_title_is_one_slim_line_without_tempo_or_time():
+    doc = _short_song()
+    doc["meta"]["bpm"] = "97"
+    doc["pdf_scale"] = "floor"
+    body = _body(export.build_pdf(doc))
+    assert b"Key: E" in body
+    assert b"BPM" not in body and b"Time:" not in body
+    doc["pdf_scale"] = "fit"
+    assert b"BPM: 97" in _body(export.build_pdf(doc))

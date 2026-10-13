@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Floor** prints on one page instead of up to two. To give the chart
+  the room, the title band is one slim line (title, artist and key; no
+  tempo, time signature or instrument) and section names sit in slim
+  bands at a fixed small size, with fixed gaps around them.
+
 ## [0.31.1] — 2026-10-13
 
 v0.31.0 did not build on Windows: one test of the development tool

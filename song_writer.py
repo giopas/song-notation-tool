@@ -673,7 +673,7 @@ class SongNotationApp(tk.Tk):
             ("pdf_scale", "Size", PDF_SCALE_LABELS, "fit",
              "Fit to page enlarges the type to fill the paper. Fit to one page "
              "shrinks it as far as needed to get the song on one sheet. Floor "
-             "prints the largest type that fits on two sheets, for a page on "
+             "prints the largest type that fits on one sheet, for a page on "
              "the floor: it picks columns and orientation, tab at half size."),
             ("pdf_columns", "Columns", PDF_COLUMN_LABELS, "auto",
              "Two columns halve the height a chart needs. Auto only splits the "

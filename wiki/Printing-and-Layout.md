@@ -88,7 +88,7 @@ white text on black, which tends to fill in.
 | Fit to page | `"fit"` (default) | Scale up until the chart fills the sheet without needing another page |
 | Fit to one page | `"one"` | Scale down as far as needed to get the whole song onto one sheet |
 | 100% / 125% / 150% / 200% | `"1.0"` … `"2.0"` | A fixed scale |
-| Floor | `"floor"` | The largest type that fits on two sheets, for a page on the floor |
+| Floor | `"floor"` | The largest type that fits on one sheet, for a page on the floor |
 
 Fit to one page turns the rule around. With plain Fit to page, the page
 count is whatever it was at 100% and the type grows into the space left
@@ -118,25 +118,27 @@ scale down.
 ## Floor: a sheet at your feet
 
 Floor is for a chart laid on the floor and read from standing, a metre or
-two away. The type matters more than the page count, within limits:
+two away. Everything on the one page is there for the chords and notes:
 
-- the chart gets the largest scale that fits on at most two pages
+- the chart gets the largest scale that fits on one page
   (`constants.FLOOR_MAX_PAGES`), up to six times the 100% size
-  (`FLOOR_MAX_SCALE`);
+  (`FLOOR_MAX_SCALE`). A song too long for that prints at the smallest
+  size Fit to one page allows, on two pages;
+- the title band is one slim line at a fixed 12pt: title, artist and key.
+  Tempo, time signature and instrument are left out;
+- section names sit in slim bands at a fixed 11pt (smaller if the chart
+  itself is), with a fixed gap under them measured from the top of the
+  letters below, and 14pt between sections;
 - portrait and landscape are both tried and the bigger type wins, so the
   orientation picked in **Export** is only kept on a tie
   (`export.resolve_orient`);
 - the columns are chosen the same way. A section gets the full width of
   the page, unless the song is long enough that two columns on the same
-  two pages give clearly bigger type (`export._floor_columns`). The
+  page give clearly bigger type (`export._floor_columns`). The
   Columns setting is greyed out;
 - riff tab inside a chart line and tab grids print at half the chart's
   size (`FLOOR_TAB_RATIO`), but not below 75% (`FLOOR_TAB_MIN`). Each riff
   still starts under its name, and its strings stay lined up;
-- the gaps between sections and the title band stop growing at 1.5 and
-  2.5 times their desk size, so the space goes to the chart. The space
-  under a section's band is measured from the top of the letters, so big
-  notes do not touch it;
 - a rest is followed by one space instead of two, which narrows lines
   like `rest rest rest rest 8F 8F 5D` and lets the type grow;
 - with **Recalled licks: Name only** a riff's tab prints once, and every

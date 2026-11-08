@@ -12,17 +12,18 @@ and git hold the history.
 
 ## Where we are
 
-- Ready to release: v0.33.0 on `feat/v0.33.0` (8 November 2026): a part
-  picks Chart, Tab, Both or Free; the repeat box is gone from section
-  cards (an older section that repeats shows a ×2 chip that removes it);
-  the release build is fixed; a pushed tag now publishes its release by
-  itself, titled and written from CHANGELOG.md. Not yet merged, tagged or
-  pushed. Release title (from the changelog heading):
-  `v0.33.0 (Parts in tab or free text)`.
+- Released: v0.33.0, published by the workflow on 8 November 2026
+  (all eight files). **Update and restart** from v0.31.2 then stopped at
+  an HTTP 504 from GitHub's file server; the files were fine, and a retry
+  a minute later is expected to work.
+- Ready to release: v0.33.1 on `fix/v0.33.1`: the updater retries when
+  GitHub is busy or slow (three tries, up to a minute per file), and the
+  update card draws the release notes as text. Not yet merged, tagged or
+  pushed.
 - v0.32.0 was tagged and built on 8 November, but GitHub had retired the
   `macos-14` runner, so its draft has no `macos-arm64` file. Delete that
   draft instead of publishing it; v0.33.0 carries everything in it.
-- Last published release: v0.31.2 (13 October 2026).
+- Published before: v0.31.2 (13 October 2026).
 - `release.yml` now builds Apple silicon on `macos-15` and publishes the
   release (no draft) only when every build has succeeded.
 - Previous: v0.30.0, published on 10 October 2026 with all eight files
@@ -31,7 +32,7 @@ and git hold the history.
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 531 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 539 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 

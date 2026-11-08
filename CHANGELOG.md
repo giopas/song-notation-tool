@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.33.1] — 2026-11-08 — Updates that wait for GitHub
+
+Right after v0.33.0 was published, **Update and restart** from v0.31.2
+stopped at "HTTP Error 504: Gateway Time-out". The release was complete;
+GitHub's file server was slow to answer in the first minutes, and the app
+gave up after one try and five seconds. The app is otherwise the same as
+v0.33.0.
+
+### Fixed
+
+- **Update and restart** tries a release file up to three times, with a
+  short wait between tries, when GitHub answers that it is busy (a 5xx
+  or 429 answer) or the network is slow. It waits up to a minute for a
+  file to start, instead of five seconds for the checksum list. If GitHub
+  still does not answer, the message says so, says nothing was changed
+  and suggests trying again in a few minutes.
+- The release notes in the update card were shown as raw changelog text,
+  broken in mid-sentence, with "###" and "**" in them. They are now drawn
+  as paragraphs, headings and bullets.
+
+Copies older than this one still have the old update code: if one stops
+at a 504, press **Update and restart** again a minute later.
+
 ## [0.33.0] — 2026-11-08 — Parts in tab or free text
 
 Parts can now be tab or free text, the repeat box is gone from section

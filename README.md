@@ -82,10 +82,18 @@ Riffs and repeated sections
 - **→ riff** beside a chart line in the browser, or **Promote to riff**
   (Ctrl/Cmd+R) in the desktop app, turns the selected part of a line into
   a named riff in place.
-- **Duplicate as reference** (Ctrl/Cmd+D in the desktop app) adds
-  `=sectionname` instead of a copy, so a repeated section never duplicates
-  its content.
-- Drag a section, or press Alt+↑/↓, to reorder.
+- A copied section is a reference: it holds `=sectionname`, so a repeated
+  section plays whatever the original holds and you edit it in one place.
+  In the browser, **⧉** on a section card asks where the copy goes (the
+  top of the song, or after any section). In the desktop app,
+  **Duplicate as reference** (Ctrl/Cmd+D) puts it right after the
+  original.
+- To reorder, drag a section by its **⠿** handle in the browser, or by its
+  left edge in the desktop app. While you drag in the browser, every card
+  folds down to its name, so the whole song fits on screen and a section
+  can go from the end to the top in one move. Escape puts everything
+  back. From the keyboard: click the handle and use the up and down arrow
+  keys in the browser, or Alt+↑/↓ in the desktop app.
 - A reference prints the notes it plays. On screen it shows the target's
   current name, and the file stores an id, so renaming the target does not
   break it.
@@ -322,8 +330,9 @@ There is TXT and PDF export, **Transpose** (whole song or one section), the
 **Lyrics** panel (with section markers you can drag into the sheet), the
 **Chords** dialog, and a quick-insert palette beside each chart line. The
 palette inserts rests, repeat barlines, endings, groups, annotations, licks
-and every lick you have already named, at the cursor. Free-text sections
-work too, and **⚙ Layout** at the bottom left of the sidebar holds
+and every lick you have already named, at the cursor. Sections move by
+dragging their **⠿** handle, and **⧉** copies one to the place you pick.
+Free-text sections work too, and **⚙ Layout** at the bottom left of the sidebar holds
 everything about how the song prints.
 
 Tab-grid sections can be edited in the browser as well: switch a section

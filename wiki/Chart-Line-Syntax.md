@@ -168,8 +168,9 @@ content, the way you would write "same as Verse 1":
 ```
 
 `all` (only after a section reference) repeats everything in that section,
-not only its chart line. **Duplicate as reference** (Ctrl/Cmd+D) in the
-desktop app inserts one for you.
+not only its chart line. **⧉** on a section card in the browser inserts
+one for you and asks where it goes; **Duplicate as reference**
+(Ctrl/Cmd+D) in the desktop app puts it right after the original.
 
 ### Names on screen, ids in the file
 

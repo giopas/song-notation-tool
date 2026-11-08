@@ -181,7 +181,13 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   box, kept and exported exactly as typed);
 - an editable tab grid: add measures, type fret numbers into the cells,
   delete measures;
-- adding, reordering, duplicating as reference and deleting sections;
+- adding, moving, copying and deleting sections. Drag a section by its
+  **⠿** handle to move it: the cards fold down to their names while you
+  drag, so the whole song is on screen, and Escape cancels. With the
+  handle clicked, the up and down arrow keys move it one place. **⧉**
+  opens a short list of every place a copy can go (the top, or after any
+  section); the copy is a reference to the original, as in the desktop
+  app;
 - a "how this works" help strip you can fold away, and the **Notation ⌘**
   panel, which explains every mark;
 - a "Start here" panel (New song, Open example) when nothing is open;

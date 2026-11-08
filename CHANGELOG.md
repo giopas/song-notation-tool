@@ -6,6 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.33.0] — 2026-11-08 — Parts in tab or free text
+
+Parts can now be tab or free text, the repeat box is gone from section
+cards, and the Mac builds again. A bass line under a guitar section is
+often easier to write as tab than as a chart line, so a part now has the
+same four modes as a section. The number box after the instrument was a
+whole-section repeat that most songs never used; repeats belong in the
+chart line. And v0.32.0 had no download for Apple-silicon Macs, because
+GitHub retired the runner the build used.
+
+### Added
+
+- A part picks Chart, Tab, Both or Free beside its instrument. Tab gives
+  it a tab grid of its own (**+ Measure**, then type the frets), Both
+  shows the chart line and the grid, and Free is a text box printed as
+  typed. The TXT export, the PDF and the preview print each mode under
+  the part's instrument. A part's tab cells are checked before export
+  like a section's. Parts saved before this version are chart lines and
+  are stored as they were.
+
+### Changed
+
+- The repeat box is gone from the section header. Write repeats in the
+  chart line (`[G D Em C]x2`). A section from an older song that still
+  repeats as a whole keeps printing its "(x2)" and shows a **×2** chip in
+  its header; clicking the chip removes the repeat. The desktop app still
+  has its repeat field.
+- The example song writes its verse repeat in the chart line.
+- The TXT export prints a section's tab grid through the same code as a
+  part's. The output is unchanged (the golden files still match).
+- README screenshots retaken with `tools/shots.py`.
+- A pushed tag now publishes its release by itself, as in Swiss Knife:
+  `tools/release_notes.py` takes the title and the text from the
+  version's CHANGELOG.md section (the few words after the date in its
+  heading name the release), and the workflow publishes it once every
+  download is attached. There is no draft to check and publish by hand.
+
+### Fixed
+
+- The release build for Apple-silicon Macs: GitHub retired the macOS 14
+  runner, so v0.32.0's build never started and its release has no
+  `macos-arm64` download. It now builds on macOS 15.
+- The release workflow made a draft even when a build failed, so a
+  release could look complete with a download missing. It now releases
+  only when every system has built; after a failure, **Re-run failed
+  jobs** on the Actions page builds it again and then releases.
+
 ## [0.32.0] — 2026-11-08
 
 Moving and copying sections in the browser and the native window. The ↑

@@ -12,29 +12,26 @@ and git hold the history.
 
 ## Where we are
 
-- Ready to release: v0.32.0 on `feat/v0.32.0` (8 November 2026), moving
-  sections by dragging the ⠿ handle and a "Copy to…" list on ⧉, in the
-  browser and the native window. Not yet merged, tagged or pushed. The
-  drag and the picker were tried in Chromium with Playwright; the native
-  window on the Mac is giopas's check (below). Proposed release title:
-  `v0.32.0 (Drag and copy sections)`. The screenshots are retaken with
-  the new `tools/shots.py` (in Chromium on Linux; a run on the Mac will
-  show small font differences the first time).
-- Released: v0.31.2, tagged on 13 October 2026: the floor sheet on one
-  page. v0.31.0 did not build on Windows (a test of
-  `tools/ground_truth.py` deleted read-only git files), fixed in v0.31.1.
-  Drafts of v0.31.0 and v0.31.1 are to be deleted, not published; the
-  v0.31.2 draft is to be checked and published by giopas.
-- The release workflow runs `publish` even when a build fails, so a
-  failed build still leaves a draft with files missing. Worth changing in
-  `.github/workflows/release.yml` (giopas copies it in).
+- Ready to release: v0.33.0 on `feat/v0.33.0` (8 November 2026): a part
+  picks Chart, Tab, Both or Free; the repeat box is gone from section
+  cards (an older section that repeats shows a ×2 chip that removes it);
+  the release build is fixed; a pushed tag now publishes its release by
+  itself, titled and written from CHANGELOG.md. Not yet merged, tagged or
+  pushed. Release title (from the changelog heading):
+  `v0.33.0 (Parts in tab or free text)`.
+- v0.32.0 was tagged and built on 8 November, but GitHub had retired the
+  `macos-14` runner, so its draft has no `macos-arm64` file. Delete that
+  draft instead of publishing it; v0.33.0 carries everything in it.
+- Last published release: v0.31.2 (13 October 2026).
+- `release.yml` now builds Apple silicon on `macos-15` and publishes the
+  release (no draft) only when every build has succeeded.
 - Previous: v0.30.0, published on 10 October 2026 with all eight files
   (macOS Apple silicon and Intel, `.dmg` and `.tar.gz` each; Windows
   installer and `.zip`; Linux `.tar.gz`; `SHA256SUMS`).
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 523 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 531 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -67,6 +64,10 @@ started until giopas picks it.
 - A test file for the Tkinter desktop app (`tests/test_song_writer.py`).
 
 Manual checks waiting for giopas (each stays here until reported back):
+
+- v0.33.0: in the native window, add a Bass part to a guitar section, try
+  each mode (Chart, Tab, Both, Free), export a PDF and look at the part;
+  open an older song whose sections had a repeat and click the ×2 chip.
 
 - v0.32.0: in the native window on the Mac, drag a section from the end
   of a long song to the top and back, press Escape halfway through a
@@ -135,7 +136,8 @@ and readable on stage without the handwritten sheet.
 | Sep 2026 | Lyrics come from a local file or a paste. No automatic fetching from the web (copyright). |
 | 8 Oct 2026 | Work follows the working agreements in `DEVELOPMENT.md` (branches, Conventional Commits, tests with every change, plain writing). |
 | 8 Oct 2026 | Release notes are the version's `CHANGELOG.md` section. No separate release-notes files. |
-| 13 Oct 2026 | Every GitHub release is titled `vX.Y.Z (a few words on the main change)`, for example `v0.31.2 (Floor sheet on one page)`. Claude proposes the title with each release; giopas sets it on the draft before publishing. (giopas, 13 October.) |
+| 13 Oct 2026 | Every GitHub release is titled `vX.Y.Z (a few words on the main change)`, for example `v0.31.2 (Floor sheet on one page)`. Since 8 November the few words go after the date in the version's CHANGELOG.md heading and the workflow sets the title. (giopas, 13 October.) |
+| 8 Nov 2026 | A pushed tag publishes its release directly, as in Swiss Knife: no draft. `tools/release_notes.py` writes the title and text from CHANGELOG.md; the workflow publishes only when every build passed. (giopas, 8 November.) |
 | 8 Oct 2026 | The PDF footer keeps the print date. `build_pdf` takes an optional date so tests compare bytes. |
 | 8 Oct 2026 | The `.sng` song file is saved in place, atomically, and renamed on Save without overwriting another song. Exports and imports never overwrite an existing file. |
 | 8 Oct 2026 | The interface is English only for now. No translation checks in releases. |
@@ -147,7 +149,6 @@ and readable on stage without the handwritten sheet.
 | 8 Oct 2026 | Linux gets a `.tar.gz` with a `.desktop` launcher. No AppImage unless someone asks. |
 | 9 Oct 2026 | The Linux package opens in the browser, because the native window needs GTK or Qt WebKit from the system. From the sources with pywebview, Linux gets the window. (Proposed by Claude while building item 8; giopas to confirm.) |
 | 9 Oct 2026 | The update check runs by itself only in the installed app. From the sources, **Check now** in the About card asks on request. (Proposed by Claude while building item 8; giopas to confirm.) |
-| 9 Oct 2026 | The release workflow leaves a draft release; giopas checks it and publishes it. Only published releases are offered by **Update and restart**. (Proposed by Claude while building item 8; giopas to confirm.) |
 | 10 Oct 2026 | Techniques use the standard tab letters; palm mute is a run, `[pm …]`. Dynamics are lower-case words, an accent is `^`. (giopas, 10 October.) |
 | 10 Oct 2026 | Parts are extra chart lines inside a section, each with its own instrument; ⚙ Layout picks which instruments print. (giopas, 10 October.) |
 | 10 Oct 2026 | The song travels inside its PDF as an attachment, so a PDF can be opened again. TXT exports carry nothing. |
@@ -156,6 +157,7 @@ and readable on stage without the handwritten sheet.
 | 13 Oct 2026 | Floor may use two columns when a long song gets clearly bigger type that way; a short song keeps one column across the full width. Tab never below 75%. (Proposed by Claude while building it; giopas to confirm.) |
 | 8 Nov 2026 | Sections move by dragging their ⠿ handle (arrow keys on the handle from the keyboard); the ↑ ↓ buttons are gone. ⧉ asks where the copy goes and the copy stays a reference. Browser and native window only; the Tkinter app keeps its own drag and Ctrl/Cmd+D. (giopas, 8 November.) |
 | 8 Nov 2026 | The README screenshots are retaken before every release with `tools/shots.py` (borrowed from Swiss Knife), and the pictures are committed with the release. (giopas, 8 November.) |
+| 8 Nov 2026 | A part has the same four render modes as a section (Chart, Tab, Both, Free). The section repeat box is removed from the browser app; repeats go in the chart line, and an older whole-section repeat shows as a removable ×2 chip. (giopas, 8 November.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

@@ -168,19 +168,30 @@ re-run the workflow from the Actions tab.
 2. Move `[Unreleased]` to `[X.Y.Z] — date` in `CHANGELOG.md`, with the
    "why" paragraph, and add the row to the table in `ROADMAP.md`.
 3. Run the full test suite.
-4. Merge, tag and push as above.
-5. Wait for the release workflow (`.github/workflows/release.yml`). It
+4. Retake the screenshots: `python3 tools/shots.py`. It starts the app on
+   a scratch folder (your songs and settings are left alone), retakes
+   every picture in the README, says which ones changed and writes a
+   contact sheet. Look at the contact sheet, then commit the pictures as
+   `docs: screenshots for vX.Y.Z`. A new screen or dialog shown in the
+   README gets its picture added to `PICTURES` in `tools/shots.py`
+   (`tests/test_shots.py` fails until the two agree). The tool needs
+   Playwright with Chromium (`pip install playwright` and
+   `python3 -m playwright install chromium`, in the development
+   virtualenv); Pillow is optional, for the comparison and the sheet.
+5. Merge, tag and push as above.
+6. Wait for the release workflow (`.github/workflows/release.yml`). It
    builds the packages for macOS (Apple silicon and Intel), Windows and
    Linux, smoke-tests each one, tests the Windows installer, and leaves a
    draft release with the files, `SHA256SUMS`, and that version's
    `CHANGELOG.md` section as its text.
-6. Check the draft (text, only this version's files plus `SHA256SUMS`)
+7. Check the draft (text, only this version's files plus `SHA256SUMS`)
    and set its title to `vX.Y.Z (a few words on the main change)`, for
    example `v0.31.2 (Floor sheet on one page)`; Claude proposes the words
    with each release. Then mark it *Latest* and publish it. Only a
    published release is offered by **Update and restart**.
-7. Try **Update and restart** from the previous installed version.
-8. Small fixes are patch versions (0.26.3, 0.26.4).
+8. Try **Update and restart** from the previous installed version.
+9. Small fixes are patch versions (0.26.3, 0.26.4). A patch that changes
+   nothing on screen can skip step 4.
 
 `.github/` is protected for Claude's tools on giopas's computer, so a
 change to a workflow is written by Claude and copied into

@@ -292,6 +292,10 @@ def test_release_workflow_when_present():
     if not os.path.exists(wf):
         pytest.skip("release.yml is copied into .github/workflows by hand")
     text = open(wf, encoding="utf-8").read()
-    for want in ("macos-14", "macos-15-intel", "windows-latest", "ubuntu-22.04",
+    for want in ("os: macos-15,", "macos-15-intel", "windows-latest", "ubuntu-22.04",
                  "SHA256SUMS", "--smoke", "packaging/songnotation.spec"):
         assert want in text
+    # GitHub retired the macos-14 runner: v0.32.0 lost its Apple-silicon build.
+    assert "macos-14" not in text
+    # A draft is made only when every system built.
+    assert "needs.build.result == 'success'" in text

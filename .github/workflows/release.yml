@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,        label: macos-arm64 }
+          - { os: macos-15,        label: macos-arm64 }   # GitHub retired the macOS 14 runner in November 2026
           - { os: macos-15-intel,  label: macos-x86_64 }
           - { os: windows-latest,  label: windows-x64 }
           - { os: ubuntu-22.04,    label: linux-x64 }
@@ -75,8 +75,11 @@ jobs:
 
   publish:
     needs: build
-    # attach what was built even if one system failed, so the others are not lost
-    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') }}
+    # Only when every system built: a release with one download missing looks
+    # complete, and Update and restart then finds nothing for that computer.
+    # After a failed build, "Re-run failed jobs" builds it again and this
+    # job runs then.
+    if: ${{ needs.build.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7
@@ -86,22 +89,21 @@ jobs:
           merge-multiple: true
       - name: Checksums
         run: cd files && sha256sum Song-Notation-Tool-* > SHA256SUMS && cat SHA256SUMS
-      - name: Release notes from CHANGELOG.md
-        run: |
-          python3 - "${GITHUB_REF_NAME#v}" > notes.md <<'PY'
-          import re, sys
-          ver = re.escape(sys.argv[1])
-          text = open("CHANGELOG.md", encoding="utf-8").read()
-          m = re.search(rf"^## \[{ver}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
-          print(m.group(1).strip() if m else "See CHANGELOG.md.")
-          PY
-          cat notes.md
-      - name: Attach to a draft release
+      - name: Publish the release, titled and written from CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft \
-                 --title "$TAG" --notes-file notes.md
+          # "v0.33.0 (Parts in tab or free text)" and that version's section
+          TITLE="$(python3 tools/release_notes.py "$TAG" --out notes.md)"
+          cat notes.md
+          # Hidden while the files go up, so the update check never offers a
+          # release whose download is not there yet; then published.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes-file notes.md
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft \
+              --title "$TITLE" --notes-file notes.md
+          fi
           gh release upload "$TAG" files/* --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

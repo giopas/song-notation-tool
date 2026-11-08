@@ -165,8 +165,10 @@ re-run the workflow from the Actions tab.
 ## Releasing
 
 1. Bump `APP_VERSION` in `constants.py`.
-2. Move `[Unreleased]` to `[X.Y.Z] — date` in `CHANGELOG.md`, with the
-   "why" paragraph, and add the row to the table in `ROADMAP.md`.
+2. Move `[Unreleased]` to `[X.Y.Z] — date — a few words` in
+   `CHANGELOG.md`, with the "why" paragraph, and add the row to the table
+   in `ROADMAP.md`. The few words name the release on GitHub, as
+   `vX.Y.Z (a few words)`; Claude proposes them.
 3. Run the full test suite.
 4. Retake the screenshots: `python3 tools/shots.py`. It starts the app on
    a scratch folder (your songs and settings are left alone), retakes
@@ -179,16 +181,16 @@ re-run the workflow from the Actions tab.
    `python3 -m playwright install chromium`, in the development
    virtualenv); Pillow is optional, for the comparison and the sheet.
 5. Merge, tag and push as above.
-6. Wait for the release workflow (`.github/workflows/release.yml`). It
-   builds the packages for macOS (Apple silicon and Intel), Windows and
-   Linux, smoke-tests each one, tests the Windows installer, and leaves a
-   draft release with the files, `SHA256SUMS`, and that version's
-   `CHANGELOG.md` section as its text.
-7. Check the draft (text, only this version's files plus `SHA256SUMS`)
-   and set its title to `vX.Y.Z (a few words on the main change)`, for
-   example `v0.31.2 (Floor sheet on one page)`; Claude proposes the words
-   with each release. Then mark it *Latest* and publish it. Only a
-   published release is offered by **Update and restart**.
+6. The release workflow (`.github/workflows/release.yml`) does the rest.
+   It builds the packages for macOS (Apple silicon and Intel), Windows and
+   Linux, smoke-tests each one and tests the Windows installer. When every
+   build has passed, it publishes the release: titled and written by
+   `tools/release_notes.py` from the version's `CHANGELOG.md` section,
+   with the files and `SHA256SUMS` attached, marked *Latest*. If a build
+   fails, nothing is released; fix it or use **Re-run failed jobs** on the
+   Actions page, and the release follows.
+7. Check the published release on GitHub (text, files). **Update and
+   restart** offers it at once.
 8. Try **Update and restart** from the previous installed version.
 9. Small fixes are patch versions (0.26.3, 0.26.4). A patch that changes
    nothing on screen can skip step 4.

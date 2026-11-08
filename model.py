@@ -201,13 +201,22 @@ def new_section(section_id, name, section_type="Verse",
     }
 
 
-def make_part(part_id, instrument, items=None):
-    """Another instrument's chart line in the same section: the guitar
-    under the bass line, say. The section's own chart line is its first
-    part, played on the section's instrument; `section["parts"]` holds the
-    others, each printed under it with the instrument's name."""
-    return {"id": str(part_id), "instrument": instrument,
+def make_part(part_id, instrument, items=None, render="chart", free_text=""):
+    """Another instrument's line in the same section: the guitar under the
+    bass line, say. The section's own chart line is its first part, played
+    on the section's instrument; `section["parts"]` holds the others, each
+    printed under it with the instrument's name. A part has its own render
+    mode, as a section does: Chart (a chart line), Tab (a tab grid, kept as
+    measure items), Both, or Free (text kept as typed)."""
+    part = {"id": str(part_id), "instrument": instrument,
             "items": list(items or [])}
+    # A chart part is stored as it always was, so older songs and files
+    # made from them stay byte-for-byte the same.
+    if render != "chart":
+        part["render"] = render
+    if free_text:
+        part["free_text"] = str(free_text)
+    return part
 
 
 def make_chord(name, frets, instrument="Guitar (6-string)", note=""):

@@ -43,13 +43,14 @@
     <h3>How this works</h3>
     <ul>
       <li>A song is a list of sections (Intro, Verse, Chorus…). Each has a name, an
-        instrument, a repeat count and one chart line.</li>
+        instrument and one chart line. <b>+ Part</b> adds another instrument's line,
+        as a chart line, a tab grid, both, or free text.</li>
       <li>You type the chart line: chord or note symbols in order, separated by spaces,
         such as <code>B F# G E</code>. Put a fret number right before a symbol, with no
         space, to show it too: <code>5A</code> means fret 5 on A.</li>
-      <li>Repeats: set how many times a section plays in the number box in its header,
-        or put part of a line in brackets with a repeat. <code>[5A 7D]x2</code> plays
-        the pair twice, then carries on.</li>
+      <li>Repeats go in the chart line: put a run in brackets with a repeat.
+        <code>[5A 7D]x2</code> plays the pair twice, then carries on, and
+        <code>[G D Em C]x2</code> plays the whole line twice.</li>
       <li>Riffs: a block used by name in more than one section. Edit it once and every
         section that uses it changes. <strong>Riffs 🔁</strong> at the top lists them;
         select part of a chart line and click <strong>→ riff</strong> to make one from
@@ -660,7 +661,8 @@
         <input class="sec-name" type="text" title="Section name, e.g. Verse 1">
         <select class="sec-type" title="Section type, which sets its colour"></select>
         <select class="sec-instrument" title="Instrument / tuning for this section"></select>
-        <input class="sec-repeat" type="number" min="1" title="How many times this section is played in a row">
+        <button type="button" class="sec-repeat-chip hidden"
+                title="From an older song: this whole section plays more than once and prints (xN) after its name. Click to remove it, and write repeats in the chart line instead, such as [G D Em C]x2."></button>
         <select class="sec-render" title="Render mode: Chart (chords and notes), Tab (tablature grid), Both, or Free (any text, kept as typed)">
           <option value="chart">Chart</option>
           <option value="tab">Tab</option>

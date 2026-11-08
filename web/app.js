@@ -427,7 +427,7 @@ function buildSectionCard(sec, idx) {
   });
 
   node.querySelector(".sec-name").value = sec.name || "";
-  node.querySelector(".sec-repeat").value = sec.repeat || 1;
+  showRepeatChip(node, sec);
 
   const renderSel = node.querySelector(".sec-render");
   renderSel.value = sec.render || "chart";
@@ -466,6 +466,19 @@ function buildSectionCard(sec, idx) {
   return node;
 }
 
+/**
+ * Repeats live in the chart line ([G D]x2). A section from an older song
+ * can still carry a whole-section repeat, printed as (xN) after its name;
+ * it shows as a chip that removes it, instead of a number box on every
+ * card that read as a mystery "1".
+ */
+function showRepeatChip(node, sec) {
+  const chip = node.querySelector(".sec-repeat-chip");
+  const n = parseInt(sec.repeat, 10) || 1;
+  chip.textContent = `×${n}  ✕`;
+  chip.classList.toggle("hidden", n <= 1);
+}
+
 function wireSectionEvents(node, sec, idx) {
   const byId = () => currentDoc.sections.find((s) => s.id === sec.id);
 
@@ -483,8 +496,10 @@ function wireSectionEvents(node, sec, idx) {
     byId().instrument = e.target.value;
     schedulePreviewUpdate();
   });
-  node.querySelector(".sec-repeat").addEventListener("change", (e) => {
-    byId().repeat = Math.max(1, parseInt(e.target.value, 10) || 1);
+  node.querySelector(".sec-repeat-chip").addEventListener("click", () => {
+    const s = byId();
+    s.repeat = 1;
+    showRepeatChip(node, s);
     schedulePreviewUpdate();
   });
 
@@ -652,27 +667,96 @@ function renderParts(node, sec) {
       if (name === part.instrument) opt.selected = true;
       sel.appendChild(opt);
     });
+    // The same four modes as a section: what this part shows and prints.
+    const mode = document.createElement("select");
+    mode.className = "part-render";
+    mode.title = "What this part holds: Chart (a chart line), Tab (a tab grid), Both, or Free (any text, kept as typed)";
+    [["chart", "Chart"], ["tab", "Tab"], ["both", "Both"], ["free", "Free"]].forEach(([v, t]) => {
+      const opt = document.createElement("option");
+      opt.value = v; opt.textContent = t;
+      if (v === (part.render || "chart")) opt.selected = true;
+      mode.appendChild(opt);
+    });
     const input = document.createElement("input");
     input.type = "text";
     input.className = "part-line sec-chart-line-like";
     input.placeholder = "This instrument's chart line, e.g. A D E7";
     input.value = part.chart_line || "";
+    const spacer = document.createElement("span");
+    spacer.className = "part-spacer";
     const del = document.createElement("button");
     del.type = "button";
     del.className = "btn icon-btn";
     del.textContent = "×";
     del.title = "Remove this part";
-    head.append(sel, input, del);
+    head.append(sel, mode, input, spacer, del);
     const err = document.createElement("div");
     err.className = "sec-error hidden";
     const preview = document.createElement("div");
     preview.className = "sec-preview part-preview";
-    row.append(head, preview, err);
+    // Tab: the same grid editor as a section's, with its own toolbar.
+    const grid = document.createElement("div");
+    grid.className = "part-tab-grid";
+    grid.innerHTML = '<div class="tab-grid-toolbar">'
+      + '<button type="button" class="btn subtle part-add-measure" title="Add a measure to this part\'s tab grid">+ Measure</button>'
+      + '<label class="tab-beats-label">Beats: <select class="part-beats-select"></select></label>'
+      + '</div><div class="tab-grid-body"></div>';
+    const beatsSel = grid.querySelector(".part-beats-select");
+    (META.tab_beats_options || [8, 16, 32, 64]).forEach((b) => {
+      const opt = document.createElement("option");
+      opt.value = b; opt.textContent = b;
+      if (b === (META.tab_beats_default || 8)) opt.selected = true;
+      beatsSel.appendChild(opt);
+    });
+    const gridBody = grid.querySelector(".tab-grid-body");
+    // Free: a text box kept as typed.
+    const free = document.createElement("textarea");
+    free.className = "part-free-text";
+    free.rows = 4;
+    free.spellcheck = false;
+    free.placeholder = "Free text for this instrument, kept and printed exactly as typed.";
+    free.value = part.free_text || "";
+    row.append(head, preview, err, grid, free);
     box.appendChild(row);
+
+    const show = () => {
+      const m = part.render || "chart";
+      const chart = m === "chart" || m === "both";
+      const tab = m === "tab" || m === "both";
+      input.classList.toggle("hidden", !chart);
+      spacer.classList.toggle("hidden", chart);
+      preview.classList.toggle("hidden", !chart);
+      if (!chart) err.classList.add("hidden");
+      grid.classList.toggle("hidden", !tab);
+      free.classList.toggle("hidden", m !== "free");
+      if (tab) rebuildTabGrid(row, part, gridBody);
+    };
 
     sel.addEventListener("change", () => {
       part.instrument = sel.value;
       renderLayoutInstruments();
+      if ((part.render || "chart") !== "chart") rebuildTabGrid(row, part, gridBody);
+      schedulePreviewUpdate();
+    });
+    mode.addEventListener("change", () => {
+      // Stored only when it is not Chart, as older songs have it.
+      if (mode.value === "chart") delete part.render;
+      else part.render = mode.value;
+      show();
+      schedulePreviewUpdate();
+    });
+    grid.querySelector(".part-add-measure").addEventListener("click", () => {
+      const beats = parseInt(beatsSel.value, 10) || 8;
+      const stringMap = {};
+      stringsForInstrument(part.instrument).forEach((st) => { stringMap[st] = ""; });
+      const measures = measureItems(part);
+      measures.push({ kind: "measure", beats, strings: stringMap });
+      setMeasureItems(part, measures);
+      rebuildTabGrid(row, part, gridBody);
+      schedulePreviewUpdate();
+    });
+    free.addEventListener("input", () => {
+      part.free_text = free.value;
       schedulePreviewUpdate();
     });
     del.addEventListener("click", () => {
@@ -698,20 +782,22 @@ function renderParts(node, sec) {
       applyBracketRuns(preview, [...preview.querySelectorAll(".sec-preview-more")],
                        result.brackets);
     };
+    // The chart line sets the part's chart items only; its tab measures stay.
     const onLine = debounce(async () => {
       if (!input.value.trim()) {
-        part.items = []; part.chart_line = ""; preview.innerHTML = "";
+        setChartItems(part, []); part.chart_line = ""; preview.innerHTML = "";
         err.classList.add("hidden"); schedulePreviewUpdate(); return;
       }
       try {
         const result = await API.parseLine(input.value, currentDoc);
-        if (result.ok) { part.items = result.items; part.chart_line = result.unparsed; }
+        if (result.ok) { setChartItems(part, result.items); part.chart_line = result.unparsed; }
         paint(result);
       } catch (e) { paint({ ok: false, error: String(e) }); }
       schedulePreviewUpdate();
     }, 150);
     input.addEventListener("input", onLine);
     attachAutocomplete(input);
+    show();
     if (input.value.trim()) {
       API.parseLine(input.value, currentDoc).then(paint).catch(() => {});
     }
@@ -1009,8 +1095,13 @@ function updateTabGridVisibility(node, sec) {
   }
 }
 
-function rebuildTabGrid(node, sec) {
-  const body = node.querySelector(".tab-grid-body");
+/** The section's own grid body (not one inside a part). */
+function sectionGridBody(node) {
+  return node.querySelector(":scope > .sec-tab-grid .tab-grid-body");
+}
+
+function rebuildTabGrid(node, sec, body) {
+  body = body || sectionGridBody(node);
   const measures = measureItems(sec);
   const strings = stringsForInstrument(sec.instrument);
 
@@ -1041,7 +1132,7 @@ function rebuildTabGrid(node, sec) {
       const allMeasures = measureItems(sec);
       allMeasures.splice(mi, 1);
       setMeasureItems(sec, allMeasures);
-      rebuildTabGrid(node, sec);
+      rebuildTabGrid(node, sec, body);
       schedulePreviewUpdate();
     });
     hdr.appendChild(delBtn);
@@ -1082,7 +1173,7 @@ function rebuildTabGrid(node, sec) {
           + "5h7 hammer-on, 7p5 pull-off, 5/7 or 7\\5 slide, 7b9 bend, 7b9r7 "
           + "bend and release, 7~ vibrato, 5^ accent";
         input.addEventListener("input", () => {
-          commitTabCell(sec, mi, st, beats, node);
+          commitTabCell(sec, mi, st, beats, body);
         });
         input.addEventListener("focus", () => input.select());
         // Arrow key navigation between cells
@@ -1128,8 +1219,7 @@ function rebuildTabGrid(node, sec) {
   body.appendChild(table);
 }
 
-function commitTabCell(sec, measureIdx, stringName, beats, node) {
-  const body = node.querySelector(".tab-grid-body");
+function commitTabCell(sec, measureIdx, stringName, beats, body) {
   const table = body.querySelector("table");
   if (!table) return;
 

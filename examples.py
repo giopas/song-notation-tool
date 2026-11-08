@@ -21,8 +21,8 @@ def example_document() -> dict:
     intro = model.new_section("intro", "Intro", "Intro", render="chart")
     intro["items"] = grammar.parse_items("G D Em C")
 
-    verse = model.new_section("verse1", "Verse", "Verse", repeat=2, render="chart")
-    verse_items, verse_annotation = grammar.parse('G D "keep it simple" Em C')
+    verse = model.new_section("verse1", "Verse", "Verse", render="chart")
+    verse_items, verse_annotation = grammar.parse('[G D Em C]x2 "keep it simple"')
     verse["items"] = verse_items
     verse["annotation"] = verse_annotation or ""
 

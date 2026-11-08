@@ -613,7 +613,7 @@ def check_document(doc: dict) -> dict:
     for sec in doc.get("sections", []):
         for part in sec.get("parts") or []:
             try:
-                line = grammar.unparse(part.get("items") or [])
+                line = grammar.unparse(songmap.chart_items(part))
                 if line:
                     grammar.parse_items(line)
             except Exception as exc:  # noqa: BLE001 - reported, never fatal
@@ -641,13 +641,17 @@ def check_document(doc: dict) -> dict:
     # printed as typed, so it is a warning, not a reason to stop.
     import grammar as _g
     for sec in doc.get("sections", []):
-        bad = sorted({tok for m in songmap.measure_items(sec)
-                      for raw in (m.get("strings") or {}).values()
-                      for tok in (raw or "").split()
-                      if not _g.valid_tab_position(tok)})
-        if bad:
-            warnings.append(f"[{sec.get('name') or '?'}] tab cells that are not "
-                            f"frets: " + ", ".join(bad))
+        grids = [(sec.get("name") or "?", sec)] + [
+            (f"{sec.get('name') or '?'} / {p.get('instrument') or 'part'}", p)
+            for p in sec.get("parts") or []]
+        for label, holder in grids:
+            bad = sorted({tok for m in songmap.measure_items(holder)
+                          for raw in (m.get("strings") or {}).values()
+                          for tok in (raw or "").split()
+                          if not _g.valid_tab_position(tok)})
+            if bad:
+                warnings.append(f"[{label}] tab cells that are not "
+                                f"frets: " + ", ".join(bad))
     if doc.get("chords"):
         cov = chords_mod.coverage(doc)
         if cov["missing"]:
@@ -909,7 +913,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
 
         part_lines = [r["text"] for r in
                       render.printed_part_rows(doc, sec, instruments, body_indent,
-                                               seen=seen)]
+                                               seen=seen, width=body_w)]
         if part_lines:
             if label:
                 part_lines[0] = f"{label:<{body_indent}}" + part_lines[0][body_indent:]
@@ -923,37 +927,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
 
         measures = songmap.measure_items(sec) if main_prints else []
         if sec.get("render", "chart") in ("tab", "both") and measures:
-            all_strings = INSTRUMENT_STRINGS.get(
-                sec.get("instrument"), ["e", "B", "G", "D", "A", "E"])
-            strings = render.active_strings(
-                [m.get("strings", {}) for m in measures], all_strings) or all_strings
-            max_beats = max((m.get("beats", TAB_BEATS_DEFAULT) for m in measures),
-                             default=TAB_BEATS_DEFAULT)
-            TOKEN_W = render.tab_token_width(measures)
-            mpl = render.measures_per_line(len(measures), max_beats, width=body_w,
-                                           token_w=TOKEN_W)
-
-            for chunk_start in range(0, len(measures), mpl):
-                chunk = list(range(chunk_start, min(chunk_start + mpl, len(measures))))
-                sn_pad = max(len(st) for st in strings) + 3
-                hdr = " " * sn_pad
-                for m_idx in chunk:
-                    beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-                    cell_w = TOKEN_W * beats + 1
-                    hdr += f"{'M' + str(m_idx + 1):<{cell_w}}"
-                body.append(hdr)
-                for st in strings:
-                    row = f"{st}| "
-                    for m_idx in chunk:
-                        beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-                        raw = measures[m_idx].get("strings", {}).get(st, "")
-                        tokens = [tok for tok in raw.split() if tok]
-                        while len(tokens) < beats:
-                            tokens.append("-")
-                        tokens = tokens[:beats]
-                        row += "".join(f"{tok:>{TOKEN_W}}" for tok in tokens) + "|"
-                    body.append(row)
-                body.append("")
+            body += render.tab_grid_lines(measures, sec.get("instrument"), body_w)
 
         if sec.get("annotation"):
             body.append(" " * body_indent + f'"{sec["annotation"]}"')
@@ -1653,7 +1627,8 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
                           tight=FLOOR)
                       if prints_chart else [])
         part_rows = render.printed_part_rows(doc, sec, instruments, 0,
-                                             tight=FLOOR, seen=licks_seen)
+                                             tight=FLOOR, seen=licks_seen,
+                                             width=max(20, int(COL_W_TEXT / CHAR_W)))
         measures = (songmap.measure_items(sec)
                     if main_prints and mode in ("tab", "both") else [])
         strings = (render.active_strings(

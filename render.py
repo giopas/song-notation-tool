@@ -346,6 +346,9 @@ ROLE_CODA = "coda"
 
 # The heading line of a part (another instrument's line in the section).
 ROLE_PART = "part"
+# A row of a part's tab grid ("G|  5  7  -|"): column data, drawn on the
+# column grid like a chart row, in black.
+ROLE_GRID = "grid"
 
 _SPAN_LABEL = {"pm": "P.M.", "cresc": "cresc.", "dim": "dim."}
 _SPAN_ROLE = {"pm": ROLE_PM, "cresc": ROLE_CRESC, "dim": ROLE_DIM}
@@ -938,37 +941,109 @@ def chart_body_rows(items, label: str = "", indent: int = BODY_INDENT,
 #  Parts — another instrument's line in the same section
 # ==============================================================================
 
+def part_has_content(part: dict) -> bool:
+    """Whether a part prints anything in its render mode. A part chooses
+    Chart, Tab, Both or Free the way a section does; an older part has no
+    mode and is a chart line."""
+    mode = part.get("render", "chart")
+    if mode == "free":
+        return bool((part.get("free_text") or "").strip())
+    items = part.get("items") or []
+    has_chart = any(i.get("kind") != "measure" for i in items)
+    has_tab = any(i.get("kind") == "measure" for i in items)
+    if mode == "tab":
+        return has_tab
+    if mode == "both":
+        return has_chart or has_tab
+    return has_chart
+
+
 def section_parts(sec: dict) -> list:
     """The section's extra parts that have something in them."""
-    return [p for p in (sec.get("parts") or []) if p.get("items")]
+    return [p for p in (sec.get("parts") or []) if part_has_content(p)]
+
+
+def tab_grid_lines(measures, instrument: str, width: int = DEFAULT_TXT_WIDTH) -> list:
+    """A tab grid as text: for each line of measures, a header (M1 M2 …)
+    and one row per string that has something on it, then a blank line.
+    The TXT export prints a section's grid with this, and a part's grid is
+    built from it too."""
+    from constants import INSTRUMENT_STRINGS, TAB_BEATS_DEFAULT
+    if not measures:
+        return []
+    all_strings = INSTRUMENT_STRINGS.get(instrument, ["e", "B", "G", "D", "A", "E"])
+    strings = active_strings([m.get("strings", {}) for m in measures],
+                             all_strings) or all_strings
+    max_beats = max((m.get("beats", TAB_BEATS_DEFAULT) for m in measures),
+                    default=TAB_BEATS_DEFAULT)
+    tok_w = tab_token_width(measures)
+    mpl = measures_per_line(len(measures), max_beats, width=width, token_w=tok_w)
+    out = []
+    for chunk_start in range(0, len(measures), mpl):
+        chunk = range(chunk_start, min(chunk_start + mpl, len(measures)))
+        hdr = " " * (max(len(st) for st in strings) + 3)
+        for m_idx in chunk:
+            beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
+            hdr += f"{'M' + str(m_idx + 1):<{tok_w * beats + 1}}"
+        out.append(hdr)
+        for st in strings:
+            row = f"{st}| "
+            for m_idx in chunk:
+                beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
+                raw = measures[m_idx].get("strings", {}).get(st, "")
+                tokens = [tok for tok in raw.split() if tok]
+                while len(tokens) < beats:
+                    tokens.append("-")
+                row += "".join(f"{tok:>{tok_w}}" for tok in tokens[:beats]) + "|"
+            out.append(row)
+        out.append("")
+    return out
 
 
 def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT,
-              tight=False, seen=None):
-    """One part's printed rows: a heading with its instrument, then its
-    chart, with references expanded and the section's transpose applied."""
+              tight=False, seen=None, width: int = DEFAULT_TXT_WIDTH):
+    """One part's printed rows: a heading with its instrument, then what
+    its render mode prints. Chart: its chart line, with references
+    expanded and the section's transpose applied. Tab: its tab grid.
+    Both: the chart, then the grid. Free: its text as typed."""
     import transpose
-    eff = transpose.effective_transpose((doc or {}).get("transpose", 0),
-                                        sec.get("transpose", 0))
-    items = resolve_references(
-        [i for i in part.get("items", []) if i.get("kind") != "measure"], doc or {})
-    if seen is not None:
-        items = name_repeated_licks(items, doc or {}, seen)
-    if not items:
-        return []
-    rows = chart_body_rows(resolve_display_items(items, eff), "", indent, tight)
+    mode = part.get("render", "chart")
     head = _row(" " * indent + (part.get("instrument") or "Part") + ":", ROLE_PART)
-    return [head] + rows
+    pad = " " * indent
+    if mode == "free":
+        text = part.get("free_text") or ""
+        if not text.strip():
+            return []
+        return [head] + [_row(pad + ln, ROLE_TEXT) for ln in text.splitlines()]
+
+    rows = []
+    if mode in ("chart", "both"):
+        eff = transpose.effective_transpose((doc or {}).get("transpose", 0),
+                                            sec.get("transpose", 0))
+        items = resolve_references(
+            [i for i in part.get("items", []) if i.get("kind") != "measure"], doc or {})
+        if seen is not None:
+            items = name_repeated_licks(items, doc or {}, seen)
+        if items:
+            rows += chart_body_rows(resolve_display_items(items, eff), "", indent, tight)
+    if mode in ("tab", "both"):
+        measures = [i for i in part.get("items", []) if i.get("kind") == "measure"]
+        grid = tab_grid_lines(measures, part.get("instrument"), max(20, width - indent))
+        while grid and not grid[-1].strip():
+            grid.pop()
+        rows += [_row(pad + ln if ln else "", ROLE_GRID) for ln in grid]
+    return [head] + rows if rows else []
 
 
 def printed_part_rows(doc: dict, sec: dict, instruments=None,
-                      indent: int = BODY_INDENT, tight=False, seen=None):
+                      indent: int = BODY_INDENT, tight=False, seen=None,
+                      width: int = DEFAULT_TXT_WIDTH):
     """Every part of `sec` that prints for `instruments` (None: all)."""
     out = []
     for p in section_parts(sec):
         if instruments is not None and p.get("instrument") not in instruments:
             continue
-        out += part_rows(doc, sec, p, indent, tight, seen)
+        out += part_rows(doc, sec, p, indent, tight, seen, width)
     return out
 
 

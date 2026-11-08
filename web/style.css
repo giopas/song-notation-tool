@@ -407,7 +407,13 @@ body.dragging-section, body.dragging-section * { cursor: grabbing !important; us
 .sec-name { flex: 1 1 140px; font-weight: 600; }
 .sec-type { flex: 0 0 auto; }
 .sec-instrument { flex: 0 0 auto; max-width: 160px; }
-.sec-repeat { width: 54px; }
+.sec-repeat-chip {
+  background: var(--surface); color: var(--amber); border: 1px solid var(--border);
+  border-radius: 10px; padding: 2px 8px; font: inherit; font-size: 12px; cursor: pointer;
+  white-space: nowrap;
+}
+.sec-repeat-chip:hover { border-color: var(--red); color: var(--red); }
+.sec-repeat-chip.hidden { display: none; }
 .sec-size { flex: 0 0 auto; }
 
 .sec-chart-line {
@@ -746,6 +752,16 @@ body.dragging-section, body.dragging-section * { cursor: grabbing !important; us
 .sec-parts { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .sec-part { border-left: 3px solid var(--border); padding-left: 8px; }
 .sec-part-head { display: flex; gap: 6px; align-items: center; }
+.sec-part-head .part-render { max-width: 90px; }
+.sec-part-head .part-spacer { flex: 1; }
+.sec-part-head .hidden, .sec-part .hidden { display: none; }
+.part-tab-grid { margin-top: 6px; }
+.part-free-text {
+  width: 100%; margin-top: 6px; background: var(--input-bg); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px;
+  font-family: var(--mono); font-size: 13px; resize: vertical;
+}
+.part-free-text:focus { border-color: var(--select-bg); outline: none; }
 .sec-part-head select { max-width: 170px; background: var(--input-bg); color: var(--fg);
   border: 1px solid var(--border); border-radius: 5px; padding: 5px 7px; font-size: 13px; }
 .sec-part-head .part-line { flex: 1; min-width: 0; background: var(--input-bg);

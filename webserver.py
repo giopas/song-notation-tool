@@ -469,8 +469,8 @@ def _with_chart_lines(doc: dict) -> dict:
                              if chart else "")
         if sec.get("parts"):
             sec["parts"] = [dict(p, chart_line=(
-                grammar.unparse(songmap.display_items(p.get("items") or [], doc))
-                if p.get("items") else "")) for p in sec["parts"]]
+                grammar.unparse(songmap.display_items(songmap.chart_items(p), doc))
+                if songmap.chart_items(p) else "")) for p in sec["parts"]]
         out["sections"].append(sec)
     return out
 

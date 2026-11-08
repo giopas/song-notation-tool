@@ -345,3 +345,42 @@ def test_install_says_github_was_busy_and_nothing_changed(tmp_path, monkeypatch)
     res = update.install(info)
     assert not res["ok"]
     assert "did not answer in time" in res["message"] and "Nothing was changed" in res["message"]
+
+
+# ── v0.33.2: the API address first ──────────────────────────────────────────
+
+def test_the_summary_keeps_both_addresses_of_each_file():
+    name = f"Song-Notation-Tool-9.9.9-{'-'.join(update.platform_key())}.tar.gz"
+    rel = {"tag_name": "v9.9.9", "assets": [
+        {"name": name, "browser_download_url": "https://github.com/a", "url": "https://api.github.com/a"},
+        {"name": "SHA256SUMS", "browser_download_url": "https://github.com/s", "url": "https://api.github.com/s"}]}
+    res = update._summary(rel)
+    if res["asset"]:                       # this computer has a package name in the list
+        assert res["asset"]["api_url"] == "https://api.github.com/a"
+    assert res["sums_api_url"] == "https://api.github.com/s"
+
+
+def test_a_file_comes_from_the_api_address_first_as_a_raw_file():
+    asked = []
+
+    def fake(url, accept=None):
+        asked.append((url, accept))
+        return b"data"
+    got = update._fetch(update._sources("https://api.github.com/x", "https://github.com/x"), fake)
+    assert got == b"data"
+    assert asked == [("https://api.github.com/x", "application/octet-stream")]
+
+
+def test_the_download_address_is_the_fallback(monkeypatch):
+    monkeypatch.setattr(update.time, "sleep", lambda s: None)
+    asked = []
+
+    def fake(url, accept=None):
+        asked.append(url)
+        if "api.github.com" in url:
+            raise _http_error(504)
+        return b"data"
+    got = update._fetch(update._sources("https://api.github.com/x", "https://github.com/x"), fake)
+    assert got == b"data"
+    assert asked[-1] == "https://github.com/x"
+    assert asked.count("https://api.github.com/x") == update.RETRIES

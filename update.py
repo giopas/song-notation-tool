@@ -181,14 +181,15 @@ def _ssl_context() -> ssl.SSLContext:
     return ssl.create_default_context()
 
 
-def _read(url: str, limit: int = 2_000_000, timeout: float = TIMEOUT) -> bytes:
+def _read(url: str, limit: int = 2_000_000, timeout: float = TIMEOUT,
+          accept: str = "application/vnd.github+json") -> bytes:
     if os.path.isfile(url):
         with open(url, "rb") as f:
             return f.read(limit)
     if not url.startswith("https://"):
         raise ValueError("only https:// or a local file")
     req = urllib.request.Request(url, headers={"User-Agent": f"Song-Notation-Tool/{VERSION}",
-                                               "Accept": "application/vnd.github+json"})
+                                               "Accept": accept})
     with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()) as r:
         return r.read(limit)
 
@@ -201,6 +202,38 @@ def _passing(e: Exception) -> bool:
         return e.code >= 500 or e.code == 429
     return isinstance(e, (urllib.error.URLError, socket.timeout, TimeoutError,
                           ConnectionError))
+
+
+# A release file can be fetched two ways. The API address
+# (api.github.com/.../releases/assets/<id>, asked for as a raw file) goes
+# straight to GitHub's file storage. The download address
+# (github.com/<repo>/releases/download/...) goes through github.com first,
+# and on 8 November 2026 that hop answered 504 to every request for an
+# hour while the API address answered in under a second. So the API
+# address comes first and the download address is kept as the fallback.
+RAW = "application/octet-stream"
+
+
+def _sources(api_url, browser_url):
+    """(url, Accept header) pairs to try, API address first."""
+    out = []
+    if api_url:
+        out.append((api_url, RAW))
+    if browser_url:
+        out.append((browser_url, "*/*"))
+    return out
+
+
+def _fetch(sources, fn, *args, **kw):
+    """fn(url, *args, accept=..., **kw) from the first source that works,
+    each tried with retries. Raises the last failure."""
+    last = ValueError("no address for this file")
+    for url, accept in sources:
+        try:
+            return _with_retries(fn, url, *args, accept=accept, **kw)
+        except Exception as e:  # noqa: BLE001
+            last = e
+    raise last
 
 
 def _with_retries(fn, *args, sleep=None, **kw):
@@ -235,8 +268,9 @@ def _summary(rel: dict) -> dict:
         "url": rel.get("html_url") or f"https://github.com/{REPO}/releases/latest",
         "notes": str(rel.get("body") or "")[:4000],
         "asset": ({"name": asset.get("name"), "url": asset.get("browser_download_url"),
-                   "size": asset.get("size")} if asset else None),
+                   "api_url": asset.get("url"), "size": asset.get("size")} if asset else None),
         "sums_url": sums.get("browser_download_url") if sums else None,
+        "sums_api_url": sums.get("url") if sums else None,
     }
 
 
@@ -299,13 +333,14 @@ def sha256_of(path: str) -> str:
     return h.hexdigest()
 
 
-def _download(url: str, dest: str) -> None:
+def _download(url: str, dest: str, accept: str = "*/*") -> None:
     if os.path.isfile(url):
         shutil.copyfile(url, dest)
         return
     if not url.startswith("https://"):
         raise ValueError("only https:// downloads")
-    req = urllib.request.Request(url, headers={"User-Agent": f"Song-Notation-Tool/{VERSION}"})
+    req = urllib.request.Request(url, headers={"User-Agent": f"Song-Notation-Tool/{VERSION}",
+                                               "Accept": accept})
     got = 0
     with urllib.request.urlopen(req, timeout=FILE_TIMEOUT, context=_ssl_context()) as r, open(dest, "wb") as f:
         while True:
@@ -442,13 +477,13 @@ def install(info: dict = None) -> dict:
         return {"ok": False, "message": "This release has no SHA256SUMS file, so it was not installed."}
     work = tempfile.mkdtemp(prefix="snt-update-", dir=os.path.dirname(root) if os.access(os.path.dirname(root), os.W_OK) else None)
     try:
-        sums = parse_sums(_with_retries(_read, sums_url, timeout=FILE_TIMEOUT)
-                          .decode("utf-8", "replace"))
+        sums = parse_sums(_fetch(_sources(info.get("sums_api_url"), sums_url),
+                                 _read, timeout=FILE_TIMEOUT).decode("utf-8", "replace"))
         want = sums.get(asset["name"])
         if not want:
             raise ValueError("the file is not listed in SHA256SUMS")
         arc = os.path.join(work, asset["name"])
-        _with_retries(_download, asset["url"], arc)
+        _fetch(_sources(asset.get("api_url"), asset["url"]), _download, arc)
         got = sha256_of(arc)
         if got != want:
             raise ValueError("the download does not match its SHA-256, so it was not installed")

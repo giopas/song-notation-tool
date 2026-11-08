@@ -12,17 +12,13 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.33.0 and v0.33.1, published by the workflow on 8 November
-  2026 with all eight files each. **Update and restart** from v0.33.0 to
-  v0.33.1 failed: GitHub's download address
-  (github.com/…/releases/download/…) answered 504 to every request, while
-  the API address for the same file worked in under a second (checked
-  from giopas's network).
-- Ready to release: v0.33.2 on `fix/v0.33.2`: the updater downloads
-  through the API address first, the download address as fallback. Not
-  yet merged, tagged or pushed. Installed copies up to v0.33.1 cannot
-  update themselves while GitHub's download address fails; install
-  v0.33.2 by hand once.
+- Released: v0.33.2, published by the workflow on 8 November 2026
+  (v0.33.0 and v0.33.1 the same day). Installed copies up to v0.33.1
+  cannot update themselves while GitHub's download address fails;
+  install v0.33.2 or later by hand once.
+- Ready to release: v0.33.3 on `fix/v0.33.3`: fret numbers inside a
+  bracketed group print on the fret row over their chords. Not yet
+  merged, tagged or pushed.
 - QLC+ Swiss Knife's `core/update.py` downloads the same way the old code
   here did (download address only, five seconds for SHA256SUMS), so it
   can fail the same way. Worth the same fix there.
@@ -38,7 +34,7 @@ and git hold the history.
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 542 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 543 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -72,8 +68,9 @@ started until giopas picks it.
 
 Manual checks waiting for giopas (each stays here until reported back):
 
-- v0.33.2: after installing it by hand, **Update and restart** to the
-  next release on the Mac.
+- v0.33.3: **Update and restart** from v0.33.2 on the Mac, then type
+  `[5A 3C 5A 3G]x2 5A` in a section and check the frets sit over the
+  chords in the preview and the PDF.
 - v0.33.0: in the native window, add a Bass part to a guitar section, try
   each mode (Chart, Tab, Both, Free), export a PDF and look at the part;
   open an older song whose sections had a repeat and click the ×2 chip.

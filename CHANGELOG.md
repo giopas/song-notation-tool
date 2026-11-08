@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.33.3] — 2026-11-08 — Fret numbers inside brackets
+
+A bracketed run such as `[5A 3C 5A 3G]x2` printed its fret numbers glued
+to the chord names on the chord row (`[5A 3C 5A 3G](x2)`), so in the
+preview, the TXT and the PDF the frets did not appear as the small
+figures over the chords that they are everywhere else. The app is
+otherwise the same as v0.33.2.
+
+### Fixed
+
+- Fret numbers inside a bracketed group go on the fret row, each over
+  its own chord, the same as outside brackets: `[5A 3C]x2` prints as
+  `5 3` over `[A C](x2)`. A two-digit fret widens its chord's cell so the
+  next chord stays under its own fret. Nested groups work the same way.
+
 ## [0.33.2] — 2026-11-08 — Updates through GitHub's API
 
 **Update and restart** still failed after v0.33.1, and retrying was not

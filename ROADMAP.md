@@ -35,6 +35,7 @@ serves that, not by difficulty.
 
 | **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.33.3** | Fix: fret numbers inside a bracketed group print over their chords, as they do outside brackets. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.33.2** | Fix: **Update and restart** downloads through GitHub's API address, which kept working while the usual download address answered 504. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.33.1** | Fix: **Update and restart** tries again when GitHub is busy right after a release, and shows the release notes as readable text. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.33.0** | **Parts in tab or free text** — a part picks Chart, Tab, Both or Free like a section; the repeat box leaves the section header (repeats go in the chart line); the Apple-silicon Mac build is back. See [CHANGELOG.md](CHANGELOG.md). |

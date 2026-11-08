@@ -29,6 +29,18 @@ a section where you want it, and a copy asks where it should go.
   so Enter does what the button used to do. Escape, Cancel or a click
   outside closes it. The copy is still a reference to the original.
 
+- `tools/shots.py` retakes every README screenshot in one command, on a
+  scratch songs folder with the example song, then says which pictures
+  changed and writes a contact sheet. The release checklist in
+  `DEVELOPMENT.md` now runs it before every release.
+
+### Changed
+
+- The README screenshots are retaken for this version, with two new ones:
+  the "Copy to…" list and a section halfway through a drag. They are page
+  pictures at 1920 × 1200 instead of window captures, and the old ones
+  still showed v0.26.2.
+
 ### Removed
 
 - The ↑ and ↓ buttons on each section card. Dragging and the arrow keys

@@ -172,13 +172,14 @@ Getting around
 ## Screenshots
 
 The editor: songs on the left, one card per section. Type the chart line
-and the rendered chart appears under it. The buttons beside each line
+and the rendered chart appears under it. The buttons under each line
 insert notation at the cursor.
 
 ![The editor, with the example song open](screenshots/editor.png)
 
 <table>
 <tr><td width="50%" valign="top"><a href="screenshots/start-here.png"><img src="screenshots/start-here.png" alt="Start here"></a><br><b>Start here</b>: a new or returning user sees New song and Open example instead of an empty grid.</td><td width="50%" valign="top"><a href="screenshots/layout-panel.png"><img src="screenshots/layout-panel.png" alt="⚙ Layout"></a><br><b>⚙ Layout</b>: every print setting in one panel at the bottom left (size, columns, colour, section names, lyrics, licks, chord shapes).</td></tr>
+<tr><td width="50%" valign="top"><a href="screenshots/section-copy.png"><img src="screenshots/section-copy.png" alt="Copy to"></a><br><b>⧉ Copy to…</b>: pick where the copy of a section goes. The copy is a reference, so it plays whatever the original holds.</td><td width="50%" valign="top"><a href="screenshots/section-drag.png"><img src="screenshots/section-drag.png" alt="Moving a section"></a><br><b>Moving a section</b>: drag it by its ⠿ handle. While you drag, every card folds down to its name, so the whole song fits on screen.</td></tr>
 <tr><td width="50%" valign="top"><a href="screenshots/lyrics-dialog.png"><img src="screenshots/lyrics-dialog.png" alt="Lyrics"></a><br><b>Lyrics</b>: paste or import the words, drag a section's chip into the sheet where its words begin, then <b>Split by markers</b>.</td><td width="50%" valign="top"><a href="screenshots/chord-shapes.png"><img src="screenshots/chord-shapes.png" alt="Chord shapes"></a><br><b>Chord shapes</b>: voicings typed as <code>x32010</code> and checked against the chords the chart plays. <b>+ From chart</b> adds the missing ones.</td></tr>
 <tr><td width="50%" valign="top"><a href="screenshots/notation-reference.png"><img src="screenshots/notation-reference.png" alt="Notation reference"></a><br><b>Notation reference</b>: everything you can type on a chart line, with examples checked against the real parser.</td><td width="50%" valign="top"><a href="screenshots/help-strip.png"><img src="screenshots/help-strip.png" alt="How this works"></a><br><b>How this works</b>: the ideas behind the chart line, one line each.</td></tr>
 <tr><td width="50%" valign="top"><a href="screenshots/export-menu.png"><img src="screenshots/export-menu.png" alt="Export"></a><br><b>Export</b>: TXT, PDF in portrait or landscape, or the system print dialog.</td><td width="50%"></td></tr>

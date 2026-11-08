@@ -67,7 +67,12 @@ button {
 .version-btn:hover { color: var(--accent); }
 .update-badge { margin-left: 8px; padding: 2px 10px; font-size: 12px; }
 .update-badge[hidden], #about-install[hidden] { display: none; }
-.about-notes { max-height: 240px; overflow: auto; white-space: pre-wrap;
+.about-notes h4 { margin: 10px 0 4px; font-size: 13px; }
+.about-notes p { margin: 0 0 8px; }
+.about-notes ul { margin: 0 0 8px; padding-left: 18px; }
+.about-notes li { margin-bottom: 4px; }
+.about-notes code { font-family: var(--mono); font-size: 12px; }
+.about-notes { max-height: 240px; overflow: auto; white-space: normal;
   font-size: 12px; background: var(--input-bg, rgba(0,0,0,0.2)); padding: 8px;
   border-radius: 6px; margin: 8px 0; }
 .about-msg { min-height: 1.2em; margin: 6px 0; }

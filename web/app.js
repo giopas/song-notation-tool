@@ -2762,6 +2762,41 @@ async function updateAtStart() {
   } catch (e) { /* offline: say nothing */ }
 }
 
+/**
+ * Release notes are a CHANGELOG.md section: markdown, wrapped at 72
+ * columns. Shown as typed they broke mid-sentence and showed "###" and
+ * "**". This joins the wrapped lines and draws headings, bullets, bold
+ * and code. The text is escaped first, so nothing in it becomes markup
+ * except these few marks.
+ */
+function notesHtml(md) {
+  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = (t) => esc(t)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, "$1");
+  const out = [];
+  let para = null, list = null;
+  const flush = () => {
+    if (para) { out.push("<p>" + inline(para.join(" ")) + "</p>"); para = null; }
+    if (list) { out.push("<ul>" + list.map((li) => "<li>" + inline(li) + "</li>").join("") + "</ul>"); list = null; }
+  };
+  String(md).split(/\r?\n/).forEach((raw) => {
+    const line = raw.trim();
+    if (!line || /^-{3,}$/.test(line)) { flush(); return; }
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) { flush(); out.push("<h4>" + inline(h[1]) + "</h4>"); return; }
+    const li = line.match(/^[-*]\s+(.*)$/);
+    if (li) { if (para) flush(); list = list || []; list.push(li[1]); return; }
+    if (list && /^\s{2,}/.test(raw)) { list[list.length - 1] += " " + line; return; }
+    if (list) flush();
+    para = para || [];
+    para.push(line);
+  });
+  flush();
+  return out.join("");
+}
+
 function openAbout() {
   const d = UPDATE || {};
   const current = (META && META.app_version) || d.current || "";
@@ -2779,7 +2814,7 @@ function openAbout() {
   }
   document.getElementById("about-sub").textContent = sub;
   const notes = document.getElementById("about-notes");
-  notes.textContent = d.newer ? (d.notes || "") : "";
+  notes.innerHTML = d.newer ? notesHtml(d.notes || "") : "";
   notes.classList.toggle("hidden", !(d.newer && d.notes));
   document.getElementById("about-install").hidden = !(d.newer && d.can_install && d.asset);
   document.getElementById("about-msg").textContent = d.error || "";

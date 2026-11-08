@@ -624,9 +624,9 @@ function wireSectionEvents(node, sec, idx) {
     if (inputs.length) inputs[inputs.length - 1].focus();
   });
 
-  node.querySelector(".sec-up").addEventListener("click", () => moveSection(sec.id, -1));
-  node.querySelector(".sec-down").addEventListener("click", () => moveSection(sec.id, 1));
-  node.querySelector(".sec-dup").addEventListener("click", () => duplicateSection(sec.id));
+  wireDragHandle(node, sec.id);
+  node.querySelector(".sec-dup").addEventListener("click",
+    (e) => openCopyPicker(sec.id, e.currentTarget));
   node.querySelector(".sec-del").addEventListener("click", () => deleteSection(sec.id));
 }
 
@@ -1184,6 +1184,217 @@ function deleteSection(id) {
   schedulePreviewUpdate();
 }
 
+/** Scroll a section's card into view and flash it, so you see where it went. */
+function showSectionCard(id) {
+  const card = document.querySelector(`.section-card[data-id="${CSS.escape(id)}"]`);
+  if (!card) return null;
+  card.scrollIntoView({ block: "nearest" });
+  card.classList.remove("just-moved");
+  void card.offsetWidth;            // restart the animation
+  card.classList.add("just-moved");
+  return card;
+}
+
+// ---------------------------------------------------------------------------
+//  Reordering by dragging the ⠿ handle
+// ---------------------------------------------------------------------------
+//  Pointer events rather than HTML drag-and-drop: they behave the same in a
+//  browser tab and in the native window, work with a trackpad or a finger,
+//  and leave the text fields inside each card alone.
+//
+//  While you drag, every card folds down to its header row, so the whole
+//  song fits on screen and a section can go from the end to the top in one
+//  move. The card you hold moves through the list as you go; letting go
+//  keeps the new order, Escape puts everything back.
+let sectionDrag = null;
+
+function wireDragHandle(node, id) {
+  const handle = node.querySelector(".drag-handle");
+  if (!handle) return;
+  handle.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || sectionDrag) return;
+    e.preventDefault();
+    sectionDrag = { id, node, startY: e.clientY, lastY: e.clientY, started: false,
+                    before: currentDoc.sections.map((s) => s.id), raf: 0 };
+    window.addEventListener("pointermove", onSectionDragMove);
+    window.addEventListener("pointerup", onSectionDragUp);
+    window.addEventListener("pointercancel", onSectionDragCancel);
+    window.addEventListener("keydown", onSectionDragKey, true);
+  });
+  // The keyboard way: focus the handle, then up and down arrows.
+  handle.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    moveSection(id, e.key === "ArrowUp" ? -1 : 1);
+    const card = showSectionCard(id);
+    const again = card && card.querySelector(".drag-handle");
+    if (again) again.focus();
+  });
+}
+
+function startSectionDrag() {
+  const d = sectionDrag;
+  const list = document.getElementById("section-list");
+  const main = document.getElementById("main");
+  d.started = true;
+  document.body.classList.add("dragging-section");
+  list.classList.add("reordering");
+  d.node.classList.add("lifted");
+  // Folding the cards moves everything; scroll so the held card is back
+  // under the pointer.
+  const r = d.node.getBoundingClientRect();
+  main.scrollTop += (r.top + r.height / 2) - d.lastY;
+  const tick = () => {
+    if (!sectionDrag || !sectionDrag.started) return;
+    autoScrollWhileDragging();
+    placeDraggedSection();
+    sectionDrag.raf = requestAnimationFrame(tick);
+  };
+  d.raf = requestAnimationFrame(tick);
+}
+
+function onSectionDragMove(e) {
+  const d = sectionDrag;
+  if (!d) return;
+  d.lastY = e.clientY;
+  if (!d.started && Math.abs(e.clientY - d.startY) > 4) startSectionDrag();
+}
+
+// Near the top or bottom edge of the editor, keep scrolling, faster the
+// closer the pointer gets.
+function autoScrollWhileDragging() {
+  const main = document.getElementById("main");
+  const r = main.getBoundingClientRect();
+  const edge = 48, y = sectionDrag.lastY;
+  if (y < r.top + edge) main.scrollTop -= Math.ceil((r.top + edge - y) / 4);
+  else if (y > r.bottom - edge) main.scrollTop += Math.ceil((y - (r.bottom - edge)) / 4);
+}
+
+// Put the held card before the first other card whose middle is below the
+// pointer, or last if there is none.
+function placeDraggedSection() {
+  const d = sectionDrag;
+  const list = document.getElementById("section-list");
+  const others = [...list.children].filter((c) => c !== d.node);
+  const target = others.find((c) => {
+    const r = c.getBoundingClientRect();
+    return d.lastY < r.top + r.height / 2;
+  }) || null;
+  if (target === null) {
+    if (list.lastElementChild !== d.node) list.appendChild(d.node);
+  } else if (d.node.nextElementSibling !== target) {
+    list.insertBefore(d.node, target);
+  }
+}
+
+function onSectionDragUp() { endSectionDrag(true); }
+function onSectionDragCancel() { endSectionDrag(false); }
+function onSectionDragKey(e) {
+  if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); endSectionDrag(false); }
+}
+
+function endSectionDrag(keep) {
+  const d = sectionDrag;
+  if (!d) return;
+  sectionDrag = null;
+  cancelAnimationFrame(d.raf);
+  window.removeEventListener("pointermove", onSectionDragMove);
+  window.removeEventListener("pointerup", onSectionDragUp);
+  window.removeEventListener("pointercancel", onSectionDragCancel);
+  window.removeEventListener("keydown", onSectionDragKey, true);
+  if (!d.started) return;          // a click on the handle, not a drag
+  document.body.classList.remove("dragging-section");
+  const list = document.getElementById("section-list");
+  list.classList.remove("reordering");
+  d.node.classList.remove("lifted");
+  const after = [...list.children].map((c) => c.dataset.id);
+  const changed = keep && after.join("\n") !== d.before.join("\n");
+  if (changed) {
+    const byIdMap = new Map(currentDoc.sections.map((s) => [s.id, s]));
+    currentDoc.sections = after.map((id) => byIdMap.get(id)).filter(Boolean);
+    schedulePreviewUpdate();
+  }
+  renderEditor();                  // also puts the cards back on Escape
+  showSectionCard(d.id);
+}
+
+// ---------------------------------------------------------------------------
+//  "Copy to…" picker
+// ---------------------------------------------------------------------------
+//  The ⧉ button opens a small list of every place the copy can go: the top
+//  of the song, or after any section. One click puts it there. The place
+//  right after the original is highlighted, so Enter does what the button
+//  used to do.
+function openCopyPicker(id, anchor) {
+  const secs = currentDoc.sections;
+  const i = secs.findIndex((s) => s.id === id);
+  if (i < 0) return;
+  const picker = document.getElementById("copy-picker");
+  const label = (s, n) => `${n + 1}. ${s.name || "(no name)"}`;
+  picker.querySelector(".copy-picker-title").textContent =
+    `Copy "${secs[i].name || "(no name)"}" to…`;
+  const list = picker.querySelector(".copy-picker-list");
+  list.innerHTML = "";
+  const addRow = (text, at, isDefault) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "copy-picker-row" + (isDefault ? " default" : "");
+    b.textContent = text;
+    b.addEventListener("click", () => {
+      closeCopyPicker();
+      const sec = duplicateSection(id, at);
+      if (sec) toast(at === 0 ? `Added "${sec.name}" at the top`
+                              : `Added "${sec.name}" after "${secs[at - 1].name}"`);
+    });
+    list.appendChild(b);
+    return b;
+  };
+  addRow("At the top", 0, false);
+  let focusMe = null;
+  secs.forEach((s, n) => {
+    const own = n === i;
+    const row = addRow(`After ${label(s, n)}${own ? "  (this one)" : ""}`, n + 1, own);
+    if (own) focusMe = row;
+  });
+
+  picker.querySelector(".copy-picker-cancel").onclick = closeCopyPicker;
+  picker.classList.remove("hidden");
+  // Next to the button, kept inside the window.
+  const a = anchor.getBoundingClientRect();
+  const w = picker.offsetWidth, h = picker.offsetHeight;
+  let left = Math.min(a.right - w, window.innerWidth - w - 8);
+  let top = a.bottom + 6;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, a.top - h - 6);
+  picker.style.left = `${Math.max(8, left)}px`;
+  picker.style.top = `${top}px`;
+  if (focusMe) { focusMe.focus(); focusMe.scrollIntoView({ block: "nearest" }); }
+
+  setTimeout(() => {
+    document.addEventListener("pointerdown", onCopyPickerOutside, true);
+    document.addEventListener("keydown", onCopyPickerKey, true);
+  }, 0);
+}
+
+function closeCopyPicker() {
+  document.getElementById("copy-picker").classList.add("hidden");
+  document.removeEventListener("pointerdown", onCopyPickerOutside, true);
+  document.removeEventListener("keydown", onCopyPickerKey, true);
+}
+
+function onCopyPickerOutside(e) {
+  if (!document.getElementById("copy-picker").contains(e.target)) closeCopyPicker();
+}
+
+function onCopyPickerKey(e) {
+  if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeCopyPicker(); return; }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const rows = [...document.querySelectorAll("#copy-picker .copy-picker-row")];
+    const k = rows.indexOf(document.activeElement);
+    const next = rows[Math.max(0, Math.min(rows.length - 1, k + (e.key === "ArrowDown" ? 1 : -1)))];
+    if (next) { e.preventDefault(); next.focus(); }
+  }
+}
+
 function moveSection(id, delta) {
   const secs = currentDoc.sections;
   const i = secs.findIndex((s) => s.id === id);
@@ -1212,10 +1423,16 @@ function refKeyFor(sec) {
   return clashes === 1 ? candidate : sec.id;
 }
 
-function duplicateSection(id) {
+/**
+ * Add a reference to section `id`. `at` is where it goes in the list
+ * (0 = top); left out, it goes right after the original, as before.
+ */
+function duplicateSection(id, at) {
   const i = currentDoc.sections.findIndex((s) => s.id === id);
   if (i < 0) return;
   const source = currentDoc.sections[i];
+  const where = (at === undefined || at === null)
+    ? i + 1 : Math.max(0, Math.min(currentDoc.sections.length, at));
   const newSec = {
     id: newSectionId(), name: source.name + " (ref)", type: source.type,
     instrument: source.instrument, repeat: 1, transpose: 0,
@@ -1225,9 +1442,11 @@ function duplicateSection(id) {
     items: [{ kind: "section_ref", section: source.id, repeat: 1, all: false, transpose: 0 }],
     chart_line: `=${refKeyFor(source)}`,
   };
-  currentDoc.sections.splice(i + 1, 0, newSec);
+  currentDoc.sections.splice(where, 0, newSec);
   renderEditor();
   schedulePreviewUpdate();
+  showSectionCard(newSec.id);
+  return newSec;
 }
 
 // ---------------------------------------------------------------------------

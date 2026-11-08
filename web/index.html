@@ -644,10 +644,19 @@
 
   <div id="toast" class="hidden"></div>
 
+  <!-- "Copy to…": opened by a section's ⧉ button. Lists every place the
+       copy can go; one click puts it there. Filled in by openCopyPicker(). -->
+  <div id="copy-picker" class="copy-picker hidden" role="dialog" aria-labelledby="copy-picker-title">
+    <div class="copy-picker-title" id="copy-picker-title"></div>
+    <div class="copy-picker-note">The copy is a reference: it plays whatever the original holds, so you only edit it once.</div>
+    <div class="copy-picker-list"></div>
+    <div class="copy-picker-foot"><button type="button" class="btn copy-picker-cancel">Cancel</button></div>
+  </div>
+
   <template id="section-template">
     <div class="section-card" data-id="">
       <div class="section-head">
-        <span class="drag-handle" title="Section order">⠿</span>
+        <span class="drag-handle" tabindex="0" role="button" aria-label="Move this section" title="Drag to move this section. Or click here and use the up and down arrow keys.">⠿</span>
         <input class="sec-name" type="text" title="Section name, e.g. Verse 1">
         <select class="sec-type" title="Section type, which sets its colour"></select>
         <select class="sec-instrument" title="Instrument / tuning for this section"></select>
@@ -663,9 +672,7 @@
           <option value="smaller">Smaller</option>
           <option value="larger">Larger</option>
         </select>
-        <button class="btn icon-btn sec-up" title="Move up">↑</button>
-        <button class="btn icon-btn sec-down" title="Move down">↓</button>
-        <button class="btn icon-btn sec-dup" title="Duplicate as reference: points to this section instead of copying it">⧉</button>
+        <button class="btn icon-btn sec-dup" title="Copy as a reference and choose where it goes. The copy plays whatever this section holds.">⧉</button>
         <button class="btn icon-btn sec-del" title="Delete section">🗑</button>
       </div>
       <div class="sec-line-row">

@@ -319,11 +319,30 @@ def test_reference_inside_a_group_is_expanded_too():
     assert [it["symbol"] for it in out[0]["items"]] == ["A", "D"]
 
 
-def test_group_symbol_row_keeps_fret_numbers():
+def test_group_frets_sit_on_the_fret_row_over_their_chords():
+    # "[5A 3C 5A 3G]x2" printed its frets glued to the chord names on
+    # the chord row ("[5A 3C ...]"), so the preview and PDF showed no
+    # fret hint over a bracketed run. Each fret now sits on the fret row,
+    # in the column of its own chord, as it does outside brackets.
+    import model, grammar
+    from render import render_chart_rows, ROLE_FRET, ROLE_SYM
+    rows = render_chart_rows(grammar.parse_items("[5A 3C 5A 3G]x2 5A"))
+    fret = next(r["text"] for r in rows if r["role"] == ROLE_FRET)
+    sym = next(r["text"] for r in rows if r["role"] == ROLE_SYM)
+    assert "[A C A G](x2)" in sym
+    for i, ch in enumerate(sym):
+        if ch in "ACG":
+            assert fret[i] in "53", (fret, sym)
+
+
+def test_a_wide_fret_in_a_group_keeps_the_next_chord_under_its_own_fret():
     import model, grammar
     from render import render_chart_row
-    rows = render_chart_row([model.make_group(grammar.parse_items("3A 12D"), repeat=2)])
-    assert "3A 12D" in "\n".join(rows)
+    rows = render_chart_row([model.make_group(grammar.parse_items("3A 12D 5E"), repeat=2)])
+    fret, sym = rows[0], rows[1]
+    assert fret[sym.index("A")] == "3"
+    assert fret[sym.index("D"):sym.index("D") + 2] == "12"
+    assert fret[sym.index("E")] == "5"
 
 
 def test_a_line_break_inside_a_group_actually_breaks_the_line():
@@ -377,7 +396,7 @@ def test_group_with_no_break_still_collapses_to_one_bracketed_line():
     import grammar
     from render import render_chart_row
     rows = render_chart_row(grammar.parse_items("[5A 7D]x2"))
-    assert rows == ["  [5A 7D](x2)"]
+    assert rows == ["   5 7", "  [A D](x2)"]
 
 
 def test_repeated_section_reference_with_a_break_also_breaks_the_line():

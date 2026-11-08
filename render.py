@@ -84,7 +84,39 @@ def _fret_str(item: dict) -> str:
     if item["kind"] == "token":
         f = item.get("fret")
         return str(f) if f is not None else ""
+    if item["kind"] == "group":
+        return _group_strs(item)[0].rstrip()
     return ""
+
+
+def _group_strs(item: dict):
+    """A plain bracketed group as two aligned strings: its fret row and
+    its symbol row. Each fret sits over its own chord, the same way frets
+    sit over chords outside brackets, so "[5A 3C]x2" prints as
+
+         5  3
+        [A  C](x2)
+
+    rather than "[5A 3C](x2)" on the chord row, where the fret read as
+    part of the chord name instead of a hint above it. A fret wider than
+    its chord widens that chord's cell, so the next one stays under its
+    own fret. Nested groups recurse."""
+    frets, syms = [], []
+    for x in item["items"]:
+        if x.get("kind") == "group":
+            f, sy = _group_strs(x)
+        else:
+            f = _fret_str(x)
+            sy = _symbol_str(x)
+        sy += "^" if x.get("accent") else ""
+        w = max(len(f), len(sy))
+        frets.append(f.ljust(w))
+        syms.append(sy.ljust(w))
+    fret_s = " " + " ".join(frets)
+    sym_s = "[" + " ".join(syms).rstrip() + "]"
+    if item.get("repeat", 1) != 1:
+        sym_s += f"(x{item['repeat']})"
+    return fret_s, sym_s
 
 
 def _symbol_str(item: dict) -> str:
@@ -104,24 +136,13 @@ def _symbol_str(item: dict) -> str:
             s += f" {tag}"
         return s
     if k == "group":
-        # Frets belong inline here: the group renders on the symbol row
-        # only (there's no fret row to align a bracketed run against), so
-        # dropping them would silently lose "3A 12D" down to "A D" — which
-        # is exactly what an expanded x2 reference looks like.
-        #
-        # A group reaching this point is always the simple case: plain
-        # chords (and/or a nested group of plain chords) that fit on one
-        # line. A group that holds a lick or a line break is unwrapped
-        # before rendering ever gets here — see _flatten_bracket_groups —
-        # because neither a lick's tab nor a "//" survives being flattened
-        # into inline bracket text.
-        inner = " ".join(_fret_str(x) + _symbol_str(x)
-                         + ("^" if x.get("accent") else "")
-                         for x in item["items"])
-        s = f"[{inner}]"
-        if item.get("repeat", 1) != 1:
-            s += f"(x{item['repeat']})"
-        return s
+        # Frets go on the fret row above, each over its own chord — see
+        # _group_strs. A group reaching this point is always the simple
+        # case: plain chords (and/or a nested group of plain chords) that
+        # fit on one line. A group that holds a lick or a line break is
+        # unwrapped before rendering ever gets here — see
+        # _flatten_bracket_groups.
+        return _group_strs(item)[1]
     if k == "lick":
         # A named lick prints its name over its tab, so the same figure
         # recalled later as "{Riff1}" is recognisable as the thing you

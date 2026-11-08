@@ -299,3 +299,49 @@ def test_release_workflow_when_present():
     assert "macos-14" not in text
     # A draft is made only when every system built.
     assert "needs.build.result == 'success'" in text
+
+
+# ── v0.33.1: GitHub busy right after a release ──────────────────────────────
+
+def _http_error(code):
+    import urllib.error
+    return urllib.error.HTTPError("https://github.com/x", code, "busy", {}, None)
+
+
+def test_a_busy_github_is_tried_again():
+    calls, waits = [], []
+
+    def flaky():
+        calls.append(1)
+        if len(calls) < 3:
+            raise _http_error(504)
+        return b"ok"
+    assert update._with_retries(flaky, sleep=waits.append) == b"ok"
+    assert len(calls) == 3 and waits == list(update.RETRY_WAIT)
+
+
+def test_a_missing_file_is_not_tried_again():
+    calls = []
+
+    def missing():
+        calls.append(1)
+        raise _http_error(404)
+    with pytest.raises(Exception):
+        update._with_retries(missing, sleep=lambda s: None)
+    assert len(calls) == 1
+
+
+def test_install_says_github_was_busy_and_nothing_changed(tmp_path, monkeypatch):
+    monkeypatch.setattr(update, "install_root", lambda: str(tmp_path / "app"))
+    monkeypatch.setattr(update.time, "sleep", lambda s: None)
+
+    def busy(*_a, **_k):
+        raise _http_error(504)
+    monkeypatch.setattr(update, "_read", busy)
+    info = {"newer": True, "latest": "9.9.9",
+            "asset": {"name": "Song-Notation-Tool-9.9.9-macos-arm64.tar.gz",
+                      "url": "https://github.com/x/a.tar.gz"},
+            "sums_url": "https://github.com/x/SHA256SUMS"}
+    res = update.install(info)
+    assert not res["ok"]
+    assert "did not answer in time" in res["message"] and "Nothing was changed" in res["message"]

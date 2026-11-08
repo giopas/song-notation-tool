@@ -52,7 +52,10 @@ import userpaths
 REPO = "giopas/song-notation-tool"
 FEED = f"https://api.github.com/repos/{REPO}/releases/latest"
 CACHE_HOURS = 12
-TIMEOUT = 5
+TIMEOUT = 5            # the update check: a quick question, offline is normal
+FILE_TIMEOUT = 60      # a release file: GitHub's file server can take 10 s to start
+RETRIES = 3            # attempts per release file
+RETRY_WAIT = (2, 5)    # seconds between them
 MAX_DOWNLOAD = 300 * 1024 * 1024
 _ASSET_RE = re.compile(r"^Song-Notation-Tool-(?P<ver>\d+\.\d+\.\d+)-(?P<os>macos|windows|linux)-(?P<arch>arm64|x86_64|x64)\.(?P<ext>zip|tar\.gz|dmg)$")
 
@@ -178,7 +181,7 @@ def _ssl_context() -> ssl.SSLContext:
     return ssl.create_default_context()
 
 
-def _read(url: str, limit: int = 2_000_000) -> bytes:
+def _read(url: str, limit: int = 2_000_000, timeout: float = TIMEOUT) -> bytes:
     if os.path.isfile(url):
         with open(url, "rb") as f:
             return f.read(limit)
@@ -186,8 +189,31 @@ def _read(url: str, limit: int = 2_000_000) -> bytes:
         raise ValueError("only https:// or a local file")
     req = urllib.request.Request(url, headers={"User-Agent": f"Song-Notation-Tool/{VERSION}",
                                                "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=TIMEOUT, context=_ssl_context()) as r:
+    with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()) as r:
         return r.read(limit)
+
+
+def _passing(e: Exception) -> bool:
+    """A failure worth another try: GitHub busy (5xx, 429) or the network slow."""
+    import socket
+    import urllib.error
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code >= 500 or e.code == 429
+    return isinstance(e, (urllib.error.URLError, socket.timeout, TimeoutError,
+                          ConnectionError))
+
+
+def _with_retries(fn, *args, sleep=None, **kw):
+    """Run fn, again after a short wait when the failure is GitHub being busy
+    or slow. Right after a release is published its file server can answer
+    504 for a few minutes; one attempt turned that into a failed update."""
+    for attempt in range(RETRIES):
+        try:
+            return fn(*args, **kw)
+        except Exception as e:  # noqa: BLE001
+            if attempt == RETRIES - 1 or not _passing(e):
+                raise
+            (sleep or time.sleep)(RETRY_WAIT[min(attempt, len(RETRY_WAIT) - 1)])
 
 
 def _feed_url() -> str:
@@ -281,7 +307,7 @@ def _download(url: str, dest: str) -> None:
         raise ValueError("only https:// downloads")
     req = urllib.request.Request(url, headers={"User-Agent": f"Song-Notation-Tool/{VERSION}"})
     got = 0
-    with urllib.request.urlopen(req, timeout=30, context=_ssl_context()) as r, open(dest, "wb") as f:
+    with urllib.request.urlopen(req, timeout=FILE_TIMEOUT, context=_ssl_context()) as r, open(dest, "wb") as f:
         while True:
             chunk = r.read(1 << 20)
             if not chunk:
@@ -416,12 +442,13 @@ def install(info: dict = None) -> dict:
         return {"ok": False, "message": "This release has no SHA256SUMS file, so it was not installed."}
     work = tempfile.mkdtemp(prefix="snt-update-", dir=os.path.dirname(root) if os.access(os.path.dirname(root), os.W_OK) else None)
     try:
-        sums = parse_sums(_read(sums_url).decode("utf-8", "replace"))
+        sums = parse_sums(_with_retries(_read, sums_url, timeout=FILE_TIMEOUT)
+                          .decode("utf-8", "replace"))
         want = sums.get(asset["name"])
         if not want:
             raise ValueError("the file is not listed in SHA256SUMS")
         arc = os.path.join(work, asset["name"])
-        _download(asset["url"], arc)
+        _with_retries(_download, asset["url"], arc)
         got = sha256_of(arc)
         if got != want:
             raise ValueError("the download does not match its SHA-256, so it was not installed")
@@ -445,4 +472,8 @@ def install(info: dict = None) -> dict:
                 "message": f"Version {info.get('latest')} is ready. The app closes and starts again."}
     except Exception as e:  # noqa: BLE001
         shutil.rmtree(work, ignore_errors=True)
+        if _passing(e):
+            return {"ok": False, "message": "GitHub did not answer in time, even after "
+                    f"{RETRIES} tries ({e}). Nothing was changed. Try again in a few "
+                    "minutes; just after a release, its files can be slow to come."}
         return {"ok": False, "message": f"Could not update: {e}"}

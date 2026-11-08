@@ -38,7 +38,10 @@ closing bracket (no space) to repeat it:
 ```
 
 plays the pair twice, then carries on with the rest of the line. A space
-before the `xN` works too.
+before the `xN` works too. To repeat a whole section, put its whole line
+in a group: `[G D Em C]x2`. (Older songs had a repeat box in each
+section's header instead; a section that still uses it shows a **×2**
+chip in the browser app, which removes it when clicked.)
 
 A repeat also works after a riff or a section reference, but there it
 needs the space: `riff1 x3`, `=verse1 x2`. Without the space it becomes

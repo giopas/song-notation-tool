@@ -60,8 +60,12 @@ Writing the chart
   an accent, and runs for what covers several notes: `[pm 5A 5A 5A]` palm
   mute, `[cresc A D E]` and `[dim E D A]` hairpins.
 - Parts: **+ Part** adds another instrument's line to a section, such as
-  the guitar chords under the bass line. **⚙ Layout → Instruments** picks
-  which instruments print (browser app).
+  a bass line under the guitar chords. Like a section, a part can be a
+  chart line, a tab grid, both, or free text. **⚙ Layout → Instruments**
+  picks which instruments print (browser app).
+- Repeats are written in the chart line: `[G D Em C]x2` plays the line
+  twice. A section from an older song that still repeats as a whole shows
+  a **×2** chip in its header; click it to remove the repeat.
 - While you type a chart line, the browser app suggests the song's riffs,
   sections (after `=`) and named licks (after `{`).
 - A tab grid is there for the occasional bar you want fully written out.

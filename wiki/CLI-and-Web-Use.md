@@ -175,7 +175,8 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
 - a short list of suggestions as you type a chart line: riffs for a plain
   word, sections after `=`, named licks after `{`;
 - **+ Part** under each section, for another instrument's line in the same
-  section (see [[Printing and Layout]]);
+  section, as a chart line, a tab grid, both, or free text (see
+  [[Printing and Layout]]);
 - an Annotation field for each section;
 - four render modes per section: Chart, Tab, Both and Free (a plain text
   box, kept and exported exactly as typed);

@@ -31,8 +31,18 @@ A section can hold more than one instrument. The section's own chart line
 belongs to the instrument picked in its header; click **+ Part** under it
 to add another instrument's line to the same section, for example the
 guitar chords under the bass line of a verse. A part has its own
-instrument and its own chart line, with the same grammar, and plays the
-section's repeats and transpose.
+instrument and its own render mode, picked beside the instrument:
+
+- **Chart**: a chart line, with the same grammar as the section's;
+- **Tab**: a tab grid, edited like a section's (**+ Measure**, then type
+  fret numbers into the cells);
+- **Both**: the chart line, then the grid under it;
+- **Free**: any text, kept and printed exactly as typed, for a note such
+  as "follow the kick drum".
+
+A part's chart line follows the section's transpose; its tab grid, like a
+section's, prints as typed. Switching a part to another mode keeps what
+the other modes hold, so switching back brings it back.
 
 A part prints under the section's own line, with its instrument as a small
 grey heading. **⚙ Layout → Instruments** picks which instruments print: all

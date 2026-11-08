@@ -35,6 +35,7 @@ serves that, not by difficulty.
 
 | **v0.20.0** | **Quick-insert palette, free-text sections, `//` line breaks, Fit to one page.** See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.21.0** | **Licks read as tab** — printed as `\|G\|-5-7-5-\|` string rows in blue, an empty-lick button built from the section's instrument, rests in grey, and row roles/spans so both front ends colour from one source. See [CHANGELOG.md](CHANGELOG.md). |
+| **v0.32.0** | **Move and copy sections** — drag a section by its handle (the cards fold to their names while you drag), arrow keys on the handle, and a "Copy to…" list for where a copy goes. Replaces the ↑ ↓ buttons. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.31.2** | Floor on one page, with a slim title (title, artist, key) and small section names. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.31.1** | Fix: the Windows build of v0.31.0 failed on a development test; the app is unchanged. See [CHANGELOG.md](CHANGELOG.md). |
 | **v0.31.0** | **Floor sheet** — a Size for a page on the floor: the largest type on two sheets, portrait or landscape, one or two columns, tab at half size; a size per section; a riff's tab printed once with Name only. See [CHANGELOG.md](CHANGELOG.md). |

@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.32.0] — 2026-11-08
+
+Moving and copying sections in the browser and the native window. The ↑
+and ↓ buttons on each card moved a section one place at a time, and in a
+long song it was easy to lose track of where it had got to. Now you drag
+a section where you want it, and a copy asks where it should go.
+
+### Added
+
+- Drag a section by its ⠿ handle to move it. While you drag, every card
+  folds down to its header row, so the whole song fits on screen; the list
+  scrolls by itself near the top and bottom edges. Letting go keeps the
+  new order, Escape puts everything back, and the card you moved flashes
+  once so you can see where it landed. It works with a mouse, a trackpad
+  or a finger, in a browser tab and in the native window.
+- Click the ⠿ handle and use the up and down arrow keys to move a section
+  one place without the mouse.
+- **⧉** on a section card opens a small "Copy to…" list: the top of the
+  song, or after any section, numbered so two sections with the same name
+  can be told apart. The place right after the original is highlighted,
+  so Enter does what the button used to do. Escape, Cancel or a click
+  outside closes it. The copy is still a reference to the original.
+
+### Removed
+
+- The ↑ and ↓ buttons on each section card. Dragging and the arrow keys
+  on the handle replace them.
+
 ### Fixed
 
 - On a printed floor sheet the title was cut off: it sat in the top few

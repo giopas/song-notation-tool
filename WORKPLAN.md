@@ -12,6 +12,12 @@ and git hold the history.
 
 ## Where we are
 
+- Ready to release: v0.32.0 on `feat/v0.32.0` (8 November 2026), moving
+  sections by dragging the ⠿ handle and a "Copy to…" list on ⧉, in the
+  browser and the native window. Not yet merged, tagged or pushed. The
+  drag and the picker were tried in Chromium with Playwright; the native
+  window on the Mac is giopas's check (below). Proposed release title:
+  `v0.32.0 (Drag and copy sections)`.
 - Released: v0.31.2, tagged on 13 October 2026: the floor sheet on one
   page. v0.31.0 did not build on Windows (a test of
   `tools/ground_truth.py` deleted read-only git files), fixed in v0.31.1.
@@ -26,7 +32,7 @@ and git hold the history.
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 515 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 521 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -59,6 +65,11 @@ started until giopas picks it.
 - A test file for the Tkinter desktop app (`tests/test_song_writer.py`).
 
 Manual checks waiting for giopas (each stays here until reported back):
+
+- v0.32.0: in the native window on the Mac, drag a section from the end
+  of a long song to the top and back, press Escape halfway through a
+  drag, move a section with the arrow keys on its handle, and copy one
+  with ⧉ to the top and to the middle of the list.
 
 - v0.26.3 repeat bracket in a printed PDF and in the web preview.
 - v0.27.0: the icon in the desktop app's window and Dock, in the native
@@ -141,6 +152,7 @@ and readable on stage without the handwritten sheet.
 | 11 Oct 2026 | A session starts with `tools/ground_truth.py` and corrects this plan where it disagrees. Finished items are deleted from the plan, not ticked. Ideas borrowed from truongfelix/workflow; the rest of that template is not adopted. (giopas, 11 October.) |
 | 13 Oct 2026 | A floor sheet: Size "Floor" prints the largest type that fits on one page (changed from two the same day), portrait or landscape, whichever is bigger; tab at about half size; a slim title (title, artist, key) and small section names. Each section can also be Smaller or Larger than the song. (giopas, 13 October.) |
 | 13 Oct 2026 | Floor may use two columns when a long song gets clearly bigger type that way; a short song keeps one column across the full width. Tab never below 75%. (Proposed by Claude while building it; giopas to confirm.) |
+| 8 Nov 2026 | Sections move by dragging their ⠿ handle (arrow keys on the handle from the keyboard); the ↑ ↓ buttons are gone. ⧉ asks where the copy goes and the copy stays a reference. Browser and native window only; the Tkinter app keeps its own drag and Ctrl/Cmd+D. (giopas, 8 November.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

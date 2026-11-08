@@ -12,14 +12,20 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.33.0, published by the workflow on 8 November 2026
-  (all eight files). **Update and restart** from v0.31.2 then stopped at
-  an HTTP 504 from GitHub's file server; the files were fine, and a retry
-  a minute later is expected to work.
-- Ready to release: v0.33.1 on `fix/v0.33.1`: the updater retries when
-  GitHub is busy or slow (three tries, up to a minute per file), and the
-  update card draws the release notes as text. Not yet merged, tagged or
-  pushed.
+- Released: v0.33.0 and v0.33.1, published by the workflow on 8 November
+  2026 with all eight files each. **Update and restart** from v0.33.0 to
+  v0.33.1 failed: GitHub's download address
+  (github.com/…/releases/download/…) answered 504 to every request, while
+  the API address for the same file worked in under a second (checked
+  from giopas's network).
+- Ready to release: v0.33.2 on `fix/v0.33.2`: the updater downloads
+  through the API address first, the download address as fallback. Not
+  yet merged, tagged or pushed. Installed copies up to v0.33.1 cannot
+  update themselves while GitHub's download address fails; install
+  v0.33.2 by hand once.
+- QLC+ Swiss Knife's `core/update.py` downloads the same way the old code
+  here did (download address only, five seconds for SHA256SUMS), so it
+  can fail the same way. Worth the same fix there.
 - v0.32.0 was tagged and built on 8 November, but GitHub had retired the
   `macos-14` runner, so its draft has no `macos-arm64` file. Delete that
   draft instead of publishing it; v0.33.0 carries everything in it.
@@ -32,7 +38,7 @@ and git hold the history.
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 539 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 542 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -66,6 +72,8 @@ started until giopas picks it.
 
 Manual checks waiting for giopas (each stays here until reported back):
 
+- v0.33.2: after installing it by hand, **Update and restart** to the
+  next release on the Mac.
 - v0.33.0: in the native window, add a Bass part to a guitar section, try
   each mode (Chart, Tab, Both, Free), export a PDF and look at the part;
   open an older song whose sections had a repeat and click the ×2 chip.

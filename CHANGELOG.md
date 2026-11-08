@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.33.2] — 2026-11-08 — Updates through GitHub's API
+
+**Update and restart** still failed after v0.33.1, and retrying was not
+the answer. The address every release file was downloaded from
+(github.com/…/releases/download/…) answered "504 Gateway Time-out" to
+every request for an hour, from any computer, while GitHub's API address
+for the same file answered in under a second. The app is otherwise the
+same as v0.33.1.
+
+### Fixed
+
+- **Update and restart** downloads the checksum list and the package
+  through GitHub's API address for each release file (asked for as a raw
+  file), which goes straight to GitHub's file storage. The usual download
+  address is kept as a fallback, and both keep the retries from v0.33.1.
+
+Copies older than this one download through the usual address only.
+While GitHub's download address is failing, they cannot update
+themselves; download the new version from the release page instead, or
+wait until GitHub answers again.
+
 ## [0.33.1] — 2026-11-08 — Updates that wait for GitHub
 
 Right after v0.33.0 was published, **Update and restart** from v0.31.2

@@ -26,6 +26,39 @@ All three use the same notation engine (`model.py`, `grammar.py`,
 `render.py`, `transpose.py`, `export.py`), so a chart looks the same
 whichever way you made it.
 
+## How it compares
+
+Score programs and tab editors solve a different problem from this tool.
+
+| | Song Notation Tool | MuseScore | Guitar Pro, TuxGuitar |
+|---|---|---|---|
+| Main output | A one-page chart: chords, frets, repeats, riffs | Standard notation, with optional tab staves | Tablature and standard notation |
+| Chord symbols with fret numbers | Yes, typed as plain text | Possible, but entered through palettes and staves | Tab-first, chord names are secondary |
+| Named riffs and back-references | Yes | No direct equivalent | No direct equivalent |
+| Playback | No | Yes | Yes |
+| Rhythm and exact timing | No | Yes | Yes |
+| Files | `.sng` in, TXT and PDF out | MusicXML and its own format | Their own formats |
+
+**MuseScore** is the right choice when you need a full score: standard notation,
+parts for several instruments, exact rhythm, playback, or MusicXML to share
+with others. Building a chord-and-fret chart in it means working through
+palettes and staves, and the result is a score, not a single page to read on
+stage.
+
+**Guitar Pro and TuxGuitar** are tab editors. They suit writing a solo or a
+riff note by note, with playback. A chart of chord symbols, repeat counts and
+named riffs is not what they are built for.
+
+**This tool** is for the chart you would otherwise write by hand: fret numbers
+over chord symbols, repeat counts such as `(x2)`, riffs named once and called
+by name, and free notes. You type it as plain text, with no palettes or staves.
+A printed chart is meant to fit on one page, and the same song always produces
+the same PDF or TXT bytes. It uses only Python's standard library, and nothing
+leaves your computer except the optional update check. It does not play music
+and does not write standard notation or rhythm.
+
+Use it when you want the sheet you already write, typed and printable.
+
 ## Features
 
 Writing the chart

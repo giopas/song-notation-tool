@@ -38,7 +38,11 @@ Needs Pillow and ffmpeg (the app itself needs neither):
     brew install ffmpeg                         # macOS; apt install ffmpeg on Linux
 
 Optional, for a more natural voice: `pip install edge-tts`, then --tts edge
-(needs internet while generating; the app itself never needs it). On a Mac,
+(needs internet while generating; the app itself never needs it). Every
+voiced slide is kept in dist/marketing/.voice-cache/, so a rerun only asks
+for the lines that changed, and an edge-tts run that stops halfway (Microsoft
+drops requests now and then) carries on where it stopped instead of mixing in
+another voice. On a Mac,
 better `say` voices are a free download: System Settings > Accessibility >
 Read & Speak (Spoken Content before macOS 26) > System voice menu > Manage
 Voices... (e.g. "Zoe (Premium)").
@@ -65,6 +69,7 @@ from __future__ import annotations
 import argparse
 import array
 import copy
+import hashlib
 import math
 import os
 import random
@@ -96,6 +101,9 @@ PITCH = os.path.join(ROOT, "tools", "pitch_media")
 MEDIA_DIRS = [SHOTS, PITCH]
 ICON = os.path.join(ROOT, "web", "logo", "icon-256.png")
 OUT_DIR = os.path.join(ROOT, "dist", "marketing")
+# Finished voice clips, kept between runs: a rerun with the same text, voice
+# and rate reuses them instead of asking the voice engine again.
+TTS_CACHE = os.path.join(OUT_DIR, ".voice-cache")
 NAME = "Song Notation Tool"
 FILE_STEM = "Song_Notation_Tool_Pitch"
 TAGLINE = "One-page charts for guitar & bass"
@@ -132,7 +140,7 @@ SPOKEN = {
 
 SLIDES = [
     {
-        "kicker": "MADE BY A BASS PLAYER",
+        "kicker": "BY A BASS & GUITAR PLAYER",
         "color": RED,
         "title": NAME,
         "sub": "The chart you scribble on paper, as a clean one-page PDF.",
@@ -142,7 +150,7 @@ SLIDES = [
             "Riffs named once, repeats and endings: no bar written twice",
             "Free for Mac, Windows and Linux; songs stay on your computer",
         ],
-        "vo": "Hi! I play bass, and for years I wrote my songs on paper: fret numbers over chords, "
+        "vo": "Hi! I play bass and guitar, and for years I wrote my songs on paper: fret numbers over chords, "
               "repeats, riffs. So I built Song Notation Tool, to turn those scribbles into a clean "
               "one-page chart.",
     },
@@ -456,6 +464,11 @@ class Voice:
     def __init__(self, engine: str, voice: str = None, rate: int = 180):
         self.engine, self.voice, self.rate = engine, voice, rate
         self.label = engine
+        self.done = 0  # slides this engine has voiced (cached or not)
+
+    def cache_path(self, said: str) -> str:
+        key = hashlib.sha1(f"{self.engine}|{self.voice}|{self.rate}|{said}".encode("utf-8")).hexdigest()[:16]
+        return os.path.join(TTS_CACHE, f"{self.engine}-{key}.wav")
 
     @classmethod
     def choose(cls, tts: str, voice: str, rate: int) -> "Voice":
@@ -485,50 +498,82 @@ class Voice:
         if self.engine == "none":
             return False
         said = spoken(text)
-        raw = os.path.join(tmp, "tts_raw")
-        try:
-            if self.engine == "say":
-                raw += ".aiff"
-                cmd = ["say", "-r", str(self.rate), "-o", raw]
-                if self.voice:
-                    cmd += ["-v", self.voice]
-                run(cmd + [said], capture_output=True, text=True)
-            elif self.engine == "espeak":
-                raw += ".wav"
-                run(["espeak-ng", "-v", self.voice, "-s", str(int(self.rate * 0.92)), "-w", raw, said],
-                    capture_output=True, text=True)
-            elif self.engine == "edge":
-                raw += ".mp3"
-                pct = round((self.rate / 180.0 - 1) * 100)
-                run(self.edge_cmd + ["--voice", self.voice, f"--rate={pct:+d}%", "--text", said,
-                     "--write-media", raw], capture_output=True, text=True, timeout=90)
-            # Clean, consistent level: trim silence at both ends, gentle compression, normalise.
-            run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw, "-af",
-                 "silenceremove=start_periods=1:start_threshold=-50dB,"
-                 "areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,"
-                 "highpass=f=80,acompressor=threshold=-18dB:ratio=3:attack=5:release=120,"
-                 "loudnorm=I=-16:TP=-1.5:LRA=7",
-                 "-ar", str(RATE), "-ac", "1", "-sample_fmt", "s16", out_wav],
-                capture_output=True, text=True)
+        cached = self.cache_path(said)
+        if os.path.exists(cached):
+            shutil.copyfile(cached, out_wav)
+            self.done += 1
             return True
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as e:
-            reason = failure_reason(e)
+        # edge-tts goes over the internet to Microsoft, which sometimes drops
+        # a request or two in a row: try again before giving up on it.
+        tries = 3 if self.engine == "edge" else 1
+        for attempt in range(tries):
+            try:
+                self._synthesise(said, out_wav, tmp)
+                try:
+                    os.makedirs(TTS_CACHE, exist_ok=True)
+                    shutil.copyfile(out_wav, cached)
+                except OSError:
+                    pass
+                self.done += 1
+                return True
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as e:
+                reason = failure_reason(e)
+                if attempt + 1 < tries:
+                    wait = 4 * (attempt + 1)
+                    print(f"   ! {self.label} didn't answer ({reason}); trying again in {wait} s...")
+                    time.sleep(wait)
         if self.engine == "edge":
-            # edge-tts fails the same way for every slide (no internet, an old
-            # edge-tts that Microsoft no longer accepts, a Python it doesn't
-            # support yet), so say why once and use the local voice instead.
             print(f"   ! {self.label} failed: {reason}")
+            if self.done:
+                # Some slides already have the edge voice: switching to another
+                # voice now would give a video with two different speakers.
+                sys.exit(
+                    f"\nedge-tts stopped answering after {self.done} slide(s). Rather than mix two voices,\n"
+                    "the video was not made. The slides already voiced are saved, so run the same\n"
+                    "command again in a minute or two and it carries on from here.\n"
+                    "Or use the Mac's own voice for the whole video:  --tts say")
+            # Nothing voiced yet: say why once, and use the local voice for all of it.
             print("     Check with:  " + " ".join(self.edge_cmd) + ' --text "Hello" --write-media /tmp/hello.mp3')
             print(f"     Often fixed by updating it:  {sys.executable} -m pip install --user -U edge-tts")
             fallback = Voice.choose("auto", None, self.rate)
             if fallback.engine == "none":
                 self.engine, self.label = "none", "no voice"
                 return False
-            print(f"     Using {fallback.label} for the rest of the video.")
+            print(f"     Using {fallback.label} for the whole video instead.")
             self.__dict__.update(fallback.__dict__)
             return self.render(text, out_wav, tmp)
         print(f"   ! {self.label} failed ({reason}); this slide gets no voice.")
         return False
+
+    def _synthesise(self, said: str, out_wav: str, tmp: str) -> None:
+        raw = os.path.join(tmp, "tts_raw")
+        if self.engine == "say":
+            raw += ".aiff"
+            cmd = ["say", "-r", str(self.rate), "-o", raw]
+            if self.voice:
+                cmd += ["-v", self.voice]
+            run(cmd + [said], capture_output=True, text=True)
+        elif self.engine == "espeak":
+            raw += ".wav"
+            run(["espeak-ng", "-v", self.voice, "-s", str(int(self.rate * 0.92)), "-w", raw, said],
+                capture_output=True, text=True)
+        elif self.engine == "edge":
+            raw += ".mp3"
+            if os.path.exists(raw):
+                os.remove(raw)
+            pct = round((self.rate / 180.0 - 1) * 100)
+            run(self.edge_cmd + ["--voice", self.voice, f"--rate={pct:+d}%", "--text", said,
+                 "--write-media", raw], capture_output=True, text=True, timeout=90)
+            if not os.path.exists(raw) or os.path.getsize(raw) < 1000:
+                raise OSError("edge-tts returned no audio")
+        # Clean, consistent level: trim silence at both ends, gentle compression, normalise.
+        run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw, "-af",
+             "silenceremove=start_periods=1:start_threshold=-50dB,"
+             "areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,"
+             "highpass=f=80,acompressor=threshold=-18dB:ratio=3:attack=5:release=120,"
+             "loudnorm=I=-16:TP=-1.5:LRA=7",
+             "-ar", str(RATE), "-ac", "1", "-sample_fmt", "s16", out_wav],
+            capture_output=True, text=True)
 
 
 def failure_reason(e: Exception) -> str:

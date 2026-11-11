@@ -180,8 +180,20 @@ re-run the workflow from the Actions tab.
    Playwright with Chromium (`pip install playwright` and
    `python3 -m playwright install chromium`, in the development
    virtualenv); Pillow is optional, for the comparison and the sheet.
-5. Merge, tag and push as above.
-6. The release workflow (`.github/workflows/release.yml`) does the rest.
+5. Pitch check (see the 11 November decision in `WORKPLAN.md`): read the
+   version's `CHANGELOG.md` section against `SLIDES` in
+   `tools/make_pitch_video.py`, the `tools/shots.py` report against the
+   zoom points (`name.png@x,y,zoom`), and any change to the printed PDF
+   against `tools/pitch_media/` (`--refresh-pages`). Look at the slides
+   with `--stills-only`. If something is out of date, Claude proposes the
+   exact edit with the release; if not, the release summary says "Pitch
+   video: no change". When it changed, giopas remakes the video and deck
+   on the Mac, always with:
+
+       cd tools && python3 make_pitch_video.py --stills --tts edge
+
+6. Merge, tag and push as above.
+7. The release workflow (`.github/workflows/release.yml`) does the rest.
    It builds the packages for macOS (Apple silicon and Intel), Windows and
    Linux, smoke-tests each one and tests the Windows installer. When every
    build has passed, it publishes the release: titled and written by
@@ -189,11 +201,11 @@ re-run the workflow from the Actions tab.
    with the files and `SHA256SUMS` attached, marked *Latest*. If a build
    fails, nothing is released; fix it or use **Re-run failed jobs** on the
    Actions page, and the release follows.
-7. Check the published release on GitHub (text, files). **Update and
+8. Check the published release on GitHub (text, files). **Update and
    restart** offers it at once.
-8. Try **Update and restart** from the previous installed version.
-9. Small fixes are patch versions (0.26.3, 0.26.4). A patch that changes
-   nothing on screen can skip step 4.
+9. Try **Update and restart** from the previous installed version.
+10. Small fixes are patch versions (0.26.3, 0.26.4). A patch that changes
+   nothing on screen can skip step 4, but not the pitch check in step 5.
 
 `.github/` is protected for Claude's tools on giopas's computer, so a
 change to a workflow is written by Claude and copied into

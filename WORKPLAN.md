@@ -47,6 +47,10 @@ Housekeeping, small:
 2. `feat/v0.30.0` was pushed to GitHub, against the working agreement.
    It is merged, so it can go: `git push origin --delete feat/v0.30.0`.
 
+3. The pitch video tool (`tools/make_pitch_video.py` and
+   `tools/pitch_media/`, 11 November) is in the working folder, not yet
+   committed: `git switch -c chore/pitch-video`, then add and commit both.
+
 Still open from v0.31.0: a per-section size control in the desktop app,
 if wanted, and giopas's check of a printed floor sheet.
 
@@ -67,6 +71,10 @@ started until giopas picks it.
 - A test file for the Tkinter desktop app (`tests/test_song_writer.py`).
 
 Manual checks waiting for giopas (each stays here until reported back):
+
+- Pitch video: a full run of `python3 make_pitch_video.py --stills --tts edge`
+  (from `tools/`) on the Mac, every slide in the same voice, and a look at
+  the video on a phone.
 
 - v0.33.3: **Update and restart** from v0.33.2 on the Mac, then type
   `[5A 3C 5A 3G]x2 5A` in a section and check the frets sit over the
@@ -164,6 +172,8 @@ and readable on stage without the handwritten sheet.
 | 8 Nov 2026 | Sections move by dragging their ⠿ handle (arrow keys on the handle from the keyboard); the ↑ ↓ buttons are gone. ⧉ asks where the copy goes and the copy stays a reference. Browser and native window only; the Tkinter app keeps its own drag and Ctrl/Cmd+D. (giopas, 8 November.) |
 | 8 Nov 2026 | The README screenshots are retaken before every release with `tools/shots.py` (borrowed from Swiss Knife), and the pictures are committed with the release. (giopas, 8 November.) |
 | 8 Nov 2026 | A part has the same four render modes as a section (Chart, Tab, Both, Free). The section repeat box is removed from the browser app; repeats go in the chart line, and an older whole-section repeat shows as a removable ×2 chip. (giopas, 8 November.) |
+| 11 Nov 2026 | Every release includes a pitch check: does the pitch video and slide deck (`tools/make_pitch_video.py`) still tell the truth about the app? Claude reads the version's CHANGELOG.md section against `SLIDES` (a claim now wrong, a feature renamed or removed, a new feature worth a bullet or a slide, a slide's narration that no longer matches), against the `tools/shots.py` report (a retaken screenshot whose zoom point `name.png@x,y,zoom` now lands somewhere else), and against the golden PDFs (a change to the printed output means `--refresh-pages`). It then runs `--stills-only` and looks at the slides. If something needs to change, Claude proposes the exact edit to the script (or the refreshed pictures) with the release, for giopas to approve; if nothing does, the release summary says "Pitch video: no change". The video and deck are always made by giopas on the Mac with exactly `python3 make_pitch_video.py --stills --tts edge` (run from `tools/`): the edge-tts voice for every slide, plus the PNG stills and the PDF deck. Claude gives that command in every release summary whose pitch check changed something, and never proposes another voice or option. The output is never committed (`dist/` is ignored). (giopas, 11 November.) |
+| 11 Nov 2026 | The pitch video's first slide shows a photo of one of giopas's handwritten charts (`tools/pitch_media/paper-handwritten.jpg`), as the "before" next to the app's PDF. This is the one exception to keeping the author's own songs out of the repository. (giopas, 11 November.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

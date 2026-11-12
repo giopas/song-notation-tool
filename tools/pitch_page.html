@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Song Notation Tool — the video</title>
+<meta name="description" content="One-page charts for guitar and bass: a short video about Song Notation Tool, and the same slides as a PDF.">
+<meta property="og:title" content="Song Notation Tool — the video">
+<meta property="og:description" content="One-page charts for guitar and bass, in a minute and a half.">
+<meta property="og:type" content="video.other">
+<meta property="og:image" content="slide-01.png">
+<meta property="og:video" content="Song_Notation_Tool_Pitch.mp4">
+<link rel="icon" href="icon.png">
+<!-- Published by .github/workflows/pitch-page.yml with the latest release's
+     video and slides next to it. Edit it in tools/pitch_page.html. -->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #121319; --fg: #e6e8ef; --dim: #9aa0b3; --card: #1b1d26;
+    --border: #2c2f3d; --accent: #ff8a6b; --accent-fg: #1a0f0a; --focus: #7aa2ff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { color-scheme: light; --bg: #f6f5f1; --fg: #1d1f27; --dim: #5d6170;
+      --card: #ffffff; --border: #d9d7d0; --focus: #2f5bd3; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 28px 16px 40px; gap: 18px; min-height: 100vh;
+  }
+  header { display: flex; align-items: center; gap: 12px; }
+  header img { width: 40px; height: 40px; border-radius: 9px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--dim); font-size: 14px; }
+  video {
+    display: block; width: auto; max-width: 100%; height: min(78vh, 900px);
+    aspect-ratio: 9 / 16; background: #000; border-radius: 14px;
+    border: 1px solid var(--border);
+  }
+  nav { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  a.btn {
+    display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--card);
+    color: var(--fg); text-decoration: none; font-weight: 500;
+  }
+  a.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  footer { color: var(--dim); font-size: 13px; text-align: center; max-width: 520px; }
+  footer a { color: inherit; }
+  @media (max-width: 480px) { video { height: auto; width: 100%; } }
+</style>
+</head>
+<body>
+  <header>
+    <img src="icon.png" alt="">
+    <div>
+      <h1>Song Notation Tool</h1>
+      <p>One-page charts for guitar &amp; bass</p>
+    </div>
+  </header>
+
+  <video controls playsinline preload="metadata" poster="slide-01.png"
+         aria-label="Song Notation Tool in a minute and a half, with captions">
+    <source src="Song_Notation_Tool_Pitch.mp4" type="video/mp4">
+    Your browser does not play this video.
+    <a href="Song_Notation_Tool_Pitch.mp4">Download it</a> instead.
+  </video>
+
+  <nav aria-label="More">
+    <a class="btn primary" href="https://github.com/giopas/song-notation-tool/releases/latest">Download the app</a>
+    <a class="btn" href="Song_Notation_Tool_Pitch.pdf">The slides (PDF)</a>
+    <a class="btn" href="Song_Notation_Tool_Pitch.mp4" download>Save the video</a>
+    <a class="btn" href="https://github.com/giopas/song-notation-tool">Source on GitHub</a>
+  </nav>
+
+  <footer>
+    Free and open source (MIT), for macOS, Windows and Linux.
+    The video and slides are made again with every release.
+  </footer>
+</body>
+</html>

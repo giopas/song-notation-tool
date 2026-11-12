@@ -15,8 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `Song_Notation_Tool_Pitch.pdf`; it also refreshes them on the latest
   release when the slides, the screenshots or the logo change, and can be
   run by hand from the Actions tab. The README opens with *See it in a
-  minute and a half*, linking to the latest ones. The files are not in
-  the repository, and **Update and restart** ignores them.
+  minute and a half*: its picture opens a small page that plays the video
+  in the browser (`giopas.github.io/song-notation-tool`, published by
+  `pitch-page.yml` from `tools/pitch_page.html` with the latest release's
+  files), since GitHub sends a release file as a download. The README
+  also links the files themselves. They are not in the repository, and
+  **Update and restart** ignores them.
 - `make_pitch_video.py`: `--strict-voice` (never a video without a voice,
   nor with a second voice taking over) and `--poster` (the README
   picture, with no version on it).

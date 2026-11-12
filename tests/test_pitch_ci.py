@@ -64,3 +64,31 @@ def test_every_zoom_point_names_a_picture_that_exists():
         for spec in slide.get("media", []):
             name = m.parse_media(spec)[0]
             assert m.find_media(name), f"{slide['title']}: {name}"
+
+
+def test_the_readme_poster_opens_the_page_that_plays_the_video():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "(screenshots/pitch-poster.png)](https://giopas.github.io/song-notation-tool/)" in readme
+
+
+def test_the_page_workflow_runs_from_main_and_pitch_starts_it():
+    page = (WF / "pitch-page.yml").read_text(encoding="utf-8")
+    assert "  workflow_dispatch:" in page and "push:" not in page
+    for need in ("pages: write", "id-token: write", "name: github-pages",
+                 "actions/deploy-pages@", "cp tools/pitch_page.html site/index.html",
+                 "-p 'Song_Notation_Tool_Pitch.*'"):
+        assert need in page, need
+    pitch = (WF / "pitch.yml").read_text(encoding="utf-8")
+    assert "gh workflow run pitch-page.yml" in pitch and "--ref main" in pitch
+    assert "actions: write" in pitch
+    rel = (WF / "release.yml").read_text(encoding="utf-8")
+    job = rel[rel.index("\n  pitch:\n"):]
+    assert "actions: write" in job and "contents: write" in job
+
+
+def test_the_page_plays_the_files_the_workflow_puts_beside_it():
+    html = (ROOT / "tools" / "pitch_page.html").read_text(encoding="utf-8")
+    m = _tool()
+    for name in (f"{m.FILE_STEM}.mp4", f"{m.FILE_STEM}.pdf", "icon.png", "slide-01.png"):
+        assert f'"{name}"' in html, name
+    assert "<video" in html and "playsinline" in html

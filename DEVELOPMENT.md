@@ -190,7 +190,8 @@ re-run the workflow from the Actions tab.
    video: no change". Nobody makes or uploads the video by hand: after
    the release is published, the `pitch` workflow makes it with the edge
    voice and attaches `Song_Notation_Tool_Pitch.mp4` and `.pdf` to the
-   release, and the README links to the latest ones. To look at them
+   release, and `pitch-page` publishes the page that plays it
+   (`giopas.github.io/song-notation-tool`), which the README links to. To look at them
    before a release, on the Mac:
 
        cd tools && python3 make_pitch_video.py --stills --tts edge
@@ -205,7 +206,8 @@ re-run the workflow from the Actions tab.
    fails, nothing is released; fix it or use **Re-run failed jobs** on the
    Actions page, and the release follows.
 8. Check the published release on GitHub (text, files; a few minutes
-   later, the pitch video and the PDF). **Update and
+   later, the pitch video and the PDF, and the video page playing the new
+   version). **Update and
    restart** offers it at once.
 9. Try **Update and restart** from the previous installed version.
 10. Small fixes are patch versions (0.26.3, 0.26.4). A patch that changes

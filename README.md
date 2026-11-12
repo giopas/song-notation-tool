@@ -8,11 +8,12 @@
 
 ### See it in a minute and a half
 
-[![Watch the video about Song Notation Tool](screenshots/pitch-poster.png)](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.mp4)
+[![Watch the video about Song Notation Tool](screenshots/pitch-poster.png)](https://giopas.github.io/song-notation-tool/)
 
-A short vertical video (about 10 MB) and the same slides as a PDF:
-[video](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.mp4) · [slides](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.pdf). Both are made again with every
-release.
+The picture opens [a page that plays the video](https://giopas.github.io/song-notation-tool/)
+in the browser. To keep or send them on: the [video](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.mp4) (about
+10 MB, vertical, for a phone) and the same [slides as a PDF](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.pdf).
+All are made again with every release.
 
 ## What it makes
 

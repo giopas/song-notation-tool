@@ -25,7 +25,15 @@ and git hold the history.
   the edge voice; a failed run keeps the files a release has, and a new
   release without them gets the previous release's. The README opens
   with *See it in a minute and a half* (`screenshots/pitch-poster.png`,
-  drawn by `--poster`, linking to `releases/latest/download/…`). The
+  drawn by `--poster`). The poster opens a GitHub Pages page that plays
+  the video (`https://giopas.github.io/song-notation-tool/`): GitHub sends
+  release files as downloads, so they never play in the browser.
+  `pitch-page.yml` builds it from `tools/pitch_page.html`, the latest
+  release's MP4 and PDF, the icon and a poster frame, and always runs
+  from `main` (only the default branch may publish to Pages; a release
+  runs from its tag), so `pitch.yml` starts it with `gh workflow run`
+  once the files are attached. Pages is set to *GitHub Actions* (giopas,
+  12 November). The README also links the files for downloading. The
   slides took the v0.34.0 colours and the four moved zoom points
   (measured on the pictures). Pushing it to `main` runs `pitch` once and
   attaches the files to v0.34.0.
@@ -80,8 +88,9 @@ Manual checks waiting for giopas (each stays here until reported back):
 
 - Pitch video: after pushing `chore/pitch-ci`, a green `pitch` run on the
   Actions page, `Song_Notation_Tool_Pitch.mp4` and `.pdf` on the v0.34.0
-  release, the README's poster opening the video, and a look at it on a
-  phone. A red run: **Run workflow** on the `pitch` page retries it.
+  release, a green `pitch-page` run, the README's poster opening
+  `giopas.github.io/song-notation-tool` with the video playing, and a look
+  at that page on a phone. A red run: **Run workflow** on the `pitch` page retries it.
 
 - v0.34.0 in the native window on the Mac: open a song, check the new
   look in dark and light (the ◐ button), press Escape in each dialog,

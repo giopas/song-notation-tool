@@ -16,7 +16,19 @@ and git hold the history.
   the workflow builds and publishes it. Before it: v0.33.3 (8 November).
   Installed copies up to v0.33.1 cannot update themselves while GitHub's
   download address fails; install v0.33.2 or later by hand once.
-- `feat/v0.34.0` is merged into `main` and can be deleted.
+- In progress: `chore/pitch-ci` (12 November), committed locally, waiting
+  for the push. GitHub makes the pitch video and the slide deck and
+  attaches them to every release (`.github/workflows/pitch.yml`, called by
+  `release.yml` after `publish`; also on a push to `main` that changes the
+  slides, the screenshots, `tools/pitch_media/` or the logo, and by hand
+  from the Actions tab). `--strict-voice` never lets a video out without
+  the edge voice; a failed run keeps the files a release has, and a new
+  release without them gets the previous release's. The README opens
+  with *See it in a minute and a half* (`screenshots/pitch-poster.png`,
+  drawn by `--poster`, linking to `releases/latest/download/…`). The
+  slides took the v0.34.0 colours and the four moved zoom points
+  (measured on the pictures). Pushing it to `main` runs `pitch` once and
+  attaches the files to v0.34.0.
 - QLC+ Swiss Knife's `core/update.py` downloads the same way the old code
   here did (download address only, five seconds for SHA256SUMS), so it
   can fail the same way. Worth the same fix there.
@@ -45,10 +57,6 @@ Housekeeping, small:
 2. `feat/v0.30.0` was pushed to GitHub, against the working agreement.
    It is merged, so it can go: `git push origin --delete feat/v0.30.0`.
 
-3. The pitch video tool (`tools/make_pitch_video.py` and
-   `tools/pitch_media/`, 11 November) is in the working folder, not yet
-   committed: `git switch -c chore/pitch-video`, then add and commit both.
-
 Still open from v0.31.0: a per-section size control in the desktop app,
 if wanted, and giopas's check of a printed floor sheet.
 
@@ -70,9 +78,10 @@ started until giopas picks it.
 
 Manual checks waiting for giopas (each stays here until reported back):
 
-- Pitch video: a full run of `python3 make_pitch_video.py --stills --tts edge`
-  (from `tools/`) on the Mac, every slide in the same voice, and a look at
-  the video on a phone.
+- Pitch video: after pushing `chore/pitch-ci`, a green `pitch` run on the
+  Actions page, `Song_Notation_Tool_Pitch.mp4` and `.pdf` on the v0.34.0
+  release, the README's poster opening the video, and a look at it on a
+  phone. A red run: **Run workflow** on the `pitch` page retries it.
 
 - v0.34.0 in the native window on the Mac: open a song, check the new
   look in dark and light (the ◐ button), press Escape in each dialog,
@@ -81,12 +90,6 @@ Manual checks waiting for giopas (each stays here until reported back):
   open the Preview and check Save and Export stay visible, and make the
   window narrow to see the ☰ song list. Also open it on the phone over
   the home network (`--host 0.0.0.0`).
-- v0.34.0 pitch check, still open after the release: the screenshots moved, so four zoom points in
-  `SLIDES` (`tools/make_pitch_video.py`) need giopas's OK before the
-  release: `start-here.png@0.5,0.42,1.8`, `section-copy.png@0.86,0.72,1.9`,
-  `lyrics-dialog.png@0.5,0.3,1.8`, `export-menu.png@0.86,0.2,2.0`. The
-  printed PDF does not change, so no `--refresh-pages`. These are
-  estimates from the new pictures: check them with `--stills-only`.
 - v0.33.3: **Update and restart** from v0.33.2 on the Mac, then type
   `[5A 3C 5A 3G]x2 5A` in a section and check the frets sit over the
   chords in the preview and the PDF.
@@ -185,6 +188,7 @@ and readable on stage without the handwritten sheet.
 | 8 Nov 2026 | A part has the same four render modes as a section (Chart, Tab, Both, Free). The section repeat box is removed from the browser app; repeats go in the chart line, and an older whole-section repeat shows as a removable ×2 chip. (giopas, 8 November.) |
 | 11 Nov 2026 | Every release includes a pitch check: does the pitch video and slide deck (`tools/make_pitch_video.py`) still tell the truth about the app? Claude reads the version's CHANGELOG.md section against `SLIDES` (a claim now wrong, a feature renamed or removed, a new feature worth a bullet or a slide, a slide's narration that no longer matches), against the `tools/shots.py` report (a retaken screenshot whose zoom point `name.png@x,y,zoom` now lands somewhere else), and against the golden PDFs (a change to the printed output means `--refresh-pages`). It then runs `--stills-only` and looks at the slides. If something needs to change, Claude proposes the exact edit to the script (or the refreshed pictures) with the release, for giopas to approve; if nothing does, the release summary says "Pitch video: no change". The video and deck are always made by giopas on the Mac with exactly `python3 make_pitch_video.py --stills --tts edge` (run from `tools/`): the edge-tts voice for every slide, plus the PNG stills and the PDF deck. Claude gives that command in every release summary whose pitch check changed something, and never proposes another voice or option. The output is never committed (`dist/` is ignored). (giopas, 11 November.) |
 | 11 Nov 2026 | The pitch video's first slide shows a photo of one of giopas's handwritten charts (`tools/pitch_media/paper-handwritten.jpg`), as the "before" next to the app's PDF. This is the one exception to keeping the author's own songs out of the repository. (giopas, 11 November.) |
+| 12 Nov 2026 | GitHub makes the pitch video and the slide deck and attaches them to every release (`pitch.yml`, after `release.yml` publishes), always with the edge voice (`--strict-voice`: no video without it). Nobody makes or uploads them by hand any more; `make_pitch_video.py --stills --tts edge` on the Mac stays for a look before a release. The README links to the latest release's files. The pitch check itself (Claude proposes, giopas approves the words and zoom points) is unchanged. This replaces the 11 November rule that giopas makes the video on the Mac. Adapted from QLC+ Swiss Knife. (giopas, 12 November.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

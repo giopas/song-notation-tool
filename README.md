@@ -6,6 +6,14 @@
 > ("vibecoded"). It works, but it has rough edges. Use it, break it, and
 > suggestions are welcome.
 
+### See it in a minute and a half
+
+[![Watch the video about Song Notation Tool](screenshots/pitch-poster.png)](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.mp4)
+
+A short vertical video (about 10 MB) and the same slides as a PDF:
+[video](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.mp4) · [slides](https://github.com/giopas/song-notation-tool/releases/latest/download/Song_Notation_Tool_Pitch.pdf). Both are made again with every
+release.
+
 ## What it makes
 
 A one-page stage chart, written the way the author already writes them on

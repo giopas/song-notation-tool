@@ -114,19 +114,19 @@ BEAT = 60.0 / BPM     # 0.5 s
 FPS = 30
 XFADE = 0.35          # crossfade between slides, seconds
 
-# The browser app's colours (web/style.css). DIM is halfway between --fg
-# and --lbl-gray: --lbl-gray alone is too faint for a subtitle on a phone.
-BG = (30, 30, 46)          # --bg
-CARD = (49, 50, 68)        # --surface
-LINE = (69, 71, 90)        # --border
-TEXT = (205, 214, 244)     # --fg
-DIM = (154, 161, 189)
+# The browser app's colours (web/style.css, dark theme, since v0.34.0).
+# DIM is a little brighter than --lbl-gray, for a subtitle on a phone.
+BG = (18, 19, 25)          # --bg
+CARD = (38, 41, 56)        # --surface
+LINE = (58, 62, 80)        # --border-strong
+TEXT = (230, 232, 239)     # --fg
+DIM = (176, 181, 197)
 WHITE = (255, 255, 255)
-BLUE = (137, 180, 250)     # --blue
-MAUVE = (203, 166, 247)    # --mauve
-AMBER = (249, 226, 175)    # --amber
+BLUE = (122, 162, 255)     # --blue
+MAUVE = (196, 161, 255)    # --mauve
+AMBER = (249, 200, 107)    # --amber
 GREEN = (166, 227, 161)    # --green
-RED = (233, 69, 96)        # --accent
+RED = (255, 138, 107)      # --accent (coral; the name stays for the slides that use it)
 
 URL = "github.com/giopas/song-notation-tool"
 
@@ -187,7 +187,7 @@ SLIDES = [
         "color": AMBER,
         "title": "Drag, Copy, Rearrange",
         "sub": "Move a section by its handle; a copy plays what the original holds.",
-        "media": ["section-drag.png@0.35,0.3,1.9", "section-copy.png@0.78,0.7,1.9"],
+        "media": ["section-drag.png@0.35,0.3,1.9", "section-copy.png@0.85,0.76,1.9"],
         "bullets": [
             "Dragging folds every card to its name: the whole song fits",
             "Copy a section to the top, or after any other section",
@@ -215,7 +215,7 @@ SLIDES = [
         "color": RED,
         "title": "Words Next to the Chart",
         "sub": "Paste or import the lyrics, then split them across your sections.",
-        "media": ["lyrics-dialog.png@0.78,0.45,1.9", "paper-lyrics-beside.png@0.4,0.3,1.4"],
+        "media": ["lyrics-dialog.png@0.5,0.28,1.8", "paper-lyrics-beside.png@0.4,0.3,1.4"],
         "bullets": [
             "Mark blocks with === Verse 1 === and split them in one go",
             "Print the words beside each section, under it, or as one block",
@@ -243,7 +243,7 @@ SLIDES = [
         "color": MAUVE,
         "title": "Read It From Your Feet",
         "sub": "The biggest type that fits on one page, to tape down by your pedals.",
-        "media": ["paper-floor.png@0.3,0.3,1.3", "export-menu.png@0.72,0.18,2.0"],
+        "media": ["paper-floor.png@0.3,0.3,1.3", "export-menu.png@0.87,0.15,2.0"],
         "bullets": [
             "Tries portrait and landscape, one or two columns, keeps the biggest",
             "Any section can print larger or smaller than the rest",
@@ -257,7 +257,7 @@ SLIDES = [
         "color": AMBER,
         "title": "Every PDF Carries Its Song",
         "sub": "Open an exported PDF in the app and keep editing the song.",
-        "media": ["start-here.png@0.62,0.2,2.0", "paper-basics.png@0.3,0.3,1.5"],
+        "media": ["start-here.png@0.59,0.45,1.8", "paper-basics.png@0.3,0.3,1.5"],
         "bullets": [
             "Send a friend the PDF: they can import it and keep editing",
             "Songs are plain .sng files named Artist - Title, in Documents",
@@ -1214,6 +1214,32 @@ def caption_track(text: str, start: float, length: float) -> list:
 # Main
 # ---------------------------------------------------------------------------
 
+def draw_poster(path: str, width: int = 1280, height: int = 720) -> None:
+    """The picture at the top of the README that links to the video: the icon,
+    the name, the tagline and a play button, in the app's dark colours. It has
+    no version and no screenshot on it, so it never needs to be made again."""
+    img = Image.new("RGB", (width, height), BG)
+    d = ImageDraw.Draw(img)
+    for y in range(height):                                   # a soft glow at the top
+        k = max(0.0, 1.0 - y / (height * 0.75)) * 0.12
+        d.line([(0, y), (width, y)], fill=tuple(int(BG[c] * (1 - k) + RED[c] * k) for c in range(3)))
+    cx, cy, r = width // 2, int(height * 0.64), 74
+    if os.path.exists(ICON):
+        icon = Image.open(ICON).convert("RGBA").resize((120, 120), Image.LANCZOS)
+        img.paste(icon, (cx - 60, 64), icon)
+
+    def centred(text, y, f, fill):
+        w = d.textlength(text, font=f)
+        d.text((cx - w / 2, y), text, font=f, fill=fill)
+    centred(NAME, 206, font(64, True), WHITE)
+    centred(TAGLINE, 288, font(32), DIM)
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=RED)
+    d.polygon([(cx - 22, cy - 36), (cx - 22, cy + 36), (cx + 40, cy)], fill=BG)
+    centred("Watch the video", cy + r + 26, font(30, True), TEXT)
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    img.save(path, optimize=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=f"Make {NAME}'s vertical pitch video (and stills).")
     ap.add_argument("--out", help="output .mp4 (default dist/marketing/%s.mp4)" % FILE_STEM)
@@ -1229,12 +1255,24 @@ def main() -> None:
     ap.add_argument("--stills-only", action="store_true", help="only the PNGs and the PDF, no video")
     ap.add_argument("--only", type=int, metavar="N", help="render just slide N (1-based), for a quick check")
     ap.add_argument("--crf", type=int, help="H.264 quality, lower is better/bigger (default 24, 22 with --hd)")
+    ap.add_argument("--strict-voice", action="store_true",
+                    help="stop with an error when the asked voice is missing, changes half-way or a slide "
+                         "gets no voice (the pitch workflow uses it, so a video without a voice is never "
+                         "published)")
+    ap.add_argument("--poster", metavar="PNG",
+                    help="only draw the README picture that links to the video (16:9, no version on it), "
+                         "and stop")
     ap.add_argument("--refresh-pages", action="store_true",
                     help="re-render tools/pitch_media/paper-*.png from the golden songs (needs pdftoppm), and stop")
     args = ap.parse_args()
 
     if args.refresh_pages:
         refresh_pages()
+        return
+
+    if args.poster:
+        draw_poster(args.poster)
+        print(f"Poster: {args.poster}")
         return
 
     if args.list_voices:
@@ -1298,6 +1336,8 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory(prefix="snt-pitch-") as tmp:
         voice = Voice.choose(args.tts, args.voice, args.rate)
+        if args.strict_voice and args.tts not in ("auto", "none") and voice.engine != args.tts:
+            sys.exit(f"--strict-voice: asked for {args.tts}, got {voice.label}.")
         print(f"1/3 Voice-over with {voice.label}...")
         vo_wavs, vo_lens = [], []
         for i, sl in enumerate(slides):
@@ -1307,8 +1347,14 @@ def main() -> None:
                     vo_lens.append(w.getnframes() / float(w.getframerate()))
                 vo_wavs.append(wav)
             else:
+                if args.strict_voice:
+                    sys.exit(f"--strict-voice: slide {i + 1} got no voice.")
                 vo_lens.append(estimate_speech(sl["vo"]))
                 vo_wavs.append(None)
+        # edge-tts may hand over to a local voice when it fails on the first
+        # slide: fine on a Mac, never in the workflow.
+        if args.strict_voice and args.tts not in ("auto", "none") and voice.engine != args.tts:
+            sys.exit(f"--strict-voice: {args.tts} failed and {voice.label} took over.")
         plan = plan_timing(slides, vo_lens)
         total = plan[-1]["start"] + plan[-1]["dur"]
 

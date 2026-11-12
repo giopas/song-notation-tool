@@ -187,8 +187,11 @@ re-run the workflow from the Actions tab.
    against `tools/pitch_media/` (`--refresh-pages`). Look at the slides
    with `--stills-only`. If something is out of date, Claude proposes the
    exact edit with the release; if not, the release summary says "Pitch
-   video: no change". When it changed, giopas remakes the video and deck
-   on the Mac, always with:
+   video: no change". Nobody makes or uploads the video by hand: after
+   the release is published, the `pitch` workflow makes it with the edge
+   voice and attaches `Song_Notation_Tool_Pitch.mp4` and `.pdf` to the
+   release, and the README links to the latest ones. To look at them
+   before a release, on the Mac:
 
        cd tools && python3 make_pitch_video.py --stills --tts edge
 
@@ -201,7 +204,8 @@ re-run the workflow from the Actions tab.
    with the files and `SHA256SUMS` attached, marked *Latest*. If a build
    fails, nothing is released; fix it or use **Re-run failed jobs** on the
    Actions page, and the release follows.
-8. Check the published release on GitHub (text, files). **Update and
+8. Check the published release on GitHub (text, files; a few minutes
+   later, the pitch video and the PDF). **Update and
    restart** offers it at once.
 9. Try **Update and restart** from the previous installed version.
 10. Small fixes are patch versions (0.26.3, 0.26.4). A patch that changes

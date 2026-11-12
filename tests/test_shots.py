@@ -16,7 +16,9 @@ import shots  # noqa: E402  (Playwright is imported only when pictures are taken
 
 def _readme_pictures():
     readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
-    return set(re.findall(r"screenshots/([\w-]+\.png)", readme))
+    # The video's poster is drawn by make_pitch_video.py --poster, not
+    # taken from the app, so tools/shots.py has no step for it.
+    return set(re.findall(r"screenshots/([\w-]+\.png)", readme)) - {"pitch-poster.png"}
 
 
 def test_the_tool_and_the_readme_name_the_same_pictures():

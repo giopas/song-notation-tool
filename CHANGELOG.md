@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added — the pitch video on every release (the app does not change)
+
+- **The pitch video and the slides are made and attached to each release
+  by GitHub.** A new workflow (`.github/workflows/pitch.yml`) runs
+  `tools/make_pitch_video.py` with the online voice after every release
+  and attaches `Song_Notation_Tool_Pitch.mp4` and
+  `Song_Notation_Tool_Pitch.pdf`; it also refreshes them on the latest
+  release when the slides, the screenshots or the logo change, and can be
+  run by hand from the Actions tab. The README opens with *See it in a
+  minute and a half*, linking to the latest ones. The files are not in
+  the repository, and **Update and restart** ignores them.
+- `make_pitch_video.py`: `--strict-voice` (never a video without a voice,
+  nor with a second voice taking over) and `--poster` (the README
+  picture, with no version on it).
+
+### Changed
+
+- The pitch slides use the app's v0.34.0 colours, and four zoom points
+  follow the v0.34.0 screenshots (the start screen, the copy list, the
+  Lyrics dialog and the Export menu).
+
 ## [0.34.0] — 2026-11-12 — A clearer editor and longer tab measures
 
 A review of the browser app found things that got in the way: dialogs

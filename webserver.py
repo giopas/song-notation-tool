@@ -72,6 +72,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 import chords as chords_mod
 import export
 import grammar
+import library
 import userpaths
 import lyrics as lyrics_mod
 import model
@@ -199,6 +200,29 @@ class _JsApi:
             return {"ok": False, "error": "Not exported: " + "; ".join(exc.errors),
                     "errors": exc.errors}
         except Exception as exc:  # noqa: BLE001 — surfaced in the UI, never fatal
+            return {"ok": False, "error": str(exc)}
+
+    def export_collection(self, cid: str, orient: str = "portrait"):
+        """A collection's PDF, written where the OS save panel says."""
+        import webview
+        try:
+            data, warnings, name = collection_export(Handler.store, cid, orient)
+            window = _RUNTIME.get("webview_window")
+            if window is None:
+                return {"ok": False, "error": "no window"}
+            chosen = window.create_file_dialog(
+                _dialog_kind(webview, "SAVE"),
+                directory=userpaths.last_export_dir(), save_filename=name)
+            if not chosen:
+                return {"ok": False, "cancelled": True}
+            path = chosen if isinstance(chosen, str) else chosen[0]
+            written = export.write_export(path, data, overwrite=True)
+            userpaths.set_last_export_dir(os.path.dirname(path))
+            return {"ok": True, "path": written, "warnings": warnings}
+        except export.ExportBlocked as exc:
+            return {"ok": False, "error": "Not exported: " + "; ".join(exc.errors),
+                    "errors": exc.errors}
+        except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc)}
 
     def print_document(self, doc: dict, orient: str = "portrait"):
@@ -342,8 +366,11 @@ class SongStore:
     def __init__(self, directory: str):
         self.dir = directory
         os.makedirs(self.dir, exist_ok=True)
+        # Hidden songs, collections and the trash (library.json).
+        self.library = library.Library(self.dir)
 
     def list_songs(self):
+        flags = self.library.song_flags()
         out = []
         for fn in sorted(os.listdir(self.dir)):
             if not fn.lower().endswith(".sng"):
@@ -358,6 +385,8 @@ class SongStore:
                 "title": meta.get("title", ""),
                 "artist": meta.get("artist", ""),
                 "sections": len(doc.get("sections", [])),
+                "hidden": flags.get(fn, {}).get("hidden", False),
+                "collections": flags.get(fn, {}).get("collections", []),
             })
         return out
 
@@ -433,16 +462,28 @@ class SongStore:
             # Only the case differs ("nutshell" → "Nutshell"): same file on
             # a case-insensitive disk, so rename it rather than delete it.
             os.rename(self._path(current), self._path(target))
-            return self.save(target, doc)
+            saved = self.save(target, doc)
+            self.library.rename_song(current, saved)
+            return saved
         saved = self.save(target, doc)
         if self.exists(current):
             os.remove(self._path(current))
+        # Hidden, and its place in every collection, follow the new name.
+        self.library.rename_song(current, saved)
         return saved
 
-    def delete(self, filename: str):
-        path = self._path(filename)
-        if os.path.exists(path):
-            os.remove(path)
+    def delete(self, filename: str) -> str:
+        """Move a song to the trash ("Deleted songs" in the songs folder).
+        Returns its name there. Restore puts it back; only emptying the
+        trash deletes it for good."""
+        filename = _safe_filename(filename)
+        meta = {}
+        try:
+            meta = self.load(filename).get("meta", {})
+        except Exception:  # noqa: BLE001 — an unreadable song can still go
+            pass
+        return self.library.trash_song(filename, title=meta.get("title", ""),
+                                       artist=meta.get("artist", ""))
 
     def exists(self, filename: str) -> bool:
         return os.path.exists(self._path(filename))
@@ -539,6 +580,31 @@ def _parse_chart_line(line: str, doc: dict = None, items=None):
         return {"ok": False, "error": str(exc)}
 
 
+def collection_export_name(name: str) -> str:
+    """The file name a collection's PDF is offered under, written like a
+    song's export name ("Friday_set.pdf"), in plain ASCII so it survives
+    an HTTP header."""
+    import unicodedata
+    name = re.sub(r"[\\/:]+", " ", name or "")
+    name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    stem = _safe_filename(name)[:-4]
+    if stem == "untitled":
+        stem = "Collection"
+    return "_".join(stem.split()) + ".pdf"
+
+
+def collection_export(store: SongStore, cid: str, orient: str = "portrait"):
+    """(pdf_bytes, warnings, file_name) for a collection. Raises
+    LibraryError for an unknown collection, ValueError for an empty one,
+    and export.ExportBlocked when a song fails its check."""
+    col = store.library.collection(cid)
+    if not col["songs"]:
+        raise ValueError(f'"{col["name"]}" has no songs to export yet.')
+    docs = [store.load(fn) for fn in col["songs"]]
+    data, warnings = export.prepare_collection_export(docs, orient=orient)
+    return data, warnings, collection_export_name(col["name"])
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = f"SongNotationTool/{APP_VERSION}"
     store: SongStore = None  # set by main()
@@ -589,6 +655,77 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send_error_json(self, status, message):
         self._send_json({"ok": False, "error": message}, status=status)
+
+    # -- library: hidden songs, collections, trash ----------------------
+
+    def _library_op(self, body: dict) -> dict:
+        """POST /api/library {op, ...}. Every answer carries the library as
+        it is afterwards, so the page redraws from one reply."""
+        lib = self.store.library
+        op = body.get("op")
+        cid = body.get("id", "")
+        song = _safe_filename(body["song"]) if body.get("song") else ""
+        out = {"ok": True}
+        try:
+            if op == "hide":
+                lib.set_hidden(song, bool(body.get("hidden", True)))
+            elif op == "create":
+                songs = [_safe_filename(x) for x in body.get("songs") or []]
+                out["collection"] = lib.create_collection(body.get("name", ""), songs)
+            elif op == "rename":
+                lib.rename_collection(cid, body.get("name", ""))
+            elif op == "delete":
+                lib.delete_collection(cid)
+            elif op == "add":
+                songs = body.get("songs") or ([song] if song else [])
+                lib.add_songs(cid, [_safe_filename(x) for x in songs])
+            elif op == "remove":
+                lib.remove_song(cid, song)
+            elif op == "move":
+                lib.move_song(cid, song, int(body.get("to", 0)))
+            elif op == "order":
+                lib.set_order(cid, [_safe_filename(x) for x in body.get("songs") or []])
+            else:
+                return {"ok": False, "error": f"unknown library operation: {op!r}"}
+        except (library.LibraryError, ValueError, TypeError) as exc:
+            return {"ok": False, "error": str(exc), "library": lib.view()}
+        out["library"] = lib.view()
+        return out
+
+    def _trash_op(self, body: dict) -> dict:
+        """POST /api/trash {op: restore|purge|empty, name}."""
+        lib = self.store.library
+        op = body.get("op")
+        out = {"ok": True}
+        try:
+            if op == "restore":
+                out["filename"] = lib.restore(body.get("name", ""))
+            elif op == "purge":
+                lib.purge(body.get("name", ""))
+            elif op == "empty":
+                out["deleted"] = lib.empty_trash()
+            else:
+                return {"ok": False, "error": f"unknown trash operation: {op!r}"}
+        except library.LibraryError as exc:
+            out = {"ok": False, "error": str(exc)}
+        out["trash"] = lib.trash_view()
+        out["library"] = lib.view()
+        return out
+
+    def _send_collection_export(self, cid: str, orient: str = "portrait"):
+        """One PDF of every song in a collection, in its order."""
+        try:
+            data, warnings, name = collection_export(self.store, cid, orient)
+        except library.LibraryError as exc:
+            return self._send_error_json(HTTPStatus.NOT_FOUND, str(exc))
+        except export.ExportBlocked as exc:
+            return self._send_json({"ok": False,
+                                    "error": "Not exported: " + "; ".join(exc.errors),
+                                    "errors": exc.errors},
+                                   status=HTTPStatus.UNPROCESSABLE_ENTITY)
+        except ValueError as exc:
+            return self._send_error_json(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc))
+        return self._send_bytes(data, "application/pdf", name, warnings=warnings)
 
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", 0) or 0)
@@ -644,6 +781,17 @@ class Handler(BaseHTTPRequestHandler):
                 })
             if path == "/api/songs":
                 return self._send_json(self.store.list_songs())
+
+            if path == "/api/library":
+                return self._send_json(self.store.library.view())
+
+            if path == "/api/trash":
+                return self._send_json(self.store.library.trash_view())
+
+            m = re.match(r"^/api/collections/([^/]+)/export\.pdf$", path)
+            if m:
+                orient = (qs.get("orient", ["portrait"])[0])
+                return self._send_collection_export(m.group(1), orient)
 
             m = re.match(r"^/api/songs/([^/]+)/export\.(txt|pdf)$", path)
             if m:
@@ -779,6 +927,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json({"ok": True, "filename": filename,
                                         "doc": _with_chart_lines(self.store.load(filename))})
 
+            if path == "/api/library":
+                return self._send_json(self._library_op(self._read_json_body()))
+
+            if path == "/api/trash":
+                return self._send_json(self._trash_op(self._read_json_body()))
+
             if path == "/api/songs":
                 # New song: {name, title, artist, key, time, bpm}
                 body = self._read_json_body()
@@ -814,6 +968,8 @@ class Handler(BaseHTTPRequestHandler):
                 if filename is None:
                     filename = self.store.free_name(song_file_name(fresh))
                     self.store.save(filename, fresh)
+                else:
+                    self.store.library.set_hidden(filename, False)
                 doc = self.store.load(filename)
                 return self._send_json({"filename": filename, "doc": _with_chart_lines(doc)})
 
@@ -950,8 +1106,13 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/api/songs/([^/]+)$", unquote(parsed.path))
         if not m:
             return self._send_error_json(HTTPStatus.NOT_FOUND, "unknown route")
-        self.store.delete(m.group(1))
-        self._send_json({"ok": True})
+        try:
+            trashed = self.store.delete(m.group(1))
+        except library.LibraryError as exc:
+            return self._send_error_json(HTTPStatus.NOT_FOUND, str(exc))
+        except Exception as exc:  # noqa: BLE001
+            return self._send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, str(exc))
+        self._send_json({"ok": True, "trashed_as": trashed})
 
 
 # ==============================================================================

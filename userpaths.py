@@ -228,6 +228,9 @@ def relocate_songs(current_dir: str, new_dir: str, move: bool = True) -> dict:
     moved, skipped = [], []
     if move and not plan["same"]:
         moved, skipped = migrate_legacy_songs(plan["current"], new)
+        # Hidden songs, collections and the trash go with them.
+        import library
+        library.carry_over(plan["current"], new)
     if not set_songs_dir(new):
         return {"ok": False, "path": new, "moved": moved, "skipped": skipped,
                 "error": "couldn't save the setting"}

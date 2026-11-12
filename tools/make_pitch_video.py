@@ -253,18 +253,19 @@ SLIDES = [
               "to read from your feet.",
     },
     {
-        "kicker": "8 · NOTHING GETS LOST",
+        "kicker": "8 · YOUR SONGBOOK",
         "color": AMBER,
-        "title": "Every PDF Carries Its Song",
-        "sub": "Open an exported PDF in the app and keep editing the song.",
-        "media": ["start-here.png@0.59,0.45,1.8", "paper-basics.png@0.3,0.3,1.5"],
+        "title": "Setlists, and Nothing Lost",
+        "sub": "Keep the songs for each gig together, in the order you play them.",
+        "media": ["collection.png@0.13,0.3,2.0", "delete-confirm.png@0.5,0.5,1.6"],
         "bullets": [
-            "Send a friend the PDF: they can import it and keep editing",
-            "Songs are plain .sng files named Artist - Title, in Documents",
-            "Export TXT or PDF, or print with your system's preview",
+            "Setlists and albums in your own order, printed as one PDF",
+            "Delete asks first, and Restore brings a song back",
+            "Every PDF carries its song: a friend can keep editing it",
         ],
-        "vo": "Every PDF you export carries the song inside it. Send a chart to a friend, "
-              "and they can open it in the app and keep editing.",
+        "vo": "Put your songs in setlists, in the order you play them, and print the whole set as one PDF. "
+              "Deleted a song by mistake? Restore it. And every PDF carries its song, "
+              "so a friend can open it and keep editing.",
     },
     {
         "kicker": "9 · YOUR TURN",

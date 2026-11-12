@@ -6,7 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [0.35.0] — 2026-11-12 — Setlists, hide and delete
+## [0.35.1] — 2026-11-12 — Setlists, hide and delete
+
+v0.35.0 was tagged but never published: its builds stopped at three
+tests of the pitch-video tool, which need Pillow, and the build machines
+do not install it. Those tests are now skipped where Pillow is missing.
+This version carries everything below.
 
 The song list held every song in the folder, for good: there was no way
 to remove one from the app, to put an old one out of the way, or to keep

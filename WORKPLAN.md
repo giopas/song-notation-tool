@@ -16,9 +16,11 @@ and git hold the history.
   the workflow builds and publishes it. Before it: v0.33.3 (8 November).
   Installed copies up to v0.33.1 cannot update themselves while GitHub's
   download address fails; install v0.33.2 or later by hand once.
-- Ready to push: v0.35.0 (12 November), *Setlists, hide and delete*, on
-  `feat/v0.35.0`: songs can be deleted (to a trash, restorable, **Empty
-  trash…**), hidden, and put in collections (setlists, albums) with their
+- Ready to push: v0.35.1 (12 November), *Setlists, hide and delete*, on
+  `fix/v0.35.1`. v0.35.0 was tagged and pushed but its builds failed on
+  three pitch tests that need Pillow (not installed in CI); nothing was
+  published, so there is no release to delete. In v0.35.1, songs can be
+  deleted (to a trash, restorable, **Empty trash…**), hidden, and put in collections (setlists, albums) with their
   own order and one PDF per collection. Browser and native window only;
   the Tkinter desktop app has no song list and is unchanged. Screenshots
   retaken (two new: `collection.png`, `delete-confirm.png`). Pitch check:

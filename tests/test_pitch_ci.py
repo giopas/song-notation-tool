@@ -16,6 +16,11 @@ sys.path.insert(0, str(ROOT))
 
 
 def _tool():
+    # The pitch tool needs Pillow, which the app and its release builds do
+    # not install: there these checks are skipped (v0.35.0 failed its
+    # builds on them). Wherever pictures are taken, Pillow is there.
+    import pytest
+    pytest.importorskip("PIL")
     spec = importlib.util.spec_from_file_location("pitch", ROOT / "tools" / "make_pitch_video.py")
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)

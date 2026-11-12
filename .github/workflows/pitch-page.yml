@@ -1,0 +1,59 @@
+name: pitch-page
+
+# A small web page that plays the pitch video in the browser:
+#   https://giopas.github.io/song-notation-tool/
+# A release file is always sent as a download, so the README's poster opens
+# this page instead. It holds the latest release's Song_Notation_Tool_Pitch.mp4
+# and .pdf, a poster frame and tools/pitch_page.html; nothing is committed.
+#
+# Started by pitch.yml once the files are on the release, or by hand. It always
+# runs from main: GitHub lets only the default branch publish to Pages, and a
+# release runs from its tag.
+# Needs Settings > Pages > Source: GitHub Actions (switched on once).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  page:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: The latest release's video and slides
+        run: |
+          mkdir -p site
+          gh release download --repo "$GITHUB_REPOSITORY" -p 'Song_Notation_Tool_Pitch.*' -D site --clobber
+          ls -la site
+
+      - name: The page, the icon and a poster frame
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          cp tools/pitch_page.html site/index.html
+          cp web/logo/icon-180.png site/icon.png
+          # The first slide, settled in: the picture the player shows before Play
+          # and the one a chat app shows next to the link.
+          ffmpeg -loglevel error -y -ss 3 -i site/Song_Notation_Tool_Pitch.mp4 -frames:v 1 site/slide-01.png
+          touch site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -12,14 +12,11 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.33.3, published by the workflow on 8 November 2026.
+- Released: v0.34.0 (12 November 2026), tagged by giopas from `main`;
+  the workflow builds and publishes it. Before it: v0.33.3 (8 November).
   Installed copies up to v0.33.1 cannot update themselves while GitHub's
   download address fails; install v0.33.2 or later by hand once.
-- In progress: v0.34.0 on `feat/v0.34.0` (12 November): the browser app's
-  UI review fixes, extendable tab measures (+2 / +4 / −) and the new look,
-  under `[Unreleased]` in `CHANGELOG.md`. Committed locally, not merged,
-  tagged or pushed. `APP_VERSION` is still 0.33.3: the release steps bump
-  it. Pitch check pending (see below).
+- `feat/v0.34.0` is merged into `main` and can be deleted.
 - QLC+ Swiss Knife's `core/update.py` downloads the same way the old code
   here did (download address only, five seconds for SHA256SUMS), so it
   can fail the same way. Worth the same fix there.
@@ -84,7 +81,7 @@ Manual checks waiting for giopas (each stays here until reported back):
   open the Preview and check Save and Export stay visible, and make the
   window narrow to see the ☰ song list. Also open it on the phone over
   the home network (`--host 0.0.0.0`).
-- v0.34.0 pitch check: the screenshots moved, so four zoom points in
+- v0.34.0 pitch check, still open after the release: the screenshots moved, so four zoom points in
   `SLIDES` (`tools/make_pitch_video.py`) need giopas's OK before the
   release: `start-here.png@0.5,0.42,1.8`, `section-copy.png@0.86,0.72,1.9`,
   `lyrics-dialog.png@0.5,0.3,1.8`, `export-menu.png@0.86,0.2,2.0`. The

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.34.0] — 2026-11-12 — A clearer editor and longer tab measures
+
 A review of the browser app found things that got in the way: dialogs
 that Escape did not close, a preview that covered Save and Export, error
 messages in the parser's own words, grey text too faint to read, and the

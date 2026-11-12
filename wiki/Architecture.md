@@ -19,7 +19,7 @@ three front ends share them. `tests/test_export.py` checks it for
 | `examples.py` | `example_document()`, the song behind **Open example song** |
 | `userpaths.py` | Where the user's files live: the songs folder, the last export folder, the config file for each platform, and the one-time move out of the old in-repo `songs/`. Changing the songs folder: `plan_relocation()` says what a move would do without doing it, and `relocate_songs()` moves the `.sng` files, never overwriting, then switches |
 | `update.py` | The update check and **Update and restart** for the packaged app (adapted from QLC+ Swiss Knife): asking the GitHub Releases API, picking this computer's download, checking it against `SHA256SUMS`, unpacking it safely and writing the script that swaps it in after the app closes. The only network code in the app. See [[Installing and Updating]] |
-| `constants.py` | `APP_VERSION`, the instrument-to-strings map, section types, render-mode labels, the labels for every **⚙ Layout** choice, and `default_export_name()` |
+| `constants.py` | `APP_VERSION`, the instrument-to-strings map, section types, render-mode labels, the labels for every **Layout** choice, and `default_export_name()` |
 
 Each of them takes and returns plain dicts and lists shaped like
 `model.py`'s schema. None of them holds a widget or any live UI state.
@@ -28,7 +28,7 @@ Each of them takes and returns plain dicts and lists shaped like
 
 | Front end | File | What it adds to the engine |
 |---|---|---|
-| Desktop | `song_writer.py` | `SongNotationApp` (Tkinter): the song map, the chart editor bar, the riff strip, the tab grid, Stage View, the Start Here panel, the help strip, the live Preview window, the Lyrics dialog's marker buttons, the Chords dialog, and the **⚙ Layout** bar along the bottom of the window |
+| Desktop | `song_writer.py` | `SongNotationApp` (Tkinter): the song map, the chart editor bar, the riff strip, the tab grid, Stage View, the Start Here panel, the help strip, the live Preview window, the Lyrics dialog's marker buttons, the Chords dialog, and the **Layout** bar along the bottom of the window |
 | Command line | `cli.py` | `convert`, `batch` and `lint` subcommands built on `argparse`, with no window |
 | Browser | `webserver.py` and `web/` | A JSON API on the standard library's `http.server`, and a plain HTML, CSS and JavaScript front end with no build step and no framework. In the native window, pywebview's `js_api` bridge (`_JsApi` in `webserver.py`) adds what a web page cannot do: save panels, printing, Finder, and changing or moving the songs folder |
 

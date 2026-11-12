@@ -4,11 +4,11 @@ How a chart comes out on paper, and where the files go.
 
 ## ⚙ Layout: where the settings are
 
-Every setting on this page is in **⚙ Layout**, at the bottom of the
+Every setting on this page is in **Layout**, at the bottom of the
 sidebar. It opens a popover instead of a modal window, so the song stays
 in view and the preview keeps updating while you change things. The line
 under the button shows what is set ("Fit to page · Auto · lyrics:
-beside"). The desktop app has the same settings behind a **⚙ Layout**
+beside"). The desktop app has the same settings behind a **Layout**
 button on a bar along the bottom of its window.
 
 | Group | Setting | Stored as |
@@ -161,8 +161,9 @@ with some white space when the next section does not fit under it.
 
 ## A section's own size
 
-Each section has a size next to its render mode in the browser app:
-Normal, **Smaller** or **Larger**. It multiplies the song's scale for that
+Each section has a print size in its **⋯** menu in the browser app:
+the song's size, **Smaller** or **Larger**. A section that is not at
+the song's size shows a small badge in its header. It multiplies the song's scale for that
 section only (`constants.SECTION_SIZE_FACTORS`: 0.75 and 1.35), the heading
 and gaps included. It works with every Size, Floor included, and the fit
 accounts for it: a larger section with a long line lowers the scale of the
@@ -363,7 +364,7 @@ Every export, from any front end, goes through `export.py`:
 
 ## Where the words go
 
-One setting for the whole song, **⚙ Layout** → Lyrics (`lyrics_layout`):
+One setting for the whole song, **Layout** → Lyrics (`lyrics_layout`):
 
 | Choice | Stored as | What prints |
 |---|---|---|
@@ -387,7 +388,7 @@ never split does the same at the start, so words the song has never go
 missing from the page.
 
 Left column makes the page two columns whatever `pdf_columns` says, and
-**⚙ Layout** greys out Columns and says why. Column 0 on every page holds
+**Layout** greys out Columns and says why. Column 0 on every page holds
 the words, laid out first, page by page, and drawn as each page is
 finished, so the chart and the lyrics flow separately. Words that run
 longer than the chart get pages of their own, which Fit to one page counts
@@ -413,8 +414,8 @@ longer decide anything.
 
 ## Chord shapes
 
-**⚙ Layout** → Chord shapes (`chord_sheet`: `"none"`, `"start"` or `"end"`)
-prints the shapes from the **Chords 🎸** dialog once, as a block of
+**Layout** → Chord shapes (`chord_sheet`: `"none"`, `"start"` or `"end"`)
+prints the shapes from the **Chords** dialog once, as a block of
 tab-style diagrams. `chords.sheet_lines()` puts as many in a row as the
 column width allows, grouped by instrument, because a row mixing a
 four-string and a six-string shape reads as one wrong diagram instead of

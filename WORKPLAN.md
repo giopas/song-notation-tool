@@ -12,13 +12,14 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.33.2, published by the workflow on 8 November 2026
-  (v0.33.0 and v0.33.1 the same day). Installed copies up to v0.33.1
-  cannot update themselves while GitHub's download address fails;
-  install v0.33.2 or later by hand once.
-- Ready to release: v0.33.3 on `fix/v0.33.3`: fret numbers inside a
-  bracketed group print on the fret row over their chords. Not yet
-  merged, tagged or pushed.
+- Released: v0.33.3, published by the workflow on 8 November 2026.
+  Installed copies up to v0.33.1 cannot update themselves while GitHub's
+  download address fails; install v0.33.2 or later by hand once.
+- In progress: v0.34.0 on `feat/v0.34.0` (12 November): the browser app's
+  UI review fixes, extendable tab measures (+2 / +4 / −) and the new look,
+  under `[Unreleased]` in `CHANGELOG.md`. Committed locally, not merged,
+  tagged or pushed. `APP_VERSION` is still 0.33.3: the release steps bump
+  it. Pitch check pending (see below).
 - QLC+ Swiss Knife's `core/update.py` downloads the same way the old code
   here did (download address only, five seconds for SHA256SUMS), so it
   can fail the same way. Worth the same fix there.
@@ -34,7 +35,7 @@ and git hold the history.
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 543 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 565 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -76,6 +77,19 @@ Manual checks waiting for giopas (each stays here until reported back):
   (from `tools/`) on the Mac, every slide in the same voice, and a look at
   the video on a phone.
 
+- v0.34.0 in the native window on the Mac: open a song, check the new
+  look in dark and light (the ◐ button), press Escape in each dialog,
+  type a broken line (`[G D Em C x2`) and read the message, switch a
+  section to Tab, add two measures and use +2, +4 and − on the second,
+  open the Preview and check Save and Export stay visible, and make the
+  window narrow to see the ☰ song list. Also open it on the phone over
+  the home network (`--host 0.0.0.0`).
+- v0.34.0 pitch check: the screenshots moved, so four zoom points in
+  `SLIDES` (`tools/make_pitch_video.py`) need giopas's OK before the
+  release: `start-here.png@0.5,0.42,1.8`, `section-copy.png@0.86,0.72,1.9`,
+  `lyrics-dialog.png@0.5,0.3,1.8`, `export-menu.png@0.86,0.2,2.0`. The
+  printed PDF does not change, so no `--refresh-pages`. These are
+  estimates from the new pictures: check them with `--stills-only`.
 - v0.33.3: **Update and restart** from v0.33.2 on the Mac, then type
   `[5A 3C 5A 3G]x2 5A` in a section and check the frets sit over the
   chords in the preview and the PDF.

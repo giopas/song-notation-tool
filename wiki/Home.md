@@ -21,7 +21,7 @@ on the same engine.
   recalling them), marks, and free text for what the grammar does not
   cover.
 - [[Printing and Layout]]: how a chart comes out on paper, all set from
-  **⚙ Layout** (size, columns, colour, section names, where the lyrics go,
+  **Layout** (size, columns, colour, section names, where the lyrics go,
   licks and chord shapes); printing through the system; and where your
   songs and exports are kept, including changing and moving the songs
   folder.

@@ -150,7 +150,7 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   songs to the new folder (native window only);
 - a form for the song's details (title, artist, key, time, BPM), which
   says nothing about how it prints;
-- **⚙ Layout** at the bottom of the sidebar: a popover with every print
+- **Layout** at the bottom of the sidebar: a popover with every print
   setting (Size, Columns, Colour, section names, Lyrics, Recalled licks,
   Chord shapes), each with a line saying what it does, and a summary of
   what is set under the button;
@@ -166,10 +166,10 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   into the whole-song sheet to drop a `=== Verse 1 ===` marker, then
   **Split by markers** (or **Split on blank lines…** for a sheet without
   markers). **+ Section…** creates a section from there;
-- the **Chords 🎸** dialog: chord shapes typed as `x32010`, a live preview
+- the **Chords** dialog: chord shapes typed as `x32010`, a live preview
   of how they will print, the chords played that have no shape, and
   **+ From chart** to add them;
-- the **Riffs 🔁** dialog: create, edit, rename and delete the song's
+- the **Riffs** dialog: create, edit, rename and delete the song's
   riffs, with where each one is used. **→ riff** beside a chart line turns
   the selected part of it into a new riff;
 - a short list of suggestions as you type a chart line: riffs for a plain
@@ -178,21 +178,34 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   section, as a chart line, a tab grid, both, or free text (see
   [[Printing and Layout]]);
 - an Annotation field for each section;
-- four render modes per section: Chart, Tab, Both and Free (a plain text
-  box, kept and exported exactly as typed);
+- four render modes per section, picked with the Chart / Tab / Both / Free
+  buttons in its header (Free is a plain text box, kept and exported
+  exactly as typed);
 - an editable tab grid: add measures, type fret numbers into the cells,
-  delete measures;
+  delete measures, and make one measure longer with **+2** or **+4** (empty
+  beats on every string) or shorter with **−** (empty beats only). → in
+  the very last cell adds two beats;
+- the insert buttons under the chart line you are typing in, in four
+  groups: Lines, Repeats, Licks and Marks;
+- a mistake in a chart line explained under it in plain words, with the
+  chart that last worked kept on screen, dimmed;
 - adding, moving, copying and deleting sections. Drag a section by its
   **⠿** handle to move it: the cards fold down to their names while you
   drag, so the whole song is on screen, and Escape cancels. With the
-  handle clicked, the up and down arrow keys move it one place. **⧉**
-  opens a short list of every place a copy can go (the top, or after any
+  handle clicked, the up and down arrow keys move it one place. The
+  card's **⋯** menu holds its print size, Delete, and **Copy as a
+  reference…**, which opens a short list of every place a copy can go (the top, or after any
   section); the copy is a reference to the original, as in the desktop
   app;
-- a "how this works" help strip you can fold away, and the **Notation ⌘**
+- a "how this works" help strip you can fold away, and the **Notation**
   panel, which explains every mark;
 - a "Start here" panel (New song, Open example) when nothing is open;
-- a live Preview showing the whole TXT export as it will look;
+- a live Preview showing the whole TXT export as it will look, beside the
+  song, so Save and Export stay in reach;
+- dialogs that close with Escape and keep the keyboard inside them while
+  open; song tools that stay greyed out until a song is open;
+- a light and a dark theme (**◐**; the system's until you choose), and a
+  narrow layout for a phone, with the song list behind **☰**;
 - TXT and PDF export, and **Print…** through the system print dialog.
 
 The toolbar, the song list and the songs folder box stay in place and only
@@ -211,7 +224,7 @@ file is the source of truth. In short:
 
 | Method | Route | Does |
 |---|---|---|
-| `GET` | `/api/meta` | app version, section types, render modes, the instrument-to-strings map, the labels for every ⚙ Layout choice (section layout, colour, PDF scale, columns, lyrics, recalled licks, chord shapes), and the songs and export folders |
+| `GET` | `/api/meta` | app version, section types, render modes, the instrument-to-strings map, the labels for every Layout choice (section layout, colour, PDF scale, columns, lyrics, recalled licks, chord shapes), and the songs and export folders |
 | `GET` | `/api/songs` | list the `.sng` files in the served folder |
 | `GET` | `/api/songs/<name>` | load one song (migrated to the current schema), with a temporary `chart_line` added to each section |
 | `PUT` | `/api/songs/<name>` | save a song (creating the file if needed) under its own name, `Artist - Title.sng`, renaming the file if the title or artist changed → `{ok, filename, renamed_from}`; use `filename` from then on |
@@ -230,7 +243,7 @@ file is the source of truth. In short:
 | `POST` | `/api/update/open` | open the release page in the system browser (only the project's own pages) |
 | `POST` | `/api/riffs` | the riff library, body `{op, doc, ...}` with `op` one of `create` (`name`, `line`), `set_line` (`id`, `line`), `rename` (`id`, `name`), `delete` (`id`), `promote` (`section_id`, `line`, `start`, `end`, `name?`) or `list` → `{ok, doc, riffs: [{id, line, used_in}]}`, or `{ok: false, error}`. Changes only the song it is sent; the editor saves it as usual |
 | `POST` | `/api/import` | import a song, body `{filename, data}` with the file in base64: a `.sng`, or a PDF the app exported. Always saved as a new file named after the song → `{ok, filename, doc}`, or `{ok: false, error}` |
-| `POST` | `/api/quit` | called by **⏻ Save & Close** after it saves: closes the native window, or stops the server in a browser tab |
+| `POST` | `/api/quit` | called by **⏻** (Save and close) after it saves: closes the native window, or stops the server in a browser tab |
 | `GET` | `/api/songs/<name>/export.txt` \| `.pdf` | export a saved song (PDF takes `?orient=portrait\|landscape`) |
 | `POST` | `/api/export.txt` \| `/api/export.pdf` | export a song from the editor that may not be saved yet, body `{doc}` (PDF also takes `orient`) |
 

@@ -6,6 +6,74 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+A review of the browser app found things that got in the way: dialogs
+that Escape did not close, a preview that covered Save and Export, error
+messages in the parser's own words, grey text too faint to read, and the
+same row of insert buttons under every section. This version fixes them,
+gives the editor a calmer look that keeps the chart line at the centre,
+and lets a tab measure grow when it runs out of room. The printed page
+does not change.
+
+### Added
+
+- Tab measures can be made longer or shorter one at a time. **+2** and
+  **+4** over a measure add empty beats to every string of that measure
+  (the new beats are tinted for a moment), **−** takes empty beats off its
+  end and never a note, and → in the very last cell adds two beats and
+  moves into the first new one. The other measures keep their length.
+- A light theme, used when the system is set to light. **◐** in the top
+  bar switches between light and dark and remembers the choice on that
+  computer.
+- A layout for narrow windows and phones: the song list folds behind a
+  **☰** button, the top bar keeps its icons, and the preview covers the
+  song.
+- "Saved" or "Not saved" beside the Save button.
+- JetBrains Mono for chart lines, tab and the preview, shipped with the
+  app (SIL Open Font License, `web/fonts/OFL.txt`), so a chart looks the
+  same on every computer, offline included.
+
+### Changed
+
+- Every dialog closes with Escape, takes the keyboard when it opens
+  (Tab stays inside it) and gives it back where it was when it closes.
+  Dialogs are marked as dialogs for screen readers.
+- The preview opens beside the song, under the top bar, so **Save** and
+  **Export** stay in reach while it is open.
+- A mistake in a chart line is explained under the line in plain words,
+  for example "a '[' is never closed: add ']' where the group ends, before
+  its repeat (x2)", and the chart that last worked stays visible, dimmed
+  and labelled, until the line is fixed. The CLI's `lint` uses the same
+  words.
+- Transpose, Lyrics, Riffs, Chords, Preview, Save and Export are greyed
+  out until a song is open.
+- The insert buttons show only under the chart line you are typing in,
+  in four labelled groups: Lines, Repeats, Licks and Marks.
+- A section's render mode is a row of four buttons (Chart, Tab, Both,
+  Free) instead of a menu. Its print size, **Copy as a reference…** and
+  **Delete section** are in a **⋯** menu on the card; a section that does
+  not print at the song's size shows a badge saying so. The size's
+  default is called "At the song's size" instead of "Size".
+- A new look: a calmer dark palette, the section type as a pill in its
+  colour, the song title as the page heading, and each section's printed
+  chart on a strip of paper colour under its line. Icons are drawn
+  instead of emoji, in the top bar, the Riffs and Chords dialogs and on
+  the cards.
+- Grey labels and hints are lighter, and every text colour reads at
+  4.5:1 or better on the surface it sits on; the Export button uses dark
+  text on its colour. Every control you can reach with Tab shows a clear
+  focus ring.
+- Larger click targets: insert buttons, icon buttons, tab-grid cells and
+  the version badge.
+- The Lyrics dialog chooses whose words you edit with the row of chips
+  only (the Scope menu is gone), and its actions sit above a usual
+  **Done** button. The Chords dialog has the same layout.
+- The start screen offers three cards: New song, Open the example and
+  Import.
+- The songs folder path breaks only after a "/", never inside a folder
+  name. The song list is a list of buttons, usable from the keyboard.
+- The tab grid's beats menu is "New measures start with 8 beats", since
+  it only sets the length of the next measure.
+
 ## [0.33.3] — 2026-11-08 — Fret numbers inside brackets
 
 A bracketed run such as `[5A 3C 5A 3G]x2` printed its fret numbers glued

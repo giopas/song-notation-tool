@@ -139,7 +139,7 @@ removes the annotation.
 ## Riffs (block references)
 
 A plain word that is not a chord or note symbol refers to a named riff (a
-`block` in the document). Riffs are managed in the **Riffs 🔁** dialog in
+`block` in the document). Riffs are managed in the **Riffs** dialog in
 the browser app, or in the Riffs strip below the song map in the desktop
 app:
 
@@ -153,7 +153,7 @@ as a riff name, because it would read as fret 1 on A (see
 `model.validate_block_name`). Dynamics (`mf`) and the run words (`pm`,
 `cresc`, `dim`) are refused for the same reason.
 
-In the **Riffs 🔁** dialog you can create a riff from a chart line, change
+In the **Riffs** dialog you can create a riff from a chart line, change
 its line, rename it (every line that plays it follows the new name) and
 delete it once nothing plays it. To make a riff from something already
 typed, select that part of a section's chart line and click **→ riff**
@@ -171,8 +171,8 @@ content, the way you would write "same as Verse 1":
 ```
 
 `all` (only after a section reference) repeats everything in that section,
-not only its chart line. **⧉** on a section card in the browser inserts
-one for you and asks where it goes; **Duplicate as reference**
+not only its chart line. **Copy as a reference…** in a section card's **⋯** menu in the browser
+inserts one for you and asks where it goes; **Duplicate as reference**
 (Ctrl/Cmd+D) in the desktop app puts it right after the original.
 
 ### Names on screen, ids in the file
@@ -360,7 +360,7 @@ none it prints the text `=Riff1` as it is. Braces define a lick and braces
 recall it.
 
 If you want the notes printed only once, where the lick was written, with
-every recall showing just `Riff1 (x3)`, set **⚙ Layout** → Recalled licks
+every recall showing just `Riff1 (x3)`, set **Layout** → Recalled licks
 → Name only (`lick_refs: "name"`; the default is `"tab"`). With Name
 only the tab prints once in the whole song: a lick that comes back inside
 a referenced section (a chorus written as `=Chorus_1`) also prints as its
@@ -466,7 +466,7 @@ song's riffs for a plain word, its sections after `=`, and its named licks
 after `{`. Use the arrow keys to choose, Enter or Tab to take one, and Esc
 to close the list.
 
-The **Notation ⌘** panel explains every mark in full: what `segno`,
+The **Notation** panel explains every mark in full: what `segno`,
 `coda`, `dc` and `ds` tell a player to do, and the usual
 D.S., segno and coda shape they combine into.
 

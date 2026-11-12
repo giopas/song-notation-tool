@@ -111,7 +111,7 @@ Writing the chart
 
 Riffs and repeated sections
 
-- The riff library (**Riffs 🔁** in the browser, the Riffs strip in the
+- The riff library (**Riffs** in the browser, the Riffs strip in the
   desktop app): name a recurring riff once, use it by name in any section,
   and edit it once to change every section that uses it. Renaming a riff
   renames it everywhere it is played. A riff still in use cannot be
@@ -121,7 +121,7 @@ Riffs and repeated sections
   a named riff in place.
 - A copied section is a reference: it holds `=sectionname`, so a repeated
   section plays whatever the original holds and you edit it in one place.
-  In the browser, **⧉** on a section card asks where the copy goes (the
+  In the browser, **Copy as a reference…** in a section card's **⋯** menu asks where the copy goes (the
   top of the song, or after any section). In the desktop app,
   **Duplicate as reference** (Ctrl/Cmd+D) puts it right after the
   original.
@@ -152,7 +152,7 @@ Lyrics and chord shapes
   section's chip in, or click it) and **Split by markers** gives each block
   to the section it names. **Split on blank lines…** handles a sheet pasted
   straight from a lyrics site.
-- **Chords 🎸** keeps a list of voicings (`x32010`) and prints them as tab
+- **Chords** keeps a list of voicings (`x32010`) and prints them as tab
   diagrams at the start or the end of the chart. The list is checked
   against the chords the chart plays (**+ From chart** adds the missing
   ones), and the shapes are re-voiced when the song is transposed: an open
@@ -160,7 +160,7 @@ Lyrics and chord shapes
 
 Printing and export
 
-- **⚙ Layout** holds every print setting in one panel at the bottom left:
+- **Layout** holds every print setting in one panel at the bottom left:
   page size, columns, colour, section names, lyrics, licks and chord
   shapes. The settings belong to the song. See
   [Printing and page layout](#printing-and-page-layout).
@@ -215,11 +215,11 @@ insert notation at the cursor.
 ![The editor, with the example song open](screenshots/editor.png)
 
 <table>
-<tr><td width="50%" valign="top"><a href="screenshots/start-here.png"><img src="screenshots/start-here.png" alt="Start here"></a><br><b>Start here</b>: a new or returning user sees New song and Open example instead of an empty grid.</td><td width="50%" valign="top"><a href="screenshots/layout-panel.png"><img src="screenshots/layout-panel.png" alt="⚙ Layout"></a><br><b>⚙ Layout</b>: every print setting in one panel at the bottom left (size, columns, colour, section names, lyrics, licks, chord shapes).</td></tr>
-<tr><td width="50%" valign="top"><a href="screenshots/section-copy.png"><img src="screenshots/section-copy.png" alt="Copy to"></a><br><b>⧉ Copy to…</b>: pick where the copy of a section goes. The copy is a reference, so it plays whatever the original holds.</td><td width="50%" valign="top"><a href="screenshots/section-drag.png"><img src="screenshots/section-drag.png" alt="Moving a section"></a><br><b>Moving a section</b>: drag it by its ⠿ handle. While you drag, every card folds down to its name, so the whole song fits on screen.</td></tr>
+<tr><td width="50%" valign="top"><a href="screenshots/start-here.png"><img src="screenshots/start-here.png" alt="Start here"></a><br><b>Start here</b>: a new or returning user sees New song and Open example instead of an empty grid.</td><td width="50%" valign="top"><a href="screenshots/layout-panel.png"><img src="screenshots/layout-panel.png" alt="Layout"></a><br><b>Layout</b>: every print setting in one panel at the bottom left (size, columns, colour, section names, lyrics, licks, chord shapes).</td></tr>
+<tr><td width="50%" valign="top"><a href="screenshots/section-copy.png"><img src="screenshots/section-copy.png" alt="Copy to"></a><br><b>Copy as a reference…</b> (in a section's ⋯ menu): pick where the copy of a section goes. The copy is a reference, so it plays whatever the original holds.</td><td width="50%" valign="top"><a href="screenshots/section-drag.png"><img src="screenshots/section-drag.png" alt="Moving a section"></a><br><b>Moving a section</b>: drag it by its ⠿ handle. While you drag, every card folds down to its name, so the whole song fits on screen.</td></tr>
 <tr><td width="50%" valign="top"><a href="screenshots/lyrics-dialog.png"><img src="screenshots/lyrics-dialog.png" alt="Lyrics"></a><br><b>Lyrics</b>: paste or import the words, drag a section's chip into the sheet where its words begin, then <b>Split by markers</b>.</td><td width="50%" valign="top"><a href="screenshots/chord-shapes.png"><img src="screenshots/chord-shapes.png" alt="Chord shapes"></a><br><b>Chord shapes</b>: voicings typed as <code>x32010</code> and checked against the chords the chart plays. <b>+ From chart</b> adds the missing ones.</td></tr>
 <tr><td width="50%" valign="top"><a href="screenshots/notation-reference.png"><img src="screenshots/notation-reference.png" alt="Notation reference"></a><br><b>Notation reference</b>: everything you can type on a chart line, with examples checked against the real parser.</td><td width="50%" valign="top"><a href="screenshots/help-strip.png"><img src="screenshots/help-strip.png" alt="How this works"></a><br><b>How this works</b>: the ideas behind the chart line, one line each.</td></tr>
-<tr><td width="50%" valign="top"><a href="screenshots/export-menu.png"><img src="screenshots/export-menu.png" alt="Export"></a><br><b>Export</b>: TXT, PDF in portrait or landscape, or the system print dialog.</td><td width="50%"></td></tr>
+<tr><td width="50%" valign="top"><a href="screenshots/export-menu.png"><img src="screenshots/export-menu.png" alt="Export"></a><br><b>Export</b>: TXT, PDF in portrait or landscape, or the system print dialog.</td><td width="50%" valign="top"><a href="screenshots/tab-grid.png"><img src="screenshots/tab-grid.png" alt="A tab section"></a><br><b>Tab</b>: a grid of fret numbers. <b>+2</b> and <b>+4</b> over a measure make room for more notes in that measure only.</td></tr>
 </table>
 
 ## Install
@@ -358,7 +358,7 @@ for a virtualenv next to it that can `import webview` and restarts itself
 inside it. `SNT_NO_REEXEC=1` turns that off, and `--browser` and
 `--no-open` skip it.
 
-The **⏻ Save & Close** button (top right) saves the open song and closes
+The **⏻** button at the top right (**Save and close**) saves the open song and closes
 the window, or stops the server when you are in a plain browser tab. The
 window's own close button still works.
 
@@ -366,15 +366,26 @@ In the browser you get the song list, the song details, and a chart-line
 editor for each section with the same live preview as the desktop app.
 There is TXT and PDF export, **Transpose** (whole song or one section), the
 **Lyrics** panel (with section markers you can drag into the sheet), the
-**Chords** dialog, and a quick-insert palette beside each chart line. The
-palette inserts rests, repeat barlines, endings, groups, annotations, licks
+**Chords** dialog, and a quick-insert palette under the chart line you are
+typing in. The palette inserts rests, repeat barlines, endings, groups, annotations, licks
 and every lick you have already named, at the cursor. Sections move by
-dragging their **⠿** handle, and **⧉** copies one to the place you pick.
-Free-text sections work too, and **⚙ Layout** at the bottom left of the sidebar holds
+dragging their **⠿** handle, and **Copy as a reference…** in a card's **⋯**
+menu copies one to the place you pick. A mistake in a chart line is
+explained in plain words right under it, and the chart that last worked
+stays visible, dimmed, until the line is fixed. The song tools stay greyed
+out until a song is open, every dialog closes with Escape, the Preview
+opens beside the song instead of over the toolbar, and **◐** switches
+between a light and a dark theme (the system's choice until you pick one).
+In a narrow window, a phone for example, the song list folds behind the
+**☰** button.
+Free-text sections work too, and **Layout** at the bottom left of the sidebar holds
 everything about how the song prints.
 
 Tab-grid sections can be edited in the browser as well: switch a section
-to Tab or Both, add measures, and type fret numbers into the cells. The
+to Tab or Both, add measures, and type fret numbers into the cells.
+**+2** and **+4** over a measure add empty beats to every string of that
+measure when you need room for more notes, **−** takes empty beats off its
+end, and → in the very last cell adds two more. The
 render mode decides what prints. Chart prints the chart line, Tab prints
 the grid, and Both prints both, so a grid left behind when you switch a
 section back to Chart stays out of the export, as it stays out of the
@@ -392,8 +403,8 @@ system's PDF viewer, so you get the real print panel (printer, paper size,
 scaling, page range) and a preview before anything is printed. In a
 browser tab the PDF opens in a new tab, where Cmd/Ctrl+P does the same.
 
-The settings that shape the exported chart are in **⚙ Layout**, at the
-bottom left of the sidebar. In the desktop app it is a **⚙ Layout** button
+The settings that shape the exported chart are in **Layout**, at the
+bottom left of the sidebar. In the desktop app it is a **Layout** button
 along the bottom of the window. It covers Size, Columns and Colour for the
 page, where section names go, where the lyrics go, how recalled licks
 print, and whether chord shapes print. A line under the button sums up
@@ -426,7 +437,7 @@ gives the bigger chord symbols and notes. The title is one slim line
 names are small, so the page goes to the chart. Tab and riffs print at
 half the chart's size, since you read them close up.
 
-Next to each section's render mode there is a size: **Smaller** or
+Each section's **⋯** menu has a print size: **Smaller** or
 **Larger** prints that section below or above the rest of the song, with
 any Size setting. A long solo can go small, the part you always lose your
 place in can go large. This is in the browser app; the desktop app keeps
@@ -458,7 +469,7 @@ wherever it is opened, and it applies to TXT, PDF, Print and the Preview.
 
 ### Where the words go
 
-One setting for the whole song, in **⚙ Layout**:
+One setting for the whole song, in **Layout**:
 
 | Choice | What prints |
 |---|---|
@@ -479,7 +490,7 @@ read straight down the page.
 
 ### Chord shapes
 
-The **Chords 🎸** dialog keeps the voicings you had to work out, written as
+The **Chords** dialog keeps the voicings you had to work out, written as
 a chord chart writes them: `x32010` is C, `320003` is G, and frets above 9
 need spaces (`x 0 12 12 12 x`). They print once, as a block of tab-style
 diagrams, at the start or the end of the chart:
@@ -513,13 +524,13 @@ stored; only the printed sheet changes.
 
 **Lyrics** keeps the words as a reference layer. They are never parsed and
 never lined up with the chart automatically, and they print only if you
-ask: whether and where is set once for the song in **⚙ Layout** (see
+ask: whether and where is set once for the song in **Layout** (see
 [Where the words go](#where-the-words-go)), and the dialog shows which.
 Paste them in, import a `.txt`, or use **Search online ↗**, which opens a
 search in your browser and does not paste anything back.
 
-The dialog lists the song's sections as chips under the **Scope** menu.
-Each chip has a dot that fills once the section has words, so you can see
+The dialog lists the whole song and each section as chips at the top;
+click one to edit its words. Each chip has a dot that fills once the section has words, so you can see
 what is still empty and click straight to it.
 
 **Split by markers** is the quick way. Write `=== Verse 1 ===` above the

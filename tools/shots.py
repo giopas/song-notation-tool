@@ -52,6 +52,7 @@ PICTURES = [
     ("notation-reference.png", "the Notation ⌘ reference"),
     ("help-strip.png", "the How this works strip"),
     ("export-menu.png", "the Export menu open"),
+    ("tab-grid.png", "a section in Tab, one measure made longer with +4"),
 ]
 
 
@@ -112,7 +113,7 @@ def take(url: str, out: str) -> list[str]:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": WIDTH, "height": HEIGHT},
-                                device_scale_factor=SCALE)
+                                device_scale_factor=SCALE, color_scheme="dark")
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
 
@@ -156,6 +157,7 @@ def take(url: str, out: str) -> list[str]:
         shot("editor.png", 800)
 
         # Copy the verse: the list opens with "after this one" highlighted.
+        page.click(".section-card:nth-child(2) .sec-more")
         page.click(".section-card:nth-child(2) .sec-dup")
         shot("section-copy.png", 300)
         page.click(".copy-picker-row >> text=After 3.")    # a second verse after the chorus
@@ -211,6 +213,21 @@ def take(url: str, out: str) -> list[str]:
         reopen()
         page.click("#btn-export")
         shot("export-menu.png", 300)
+
+        # A section in Tab: a bass line in the first measure, then +4 on
+        # the second, with the new beats still tinted.
+        reopen()
+        card = page.locator(".section-card").nth(0)
+        card.locator('.sec-render button[data-mode="tab"]').click()
+        card.locator(".tab-add-measure").click()
+        card.locator(".tab-add-measure").click()
+        rows = card.locator(".tab-grid-table tbody tr")
+        for row, beat, fret in [(3, 0, "3"), (3, 4, "3"), (2, 2, "5"), (2, 6, "5"),
+                                (3, 8, "3"), (2, 10, "5"), (1, 13, "7"), (3, 12, "5")]:
+            rows.nth(row).locator("input.tab-cell").nth(beat).fill(fret)
+        card.locator(".tab-size-btn >> text=+4").nth(1).click()
+        card.scroll_into_view_if_needed()
+        shot("tab-grid.png", 250)
 
         browser.close()
         if errors:

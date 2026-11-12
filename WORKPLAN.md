@@ -16,27 +16,19 @@ and git hold the history.
   the workflow builds and publishes it. Before it: v0.33.3 (8 November).
   Installed copies up to v0.33.1 cannot update themselves while GitHub's
   download address fails; install v0.33.2 or later by hand once.
-- In progress: `chore/pitch-ci` (12 November), committed locally, waiting
-  for the push. GitHub makes the pitch video and the slide deck and
-  attaches them to every release (`.github/workflows/pitch.yml`, called by
-  `release.yml` after `publish`; also on a push to `main` that changes the
-  slides, the screenshots, `tools/pitch_media/` or the logo, and by hand
-  from the Actions tab). `--strict-voice` never lets a video out without
-  the edge voice; a failed run keeps the files a release has, and a new
-  release without them gets the previous release's. The README opens
-  with *See it in a minute and a half* (`screenshots/pitch-poster.png`,
-  drawn by `--poster`). The poster opens a GitHub Pages page that plays
-  the video (`https://giopas.github.io/song-notation-tool/`): GitHub sends
-  release files as downloads, so they never play in the browser.
-  `pitch-page.yml` builds it from `tools/pitch_page.html`, the latest
-  release's MP4 and PDF, the icon and a poster frame, and always runs
-  from `main` (only the default branch may publish to Pages; a release
-  runs from its tag), so `pitch.yml` starts it with `gh workflow run`
-  once the files are attached. Pages is set to *GitHub Actions* (giopas,
-  12 November). The README also links the files for downloading. The
-  slides took the v0.34.0 colours and the four moved zoom points
-  (measured on the pictures). Pushing it to `main` runs `pitch` once and
-  attaches the files to v0.34.0.
+- In progress: `feat/v0.35.0` (12 November), committed locally, not
+  merged. Songs can be deleted (to a trash, restorable, **Empty trash…**),
+  hidden, and put in collections (setlists, albums) with their own order
+  and one PDF per collection. Browser and native window only; the Tkinter
+  desktop app has no song list and is unchanged. `library.py` holds it;
+  CHANGELOG `[Unreleased]`, README and wiki describe it. Before release:
+  bump the version, screenshots (the song menu, a collection and the
+  trash are worth a picture each in `tools/shots.py`), the pitch check.
+- `chore/pitch-ci` and `fix/pitch-skip` are on `main` and pushed
+  (ground truth, 12 November); both branches can be deleted. GitHub makes
+  the pitch video and the deck for every release (`pitch.yml`, called by
+  `release.yml`) and `pitch-page.yml` publishes the page that plays it
+  (`https://giopas.github.io/song-notation-tool/`).
 - 12 November: `pitch.yml` skipped a release's own run (called by
   `release.yml`, `GITHUB_EVENT_NAME` is the tag's `push`), so a release
   would never get its video; Barline 0.21.0 showed it. Fixed on
@@ -59,7 +51,7 @@ and git hold the history.
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 565 tests, all passing (`python3 -m pytest -q`).
+- Test suite: 599 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
 
@@ -92,6 +84,16 @@ started until giopas picks it.
 - A test file for the Tkinter desktop app (`tests/test_song_writer.py`).
 
 Manual checks waiting for giopas (each stays here until reported back):
+
+- v0.35.0 (feat/v0.35.0) in the native window on the Mac: make a
+  collection, add three songs from their ⋯ menu, drag one to the top and
+  move one with Alt+↑; **Export as one PDF** and look at it; hide a song
+  and find it under Hidden songs; delete the open song, Escape the first
+  question, then delete it, restore it from Deleted songs and check it is
+  back in its collection; **Empty trash…**. Then **Change…** the songs
+  folder with a collection and a deleted song, and check both came along.
+  Drag in the song list in the native window is untested (headless
+  Chromium only).
 
 - Pitch video: after pushing `chore/pitch-ci`, a green `pitch` run on the
   Actions page, `Song_Notation_Tool_Pitch.mp4` and `.pdf` on the v0.34.0
@@ -197,6 +199,7 @@ and readable on stage without the handwritten sheet.
 | 10 Oct 2026 | Parts are extra chart lines inside a section, each with its own instrument; ⚙ Layout picks which instruments print. (giopas, 10 October.) |
 | 10 Oct 2026 | The song travels inside its PDF as an attachment, so a PDF can be opened again. TXT exports carry nothing. |
 | 11 Oct 2026 | A session starts with `tools/ground_truth.py` and corrects this plan where it disagrees. Finished items are deleted from the plan, not ticked. Ideas borrowed from truongfelix/workflow; the rest of that template is not adopted. (giopas, 11 October.) |
+| 12 Nov 2026 | Deleting a song moves it to `Deleted songs` in the songs folder, restorable until **Empty trash…**; every delete asks first. Hidden songs and collections (plain, ordered, a song in several) live in `library.json` beside the songs, never in the song files. A collection exports as one PDF. (giopas, 12 November.) |
 | 13 Oct 2026 | A floor sheet: Size "Floor" prints the largest type that fits on one page (changed from two the same day), portrait or landscape, whichever is bigger; tab at about half size; a slim title (title, artist, key) and small section names. Each section can also be Smaller or Larger than the song. (giopas, 13 October.) |
 | 13 Oct 2026 | Floor may use two columns when a long song gets clearly bigger type that way; a short song keeps one column across the full width. Tab never below 75%. (Proposed by Claude while building it; giopas to confirm.) |
 | 8 Nov 2026 | Sections move by dragging their ⠿ handle (arrow keys on the handle from the keyboard); the ↑ ↓ buttons are gone. ⧉ asks where the copy goes and the copy stays a reference. Browser and native window only; the Tkinter app keeps its own drag and Ctrl/Cmd+D. (giopas, 8 November.) |

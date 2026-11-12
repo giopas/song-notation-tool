@@ -143,7 +143,12 @@ covers the config file, the one-time move out of the old in-repo
 Open the URL it prints. The front end (`web/index.html`, `app.js`,
 `style.css`) has:
 
-- a song list (every `.sng` in the served folder), **Import song…** (a
+- a song list (every `.sng` in the served folder) with a picker for
+  **All songs**, a collection, **Hidden songs** or **Deleted songs**, and a
+  **⋯** menu on each song: collections, **Hide**, **Delete…** (to the
+  trash, after asking). Collections keep their own order (drag, or Alt
+  with ↑ ↓) and print as one PDF. See *Collections and the trash* below;
+- **Import song…** (a
   `.sng` file, or a PDF the app exported, opened as a new song in your
   songs folder), and the songs folder
   itself with **Reveal** and **Change…** buttons. **Change…** can move your
@@ -228,7 +233,12 @@ file is the source of truth. In short:
 | `GET` | `/api/songs` | list the `.sng` files in the served folder |
 | `GET` | `/api/songs/<name>` | load one song (migrated to the current schema), with a temporary `chart_line` added to each section |
 | `PUT` | `/api/songs/<name>` | save a song (creating the file if needed) under its own name, `Artist - Title.sng`, renaming the file if the title or artist changed → `{ok, filename, renamed_from}`; use `filename` from then on |
-| `DELETE` | `/api/songs/<name>` | delete a `.sng` file |
+| `DELETE` | `/api/songs/<name>` | move a song to the trash (`Deleted songs` in the songs folder) → `{ok, trashed_as}` |
+| `GET` | `/api/library` | collections (each `{id, name, songs}` in order), hidden songs and `trash_count` |
+| `POST` | `/api/library` | body `{op, ...}`: `hide` (`song`, `hidden`), `create` (`name`, `songs?`), `rename` (`id`, `name`), `delete` (`id`; the songs stay), `add` (`id`, `songs`), `remove` (`id`, `song`), `move` (`id`, `song`, `to`), `order` (`id`, `songs`) → `{ok, library}`, or `{ok: false, error}`. JSON only |
+| `GET` | `/api/trash` | the deleted songs, newest first: `{name, original, title, artist, deleted_at}` |
+| `POST` | `/api/trash` | body `{op, name?}`: `restore` → `{filename}`, `purge` (one song for good), `empty` → `{deleted}`. JSON only |
+| `GET` | `/api/collections/<id>/export.pdf` | every song of a collection in one PDF, in order (`?orient=portrait\|landscape`); `422` for an empty collection or a song that fails its check |
 | `POST` | `/api/songs` | create a song, body `{name?, title, artist, key, time, bpm}`; named `Artist - Title.sng` unless `name` is given, with "(2)" if the name is taken |
 | `POST` | `/api/songs/example` | open the built-in example as shipped: an untouched copy is reused, otherwise a fresh one is created, never an example you have since edited into a song |
 | `POST` | `/api/parse` | parse one chart line, body `{line, doc?}` → items, the line written back out, rendered fret and symbol rows, or `{ok: false, error}`. With `doc` as context, references are stored as ids, shown by name, and expanded in the rendered rows |
@@ -256,7 +266,8 @@ front end shows them after the download.
 
 In the native window the front end also calls Python directly through
 pywebview's `window.pywebview.api` bridge, for what a web page cannot do:
-`export_document` (system save panel), `print_document` (system print
+`export_document` (system save panel), `export_collection(id, orient)`
+(the same for a collection's PDF), `print_document` (system print
 dialog), `choose_songs_folder` (folder picker; returns what a move would
 do and changes nothing), `set_songs_folder(path, move)` (switch, moving
 the songs if asked), `reveal`, and `open_url`. In a browser tab there is
@@ -266,6 +277,22 @@ instead.
 pywebview adds the bridge after the page has loaded and announces it with
 a `pywebviewready` event. The front end checks again on that event, which
 is why **Change…** and **Reveal** appear a moment after the window opens.
+
+`/api/library` and `/api/trash` accept only `Content-Type:
+application/json`. Another site's page can send a form or plain-text POST
+to the local server without the browser asking first, but not a JSON one,
+so it cannot empty your trash.
+
+### Collections and the trash
+
+Hidden songs and collections live in `library.json` in the songs folder,
+and deleted songs in its `Deleted songs` folder until the trash is
+emptied. No song file changes when it is hidden or added to a collection.
+A name in `library.json` whose file has gone (deleted or renamed outside
+the app) is skipped, not an error. Saving a song under a new name updates
+its collections, and **Change…** takes `library.json` and the deleted
+songs along when it moves the songs; a `library.json` already in the new
+folder is kept, and ours stays in the old one.
 
 Moving the songs folder is a bridge method on purpose, and not an HTTP
 route. The local server cannot tell the app's own page from any other

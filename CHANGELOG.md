@@ -6,6 +6,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added — delete, hide and collect songs
+
+The song list held every song in the folder, for good: there was no way
+to remove one from the app, to put an old one out of the way, or to keep
+the songs for one gig together. Now a song can be deleted (and restored),
+hidden, and put in collections: a setlist, an album, a "learn next" pile.
+
+- **Delete…** in a song's **⋯** menu asks first, then moves the song to
+  *Deleted songs*, a folder inside your songs folder. **Deleted songs** in
+  the list's picker shows them with **Restore** (back under its own name,
+  or `… (2)` if that is taken now, and back in its collections at the
+  same place) and **Delete forever**. **Empty trash…** deletes them all
+  for good, after asking. Every question puts Cancel first, so Enter or
+  Escape never deletes anything.
+- **Hide from All songs** keeps a song but leaves it out of the list. It
+  is under **Hidden songs**, with **Show in All songs** to bring it back,
+  and still shows (marked *hidden*) in its collections.
+- **Collections.** The picker over the song list shows all songs, one
+  collection, the hidden songs or the deleted ones. The **⋯** beside it
+  makes a new collection, and for the collection shown renames it,
+  deletes it (the songs stay) or exports it. A song's **⋯** menu ticks
+  the collections it is in. In a collection the songs are numbered in
+  their running order: drag one to move it, or select it and press Alt
+  with ↑ or ↓, or use **Move up** and **Move down** in its menu.
+- **Export as one PDF** prints every song of a collection, in order, in
+  one file (portrait or landscape). Each song starts on a new page and
+  looks exactly as in its own PDF, a floor sheet included. This PDF does
+  not carry the songs, so **Import song…** does not open it; each song's
+  own PDF still does.
+- Hidden songs and collections are kept in `library.json` in the songs
+  folder, so no song file changes when you hide it or add it to a
+  setlist. They follow a song renamed on Save, and **Change…** moves them
+  and the deleted songs along with the songs. A `library.json` that cannot
+  be read is kept as `library.json.unreadable` instead of being written
+  over.
+- New routes: `GET /api/library`, `POST /api/library` (`hide`, `create`,
+  `rename`, `delete`, `add`, `remove`, `move`, `order`), `GET /api/trash`,
+  `POST /api/trash` (`restore`, `purge`, `empty`), and
+  `GET /api/collections/<id>/export.pdf`; in the native window,
+  `export_collection`. The two `POST` routes take `application/json`
+  only, so no page on another site can send them.
+
+### Changed
+
+- `DELETE /api/songs/<name>` moves the song to the trash instead of
+  deleting the file, and answers with its name there (`trashed_as`).
+- The app opens on the first song that is not hidden.
+
 ### Added — the pitch video on every release (the app does not change)
 
 - **The pitch video and the slides are made and attached to each release

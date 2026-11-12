@@ -196,11 +196,18 @@ Files
 
 - Songs are saved as `.sng` files (plain JSON you can read). Files from
   earlier versions open without losing anything.
+- Collections: a setlist, an album or any group of songs, in your own
+  order, printed as one PDF with **Export as one PDF**. A song can be in
+  several.
+- **Delete…** asks first and moves the song to *Deleted songs*, where
+  **Restore** puts it back until you **Empty trash…**. **Hide** keeps a
+  song out of the list without deleting it.
 - Songs live in `~/Documents/Song Notation Tool`, outside this checkout,
   and the app shows you the folder. Each file is named after its song,
   `Artist - Title.sng`, and renamed on Save if you change the title.
-  **Change…** picks a new folder and moves your songs there: only `.sng`
-  files move, nothing is overwritten, and the old folder stays.
+  **Change…** picks a new folder and moves your songs there, with your
+  collections and deleted songs: nothing is overwritten, and the old
+  folder stays.
 
 Getting around
 
@@ -570,6 +577,32 @@ time you save, and a message tells you. Another song is never overwritten
 file first and then replaces the old one, so a crash during a save cannot
 leave half a song behind.
 
+### Collections, hidden and deleted songs
+
+The picker over the song list shows **All songs**, one of your
+collections, **Hidden songs** or **Deleted songs**. Each song has a **⋯**
+menu: tick the collections it belongs to, start a new one with it, hide
+it, or delete it.
+
+- A collection keeps its songs in order, numbered in the list. Drag a song
+  to move it, or select it and press Alt with ↑ or ↓. The **⋯** beside the
+  picker makes a new collection and, for the one shown, exports it as one
+  PDF, renames it or deletes it. Deleting a collection leaves its songs
+  where they are.
+- **Export as one PDF** puts every song of the collection in one file, in
+  order, each starting on a new page and printed as in its own PDF. If the
+  open song is in the collection and has changes, it is saved first.
+- A hidden song stays in its file and in its collections; it is only left
+  out of **All songs**. **Show in All songs** brings it back.
+- **Delete…** asks before it does anything. The song moves to the
+  `Deleted songs` folder inside your songs folder. **Restore** puts it back
+  under its old name (or `… (2)` if another song has that name now) and in
+  its collections at the same place. **Delete forever** and **Empty
+  trash…** remove files for good, and ask again first.
+
+Hidden songs and collections are kept in `library.json` beside your songs,
+so a song file never changes because it joined a setlist.
+
 **Open example song** always opens the example as shipped. Once you have
 turned it into a song of your own, the next click makes a fresh example
 instead of opening yours.
@@ -589,7 +622,8 @@ The sidebar shows the folder, with **Reveal** (open it in Finder) and
 doing it: how many songs will move, and which will stay because a song
 with the same name is already in the new folder. You can move them, just
 use the new folder and leave them where they are, or cancel. Only `.sng`
-files move, nothing in the new folder is overwritten, and the old folder
+files move, with your collections (`library.json`) and the `Deleted songs`
+folder; nothing in the new folder is overwritten, and the old folder
 is not deleted, so you can safely try iCloud Drive, Dropbox or an external
 disk. The choice is saved in:
 

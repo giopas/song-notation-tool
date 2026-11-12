@@ -92,6 +92,8 @@ from constants import (
 # folder, sys._MEIPASS; from sources they are next to this file.
 APP_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(APP_DIR, "web")
+# Fonts shipped with the page. Not every system's mimetypes table knows woff2.
+mimetypes.add_type("font/woff2", ".woff2")
 DEFAULT_PORT = 8420
 
 

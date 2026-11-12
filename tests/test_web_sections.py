@@ -31,7 +31,12 @@ def test_the_drag_handle_can_be_focused():
 
 
 def test_the_copy_button_is_still_on_every_card():
-    assert 'class="btn icon-btn sec-dup"' in _template()
+    # Since v0.34.0 it is an item of the card's ⋯ menu, with Delete and
+    # the print size.
+    tpl = _template()
+    menu = tpl[tpl.index('class="sec-menu'):]
+    assert 'class="sec-dup"' in menu and 'sec-del' in menu
+    assert 'class="icon-btn sec-more"' in tpl
 
 
 def test_the_copy_picker_has_what_the_script_fills_in():

@@ -164,9 +164,15 @@ async function refreshSongList() {
   for (const s of songs) {
     const li = document.createElement("li");
     li.className = s.filename === currentFilename ? "active" : "";
-    li.innerHTML = `<span class="song-title">${escapeHtml(s.title || s.filename)}</span>` +
+    // A real button, so the list can be used from the keyboard.
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "song-item";
+    if (s.filename === currentFilename) btn.setAttribute("aria-current", "true");
+    btn.innerHTML = `<span class="song-title">${escapeHtml(s.title || s.filename)}</span>` +
       (s.artist ? `<span class="song-artist">${escapeHtml(s.artist)}</span>` : "");
-    li.addEventListener("click", () => openSong(s.filename));
+    btn.addEventListener("click", () => openSong(s.filename).catch((e) => toast(String(e))));
+    li.appendChild(btn);
     ul.appendChild(li);
   }
 }
@@ -184,9 +190,9 @@ async function openSong(filename) {
   const doc = await API.loadSong(filename);
   currentFilename = filename;
   currentDoc = doc;
-  document.getElementById("start-here").classList.add("hidden");
-  document.getElementById("editor").classList.remove("hidden");
+  showEditor();
   renderEditor();
+  markSaved();
   refreshSongList();
   schedulePreviewUpdate();
 }
@@ -195,9 +201,9 @@ async function createSong(fields) {
   const { filename, doc } = await API.newSong(fields);
   currentFilename = filename;
   currentDoc = doc;
-  document.getElementById("start-here").classList.add("hidden");
-  document.getElementById("editor").classList.remove("hidden");
+  showEditor();
   renderEditor();
+  markSaved();
   refreshSongList();
   toast(`Created ${filename}`);
 }
@@ -206,9 +212,9 @@ async function openExampleSong() {
   const { filename, doc } = await API.openExample();
   currentFilename = filename;
   currentDoc = doc;
-  document.getElementById("start-here").classList.add("hidden");
-  document.getElementById("editor").classList.remove("hidden");
+  showEditor();
   renderEditor();
+  markSaved();
   refreshSongList();
 }
 
@@ -313,7 +319,7 @@ function songInstruments() {
   return out;
 }
 
-/** ⚙ Layout → Instruments: a box per instrument; all ticked means all print
+/** Layout → Instruments: a box per instrument; all ticked means all print
  *  (stored as an empty list, so a new instrument prints without asking). */
 function renderLayoutInstruments() {
   const box = document.getElementById("layout-instruments");
@@ -429,9 +435,8 @@ function buildSectionCard(sec, idx) {
   node.querySelector(".sec-name").value = sec.name || "";
   showRepeatChip(node, sec);
 
-  const renderSel = node.querySelector(".sec-render");
-  renderSel.value = sec.render || "chart";
-  node.querySelector(".sec-size").value = sec.print_size || "normal";
+  showRenderMode(node, sec.render || "chart");
+  showPrintSize(node, sec.print_size || "normal");
 
   const lineInput = node.querySelector(".sec-chart-line");
   lineInput.value = sec.chart_line || "";
@@ -440,13 +445,7 @@ function buildSectionCard(sec, idx) {
   node.querySelector(".sec-annotation").value = sec.annotation || "";
 
   // Populate tab beats dropdown
-  const beatsSelect = node.querySelector(".tab-beats-select");
-  (META.tab_beats_options || [8, 16, 32, 64]).forEach((b) => {
-    const opt = document.createElement("option");
-    opt.value = b; opt.textContent = b;
-    if (b === (META.tab_beats_default || 8)) opt.selected = true;
-    beatsSelect.appendChild(opt);
-  });
+  fillBeatsSelect(node.querySelector(".tab-beats-select"));
 
   wireSectionEvents(node, sec, idx);
   updateSectionPreview(node, sec);
@@ -464,6 +463,65 @@ function buildSectionCard(sec, idx) {
   }
 
   return node;
+}
+
+/** The length a new tab measure starts with: "8 beats", "16 beats"… */
+function fillBeatsSelect(sel) {
+  (META.tab_beats_options || [8, 16, 32, 64]).forEach((b) => {
+    const opt = document.createElement("option");
+    opt.value = b; opt.textContent = `${b} beats`;
+    if (b === (META.tab_beats_default || 8)) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+/** Chart / Tab / Both / Free: one pressed button in the section header. */
+function showRenderMode(node, mode) {
+  node.querySelectorAll(":scope > .section-head .sec-render button").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
+  });
+}
+
+const PRINT_SIZE_LABELS = { smaller: "Prints smaller", larger: "Prints larger" };
+
+/** The ⋯ menu's size items, and a badge in the header when it is not the song's size. */
+function showPrintSize(node, size) {
+  node.querySelectorAll(":scope > .section-head .sec-menu [data-size]").forEach((b) => {
+    b.setAttribute("aria-checked", String(b.dataset.size === size));
+  });
+  const badge = node.querySelector(":scope > .section-head .sec-size-badge");
+  badge.textContent = PRINT_SIZE_LABELS[size] || "";
+  badge.classList.toggle("hidden", !PRINT_SIZE_LABELS[size]);
+}
+
+/** Open or close a section's ⋯ menu. Only one is open at a time. */
+function toggleSectionMenu(node, open) {
+  const menu = node.querySelector(":scope > .section-head .sec-menu");
+  const btn = node.querySelector(":scope > .section-head .sec-more");
+  if (open === undefined) open = menu.classList.contains("hidden");
+  document.querySelectorAll(".sec-menu").forEach((m) => {
+    if (m !== menu) m.classList.add("hidden");
+  });
+  document.querySelectorAll(".sec-more").forEach((b) => {
+    if (b !== btn) b.setAttribute("aria-expanded", "false");
+  });
+  menu.classList.toggle("hidden", !open);
+  btn.setAttribute("aria-expanded", String(open));
+  if (open) {
+    const first = menu.querySelector('[aria-checked="true"]') || menu.querySelector("button");
+    if (first) first.focus();
+  }
+}
+
+/**
+ * The card you are working in. Its insert buttons show; the others keep
+ * them hidden, so a long song is not a wall of identical button rows.
+ */
+function setActiveCard(node) {
+  document.querySelectorAll(".section-card.is-active").forEach((c) => {
+    if (c !== node) c.classList.remove("is-active");
+  });
+  if (node) node.classList.add("is-active");
 }
 
 /**
@@ -503,22 +561,49 @@ function wireSectionEvents(node, sec, idx) {
     schedulePreviewUpdate();
   });
 
-  node.querySelector(".sec-render").addEventListener("change", (e) => {
+  node.querySelector(".sec-render").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-mode]");
+    if (!b) return;
     const s = byId();
-    s.render = e.target.value;
+    s.render = b.dataset.mode;
+    showRenderMode(node, s.render);
     updateTabGridVisibility(node, s);
     refreshReferencingPreviews(sec.id);
     schedulePreviewUpdate();
   });
 
+  // The ⋯ menu: print size, copy, delete.
+  const head = node.querySelector(".section-head");
+  head.querySelector(".sec-more").addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleSectionMenu(node);
+  });
+  const menu = head.querySelector(".sec-menu");
+  menu.addEventListener("keydown", (e) => {
+    const items = [...menu.querySelectorAll("button")];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation();
+      toggleSectionMenu(node, false);
+      head.querySelector(".sec-more").focus();
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = items.length;
+      items[(i + (e.key === "ArrowDown" ? 1 : n - 1)) % n].focus();
+    }
+  });
   // Printed size of this section against the rest of the song. "Normal"
   // is stored as no key at all, so a song that never used it is unchanged.
-  node.querySelector(".sec-size").addEventListener("change", (e) => {
+  menu.querySelectorAll("[data-size]").forEach((b) => b.addEventListener("click", () => {
     const s = byId();
-    if (e.target.value === "normal") delete s.print_size;
-    else s.print_size = e.target.value;
+    if (b.dataset.size === "normal") delete s.print_size;
+    else s.print_size = b.dataset.size;
+    showPrintSize(node, b.dataset.size);
+    toggleSectionMenu(node, false);
     schedulePreviewUpdate();
-  });
+  }));
+  node.addEventListener("focusin", () => setActiveCard(node));
+  node.addEventListener("mousedown", () => setActiveCard(node));
 
   node.querySelector(".tab-add-measure").addEventListener("click", () => {
     const s = byId();
@@ -640,9 +725,16 @@ function wireSectionEvents(node, sec, idx) {
   });
 
   wireDragHandle(node, sec.id);
-  node.querySelector(".sec-dup").addEventListener("click",
-    (e) => openCopyPicker(sec.id, e.currentTarget));
-  node.querySelector(".sec-del").addEventListener("click", () => deleteSection(sec.id));
+  // The copy picker opens beside the ⋯ button: the menu item it was
+  // chosen from is gone by then.
+  node.querySelector(".sec-dup").addEventListener("click", () => {
+    toggleSectionMenu(node, false);
+    openCopyPicker(sec.id, node.querySelector(".sec-more"));
+  });
+  node.querySelector(".sec-del").addEventListener("click", () => {
+    toggleSectionMenu(node, false);
+    deleteSection(sec.id);
+  });
 }
 
 /**
@@ -660,6 +752,7 @@ function renderParts(node, sec) {
     head.className = "sec-part-head";
     const sel = document.createElement("select");
     sel.className = "part-instrument";
+    sel.setAttribute("aria-label", "Instrument for this part");
     sel.title = "The instrument this line is for";
     Object.keys(META.instruments).forEach((name) => {
       const opt = document.createElement("option");
@@ -670,6 +763,7 @@ function renderParts(node, sec) {
     // The same four modes as a section: what this part shows and prints.
     const mode = document.createElement("select");
     mode.className = "part-render";
+    mode.setAttribute("aria-label", "Show this part as");
     mode.title = "What this part holds: Chart (a chart line), Tab (a tab grid), Both, or Free (any text, kept as typed)";
     [["chart", "Chart"], ["tab", "Tab"], ["both", "Both"], ["free", "Free"]].forEach(([v, t]) => {
       const opt = document.createElement("option");
@@ -680,34 +774,32 @@ function renderParts(node, sec) {
     const input = document.createElement("input");
     input.type = "text";
     input.className = "part-line sec-chart-line-like";
+    input.spellcheck = false;
+    input.setAttribute("aria-label", "Chart line for this part");
     input.placeholder = "This instrument's chart line, e.g. A D E7";
     input.value = part.chart_line || "";
     const spacer = document.createElement("span");
     spacer.className = "part-spacer";
     const del = document.createElement("button");
     del.type = "button";
-    del.className = "btn icon-btn";
-    del.textContent = "×";
+    del.className = "icon-btn";
+    del.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     del.title = "Remove this part";
+    del.setAttribute("aria-label", "Remove this part");
     head.append(sel, mode, input, spacer, del);
     const err = document.createElement("div");
     err.className = "sec-error hidden";
     const preview = document.createElement("div");
-    preview.className = "sec-preview part-preview";
+    preview.className = "sec-preview part-preview is-empty";
     // Tab: the same grid editor as a section's, with its own toolbar.
     const grid = document.createElement("div");
     grid.className = "part-tab-grid";
     grid.innerHTML = '<div class="tab-grid-toolbar">'
-      + '<button type="button" class="btn subtle part-add-measure" title="Add a measure to this part\'s tab grid">+ Measure</button>'
-      + '<label class="tab-beats-label">Beats: <select class="part-beats-select"></select></label>'
+      + '<button type="button" class="btn part-add-measure" title="Add a measure to this part\'s tab grid">+ Measure</button>'
+      + '<label class="tab-beats-label">New measures start with <select class="part-beats-select"></select></label>'
       + '</div><div class="tab-grid-body"></div>';
     const beatsSel = grid.querySelector(".part-beats-select");
-    (META.tab_beats_options || [8, 16, 32, 64]).forEach((b) => {
-      const opt = document.createElement("option");
-      opt.value = b; opt.textContent = b;
-      if (b === (META.tab_beats_default || 8)) opt.selected = true;
-      beatsSel.appendChild(opt);
-    });
+    fillBeatsSelect(beatsSel);
     const gridBody = grid.querySelector(".tab-grid-body");
     // Free: a text box kept as typed.
     const free = document.createElement("textarea");
@@ -716,7 +808,8 @@ function renderParts(node, sec) {
     free.spellcheck = false;
     free.placeholder = "Free text for this instrument, kept and printed exactly as typed.";
     free.value = part.free_text || "";
-    row.append(head, preview, err, grid, free);
+    err.setAttribute("role", "alert");
+    row.append(head, err, preview, grid, free);
     box.appendChild(row);
 
     const show = () => {
@@ -766,11 +859,14 @@ function renderParts(node, sec) {
     });
     const paint = (result) => {
       if (!result || !result.ok) {
-        err.textContent = (result && result.error) || "";
+        err.textContent = result && result.error ? friendlyError(result.error) : "";
         err.classList.toggle("hidden", !(result && result.error));
+        preview.classList.toggle("is-stale", !!(result && result.error));
         return;
       }
       err.classList.add("hidden");
+      preview.classList.remove("is-stale");
+      preview.classList.toggle("is-empty", !(result.rendered || []).length);
       preview.innerHTML = "";
       (result.rendered || []).forEach((text, i) => {
         const div = document.createElement("div");
@@ -786,6 +882,7 @@ function renderParts(node, sec) {
     const onLine = debounce(async () => {
       if (!input.value.trim()) {
         setChartItems(part, []); part.chart_line = ""; preview.innerHTML = "";
+        preview.classList.add("is-empty"); preview.classList.remove("is-stale");
         err.classList.add("hidden"); schedulePreviewUpdate(); return;
       }
       try {
@@ -987,6 +1084,16 @@ const refreshReferencingPreviews = debounce((excludeId) => {
   });
 }, 200);
 
+/**
+ * The parser's message, starting with a capital letter and without the
+ * "ParseError:" a thrown error carries. The wording itself is the
+ * parser's (grammar.py), so the CLI's lint says the same thing.
+ */
+function friendlyError(msg) {
+  const text = String(msg || "").replace(/^(Error|ParseError):\s*/, "").trim();
+  return text ? text[0].toUpperCase() + text.slice(1) : "This line could not be read.";
+}
+
 function updateSectionPreview(node, sec, parseResult) {
   const fretRow = node.querySelector(".sec-preview-fret");
   const symRow = node.querySelector(".sec-preview-sym");
@@ -997,15 +1104,23 @@ function updateSectionPreview(node, sec, parseResult) {
   const rendered = (parseResult && parseResult.rendered) ||
     (items.length ? null : []); // null = "not recomputed, leave last render"
 
+  const previewBox = node.querySelector(".sec-preview");
+  const lineEl = node.querySelector(".sec-chart-line");
   if (parseResult && parseResult.error) {
-    errEl.textContent = parseResult.error;
+    errEl.textContent = friendlyError(parseResult.error);
     errEl.classList.remove("hidden");
+    lineEl.setAttribute("aria-invalid", "true");
+    // The last chart that worked stays on screen, dimmed and labelled, so
+    // it is never mistaken for what the line says now.
+    previewBox.classList.add("is-stale");
     return; // leave the last valid render on screen — never clear it
   }
   errEl.classList.add("hidden");
+  lineEl.removeAttribute("aria-invalid");
+  previewBox.classList.remove("is-stale");
 
-  const previewBox = node.querySelector(".sec-preview");
-
+  // Shown before painting: the bracket lines are measured from the rows.
+  if (rendered) previewBox.classList.toggle("is-empty", !rendered.length);
   if (rendered && rendered.length) {
     // A row is 1..N lines now: an optional fret row, the symbol row, and
     // one line per string for any lick. The first two elements are reused
@@ -1106,10 +1221,12 @@ function rebuildTabGrid(node, sec, body) {
   const strings = stringsForInstrument(sec.instrument);
 
   if (!measures.length) {
-    body.innerHTML = '<p style="color:var(--lbl-gray);font-size:12px;font-style:italic;margin:4px 0;">' +
-      'No measures yet. Click "+ Measure" to add one.</p>';
+    body.innerHTML = '<p class="tab-empty">No measures yet. Click <strong>+ Measure</strong> to add one.</p>';
     return;
   }
+  // Beats just added by +2 / +4: tinted for a moment, so you see where they went.
+  const fresh = body._fresh || null;
+  body._fresh = null;
 
   const table = document.createElement("table");
   table.className = "tab-grid-table";
@@ -1121,13 +1238,40 @@ function rebuildTabGrid(node, sec, body) {
   measures.forEach((m, mi) => {
     const th = document.createElement("th");
     th.colSpan = m.beats || 8;
+    const beats = m.beats || 8;
     const hdr = document.createElement("span");
     hdr.className = "tab-measure-header";
-    hdr.innerHTML = 'M' + (mi + 1) + ' ';
+    const name = document.createElement("span");
+    name.className = "tab-measure-name";
+    name.textContent = `M${mi + 1} · ${beats}`;
+    name.title = `Measure ${mi + 1}: ${beats} beats`;
+    hdr.appendChild(name);
+    // Room for more notes: +2 / +4 add empty beats to every string of this
+    // measure only, so the other measures keep their spacing; − takes
+    // empty beats off the end again.
+    const mk = (label, title, fn, disabled) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tab-size-btn";
+      b.textContent = label;
+      b.title = title;
+      b.setAttribute("aria-label", title);
+      b.disabled = !!disabled;
+      b.addEventListener("click", fn);
+      hdr.appendChild(b);
+    };
+    mk("+2", `Add 2 beats to measure ${mi + 1}`,
+       () => resizeMeasure(node, sec, body, mi, 2), beats >= TAB_BEATS_MAX);
+    mk("+4", `Add 4 beats to measure ${mi + 1}`,
+       () => resizeMeasure(node, sec, body, mi, 4), beats >= TAB_BEATS_MAX);
+    mk("−", `Remove empty beats from the end of measure ${mi + 1}`,
+       () => resizeMeasure(node, sec, body, mi, -2), emptyTail(m, strings) < 1 || beats <= 1);
     const delBtn = document.createElement("button");
+    delBtn.type = "button";
     delBtn.className = "tab-del-measure";
     delBtn.title = "Delete measure " + (mi + 1);
-    delBtn.textContent = "×";
+    delBtn.setAttribute("aria-label", "Delete measure " + (mi + 1));
+    delBtn.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     delBtn.addEventListener("click", () => {
       const allMeasures = measureItems(sec);
       allMeasures.splice(mi, 1);
@@ -1161,7 +1305,9 @@ function rebuildTabGrid(node, sec, body) {
         const td = document.createElement("td");
         const input = document.createElement("input");
         input.type = "text";
-        input.className = "tab-cell";
+        input.className = "tab-cell" + (bi === beats - 1 ? " tab-cell-last" : "");
+        if (fresh && fresh.mi === mi && bi >= fresh.from) input.classList.add("tab-cell-new");
+        input.setAttribute("aria-label", `${st} string, measure ${mi + 1}, beat ${bi + 1}`);
         input.value = tokens[bi] || "-";
         // A cell with a technique ("7b9r7") grows to show all of it.
         const fit = () => { input.style.width = Math.max(32, input.value.length * 8 + 12) + "px"; };
@@ -1183,6 +1329,16 @@ function rebuildTabGrid(node, sec, body) {
             if (next && next.querySelector("input")) {
               e.preventDefault();
               next.querySelector("input").focus();
+            } else if (e.key === "ArrowRight" && mi === measures.length - 1
+                       && beats < TAB_BEATS_MAX) {
+              // → past the very last cell: the last measure grows by two
+              // beats and the caret moves into the first new one.
+              e.preventDefault();
+              const row = strings.indexOf(st);
+              resizeMeasure(node, sec, body, mi, 2);
+              const cells = body.querySelectorAll("tbody tr")[row]
+                ?.querySelectorAll("input.tab-cell-new");
+              if (cells && cells.length) cells[0].focus();
             }
           } else if (e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey)) {
             const prev = td.previousElementSibling;
@@ -1217,6 +1373,61 @@ function rebuildTabGrid(node, sec, body) {
   table.appendChild(tbody);
   body.innerHTML = "";
   body.appendChild(table);
+}
+
+const TAB_BEATS_MAX = 64;
+
+/** A measure's tokens for one string, padded with "-" to its length. */
+function measureTokens(m, st) {
+  const beats = m.beats || 8;
+  const tokens = ((m.strings || {})[st] || "").split(/\s+/).filter(Boolean);
+  while (tokens.length < beats) tokens.push("-");
+  return tokens.slice(0, beats);
+}
+
+/** How many beats at the end of a measure are empty on every string. */
+function emptyTail(m, strings) {
+  const beats = m.beats || 8;
+  let n = 0;
+  for (let bi = beats - 1; bi >= 0; bi--) {
+    const empty = strings.every((st) => {
+      const t = measureTokens(m, st)[bi];
+      return !t || t === "-";
+    });
+    if (!empty) break;
+    n += 1;
+  }
+  return n;
+}
+
+/**
+ * Make one measure longer (delta > 0: empty beats on every string at its
+ * end) or shorter (delta < 0: only beats that are empty on every string
+ * are taken off, so no note is ever lost). The other measures keep their
+ * length. Tokens are written out in full so every string stays aligned.
+ */
+function resizeMeasure(node, sec, body, mi, delta) {
+  const measures = measureItems(sec);
+  const m = measures[mi];
+  if (!m) return;
+  const strings = stringsForInstrument(sec.instrument);
+  const beats = m.beats || 8;
+  let next = beats + delta;
+  if (delta < 0) next = Math.max(beats - Math.min(-delta, emptyTail(m, strings)), 1);
+  next = Math.min(Math.max(next, 1), TAB_BEATS_MAX);
+  if (next === beats) return;
+  const out = {};
+  strings.forEach((st) => {
+    const tokens = measureTokens(m, st);
+    while (tokens.length < next) tokens.push("-");
+    out[st] = tokens.slice(0, next).join(" ");
+  });
+  m.beats = next;
+  m.strings = Object.assign({}, m.strings || {}, out);
+  setMeasureItems(sec, measures);
+  if (next > beats) body._fresh = { mi, from: beats };
+  rebuildTabGrid(node, sec, body);
+  schedulePreviewUpdate();
 }
 
 function commitTabCell(sec, measureIdx, stringName, beats, body) {
@@ -1411,7 +1622,7 @@ function endSectionDrag(keep) {
 // ---------------------------------------------------------------------------
 //  "Copy to…" picker
 // ---------------------------------------------------------------------------
-//  The ⧉ button opens a small list of every place the copy can go: the top
+//  Copy as a reference… (a card's ⋯ menu) opens a small list of every place the copy can go: the top
 //  of the song, or after any section. One click puts it there. The place
 //  right after the original is highlighted, so Enter does what the button
 //  used to do.
@@ -1565,6 +1776,7 @@ async function saveCurrent() {
   const saved = (res && res.filename) || currentFilename;
   const renamed = saved !== currentFilename;
   currentFilename = saved;
+  markSaved();
   toast(renamed ? `Saved. The file is now "${saved}"` : `Saved ${saved}`);
   refreshSongList();
 }
@@ -1712,7 +1924,13 @@ function renderSongsFolder() {
   const box = document.getElementById("songs-folder");
   if (!box) return;
   const dir = META.songs_dir || "";
-  box.querySelector(".songs-folder-path").textContent = dir;
+  // Break only after a "/" or "\\", never inside a folder name.
+  const pathEl = box.querySelector(".songs-folder-path");
+  pathEl.textContent = "";
+  dir.split(/(?<=[\/\\])/).forEach((part, i) => {
+    if (i) pathEl.appendChild(document.createElement("wbr"));
+    pathEl.appendChild(document.createTextNode(part));
+  });
   box.querySelector(".songs-folder-path").title = dir;
 
   const api = nativeApi();
@@ -1804,6 +2022,7 @@ async function applySongsFolder(move) {
 //  Live preview pane
 // ---------------------------------------------------------------------------
 const schedulePreviewUpdate = debounce(async () => {
+  updateSaveStatus();
   if (!previewOpen || !currentDoc) return;
   try {
     const { lines } = await API.render(currentDoc);
@@ -1816,7 +2035,143 @@ const schedulePreviewUpdate = debounce(async () => {
 function togglePreview(open) {
   previewOpen = open !== undefined ? open : !previewOpen;
   document.getElementById("preview-pane").classList.toggle("hidden", !previewOpen);
+  document.getElementById("btn-preview-toggle").setAttribute("aria-pressed", String(previewOpen));
   if (previewOpen) schedulePreviewUpdate();
+}
+
+// ---------------------------------------------------------------------------
+//  Song tools, saved state, dialogs, theme
+// ---------------------------------------------------------------------------
+
+/** The buttons that act on a song do nothing without one, so they say so. */
+function setSongToolsEnabled(on) {
+  document.querySelectorAll("#topbar .song-tool").forEach((b) => { b.disabled = !on; });
+  if (!on) togglePreview(false);
+}
+
+/** A song was opened or created: the editor shows, the tools wake up. */
+function showEditor() {
+  document.getElementById("start-here").classList.add("hidden");
+  document.getElementById("editor").classList.remove("hidden");
+  setSongToolsEnabled(true);
+  closeSidebarOnNarrow();
+}
+
+// "Saved" against "Not saved": the song as it was last read or written,
+// compared with the song now. A song is small, so a string compare after
+// each edit (debounced) costs nothing worth measuring.
+let savedSnapshot = null;
+function markSaved() {
+  savedSnapshot = currentDoc ? JSON.stringify(currentDoc) : null;
+  updateSaveStatus();
+}
+function updateSaveStatus() {
+  const el = document.getElementById("save-status");
+  if (!el) return;
+  if (!currentDoc) { el.textContent = ""; el.classList.remove("unsaved"); return; }
+  const unsaved = JSON.stringify(currentDoc) !== savedSnapshot;
+  el.textContent = unsaved ? "Not saved" : "Saved";
+  el.classList.toggle("unsaved", unsaved);
+}
+const scheduleSaveStatus = debounce(updateSaveStatus, 300);
+
+/**
+ * Every dialog behaves the same way: Escape closes it (through its own
+ * Cancel or Done button, so whatever that button does still happens),
+ * focus moves into it when it opens and back where it was when it closes.
+ */
+function topmostDialog() {
+  const open = [...document.querySelectorAll(".modal-backdrop")]
+    .filter((b) => !b.classList.contains("hidden"));
+  if (!open.length) return null;
+  const z = (b) => parseInt(getComputedStyle(b).zIndex, 10) || 0;
+  return open.reduce((a, b) => (z(b) >= z(a) ? b : a));
+}
+function wireDialogs() {
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const top = topmostDialog();
+    if (!top) return;
+    const btn = top.dataset.close && document.getElementById(top.dataset.close);
+    if (!btn) return;
+    e.preventDefault();
+    btn.click();
+  });
+  document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+    let returnTo = null;
+    new MutationObserver(() => {
+      const open = !backdrop.classList.contains("hidden");
+      if (open && !backdrop._open) {
+        returnTo = document.activeElement;
+        const first = backdrop.querySelector(
+          "input:not([type=hidden]):not(.hidden):not([tabindex='-1']), textarea, select:not(.hidden), button");
+        if (first) setTimeout(() => first.focus(), 0);
+      } else if (!open && backdrop._open) {
+        if (returnTo && document.contains(returnTo) && !returnTo.disabled) returnTo.focus();
+        returnTo = null;
+      }
+      backdrop._open = open;
+    }).observe(backdrop, { attributes: true, attributeFilter: ["class"] });
+  });
+  // Tab stays inside an open dialog.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const top = topmostDialog();
+    if (!top) return;
+    const items = [...top.querySelectorAll(
+      "button, input, select, textarea, [tabindex]:not([tabindex='-1'])")]
+      .filter((el) => !el.disabled && el.offsetParent !== null && el.tabIndex !== -1);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (!top.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+}
+
+/** Light or dark: the system's until you choose, then yours (this computer only). */
+const THEME_KEY = "snt-theme";
+function applyTheme(theme) {
+  if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+  else delete document.documentElement.dataset.theme;
+}
+function currentTheme() {
+  const set = document.documentElement.dataset.theme;
+  if (set) return set;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light" : "dark";
+}
+function wireTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem(THEME_KEY); } catch (e) { /* private window */ }
+  applyTheme(saved);
+  document.getElementById("btn-theme").addEventListener("click", () => {
+    const next = currentTheme() === "light" ? "dark" : "light";
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* not kept */ }
+  });
+}
+
+/** On a phone-sized window the song list is a panel the menu button opens. */
+function closeSidebarOnNarrow() {
+  document.body.classList.remove("sidebar-open");
+  const b = document.getElementById("btn-sidebar");
+  if (b) b.setAttribute("aria-expanded", "false");
+}
+function wireSidebarToggle() {
+  const b = document.getElementById("btn-sidebar");
+  b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = !document.body.classList.contains("sidebar-open");
+    document.body.classList.toggle("sidebar-open", open);
+    b.setAttribute("aria-expanded", String(open));
+  });
+  document.addEventListener("mousedown", (e) => {
+    if (!document.body.classList.contains("sidebar-open")) return;
+    if (e.target.closest("#sidebar") || e.target.closest("#btn-sidebar")) return;
+    if (e.target.closest(".layout-panel")) return;
+    closeSidebarOnNarrow();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1880,7 +2235,7 @@ function applyTranspose() {
 // ---------------------------------------------------------------------------
 //  Lyrics modal — stored non-destructively on the document or a section as
 //  `lyrics_text`, never parsed or aligned to the chart. Whether and where
-//  it prints is one song-wide setting, `lyrics_layout`, in the ⚙ Layout
+//  it prints is one song-wide setting, `lyrics_layout`, in the Layout
 //  panel (off by default). "Search online" opens a browser search in
 //  a new tab; it never fetches or auto-pastes lyrics in, by design
 //  (copyright + accuracy).
@@ -2247,9 +2602,10 @@ function chordRow(chord, index) {
 
   const del = document.createElement("button");
   del.type = "button";
-  del.className = "btn icon-btn";
-  del.textContent = "\u{1F5D1}";
+  del.className = "icon-btn";
+  del.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   del.title = "Remove this shape";
+  del.setAttribute("aria-label", "Remove this shape");
   del.addEventListener("click", () => {
     chordList().splice(index, 1);
     renderChordRows();
@@ -2461,7 +2817,7 @@ function closeSplitModal() {
 }
 
 function applyLyricsSplit() {
-  // Where the words print is ⚙ Layout's call; the per-section flag is
+  // Where the words print is Layout's call; the per-section flag is
   // still written so an older version opening the file agrees with it.
   const print = (currentDoc.lyrics_layout || "none") !== "none";
   let assigned = 0;
@@ -2592,7 +2948,8 @@ function renderRiffRows(riffs) {
     used.className = "riff-used";
     used.textContent = r.used_in.length ? `in ${r.used_in.join(", ")}` : "not used yet";
     const del = document.createElement("button");
-    del.type = "button"; del.className = "btn icon-btn"; del.textContent = "🗑";
+    del.type = "button"; del.className = "icon-btn"; del.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+    del.setAttribute("aria-label", `Delete the riff ${r.id}`);
     del.disabled = r.used_in.length > 0;
     del.title = r.used_in.length
       ? `Still used in ${r.used_in.join(", ")}: take it out of those lines first`
@@ -2932,6 +3289,10 @@ async function init() {
     });
   });
   wireLayoutPanel();
+  wireDialogs();
+  wireTheme();
+  wireSidebarToggle();
+  setSongToolsEnabled(false);
 
   renderSongsFolder();
   // pywebview injects its bridge *after* the page has loaded, and says so
@@ -2950,8 +3311,10 @@ async function init() {
     if (api && api.reveal) api.reveal(META.songs_dir || "");
   });
 
-  document.getElementById("btn-help").addEventListener("click", () => {
-    document.getElementById("help-strip").classList.toggle("hidden");
+  document.getElementById("btn-help").addEventListener("click", (e) => {
+    const strip = document.getElementById("help-strip");
+    strip.classList.toggle("hidden");
+    e.currentTarget.setAttribute("aria-expanded", String(!strip.classList.contains("hidden")));
   });
   document.getElementById("btn-notation-ref").addEventListener("click", () => {
     document.getElementById("notation-ref-backdrop").classList.remove("hidden");
@@ -2968,18 +3331,38 @@ async function init() {
   document.getElementById("btn-close").addEventListener("click", () => saveAndClose().catch((e) => toast(String(e))));
   document.getElementById("btn-add-section").addEventListener("click", addSection);
 
-  document.getElementById("btn-export").addEventListener("click", () => {
-    document.getElementById("export-menu").classList.toggle("hidden");
+  const exportMenu = document.getElementById("export-menu");
+  const exportBtn = document.getElementById("btn-export");
+  const setExportOpen = (open) => {
+    exportMenu.classList.toggle("hidden", !open);
+    exportBtn.setAttribute("aria-expanded", String(open));
+  };
+  exportBtn.addEventListener("click", () => {
+    const open = exportMenu.classList.contains("hidden");
+    setExportOpen(open);
+    if (open) exportMenu.querySelector("button").focus();
   });
-  document.getElementById("export-menu").addEventListener("click", (e) => {
-    const fmt = e.target.dataset.fmt;
+  exportMenu.addEventListener("click", (e) => {
+    const fmt = e.target.closest("[data-fmt]") && e.target.closest("[data-fmt]").dataset.fmt;
     if (!fmt) return;
-    document.getElementById("export-menu").classList.add("hidden");
+    setExportOpen(false);
     exportCurrent(fmt).catch((err) => toast(String(err)));
   });
+  exportMenu.addEventListener("keydown", (e) => {
+    const items = [...exportMenu.querySelectorAll("button")];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setExportOpen(false); exportBtn.focus(); }
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
+    }
+  });
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("#topbar-right .dropdown")) {
-      document.getElementById("export-menu").classList.add("hidden");
+    if (!e.target.closest("#topbar-right .dropdown")) setExportOpen(false);
+    // A section's ⋯ menu closes when you click anywhere else.
+    if (!e.target.closest(".sec-more-wrap")) {
+      document.querySelectorAll(".sec-menu").forEach((m) => m.classList.add("hidden"));
+      document.querySelectorAll(".sec-more").forEach((b) => b.setAttribute("aria-expanded", "false"));
     }
   });
 

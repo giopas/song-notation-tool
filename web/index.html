@@ -7,34 +7,45 @@
 <link rel="icon" type="image/png" href="/logo/favicon.png">
 <link rel="apple-touch-icon" href="/logo/icon-180.png">
 <link rel="stylesheet" href="/style.css">
+<script>
+  // The theme you chose last time, before anything paints, so a light
+  // window never flashes dark first. Without a choice the system's applies.
+  try { var t = localStorage.getItem("snt-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 </head>
 <body>
   <header id="topbar">
     <div id="topbar-left">
-      <span id="app-title"><img id="app-logo" src="/logo/icon.svg" alt="" width="22" height="22">Song Notation Tool</span>
+      <button id="btn-sidebar" type="button" class="icon-btn only-narrow" aria-label="Songs" aria-expanded="false" aria-controls="sidebar" title="Your songs"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <span id="app-title"><img id="app-logo" src="/logo/icon.svg" alt="" width="24" height="24">Song Notation Tool</span>
       <button id="app-version" type="button" class="version-btn" title="About this app, and updates"></button>
       <button id="update-badge" type="button" class="btn accent update-badge" hidden
               title="A newer version is out. Click for what is new and how to get it"></button>
     </div>
+    <nav id="topbar-tools" aria-label="Song tools">
+      <button id="btn-transpose" aria-label="Transpose" class="btn song-tool" title="Transpose the whole song or one section, without rewriting what you typed"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></svg><span class="btn-text">Transpose</span></button>
+      <button id="btn-lyrics" aria-label="Lyrics" class="btn song-tool" title="Paste, import or mark up lyrics, and give each marked block to its section"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 6h14M5 11h14M5 16h9"/></svg><span class="btn-text">Lyrics</span></button>
+      <button id="btn-riffs" aria-label="Riffs" class="btn song-tool" title="The riff library: name a run of chart line once and play it anywhere by its name"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a6 6 0 0 1 6-6h8M15 3l3 3-3 3M20 12a6 6 0 0 1-6 6H6M9 21l-3-3 3-3"/></svg><span class="btn-text">Riffs</span></button>
+      <button id="btn-chords" aria-label="Chords" class="btn song-tool" title="Chord shapes: the voicings you had to work out, printed once at the start or the end of the chart"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 8h14M9.7 3v18M14.3 3v18"/></svg><span class="btn-text">Chords</span></button>
+      <span class="topbar-sep" aria-hidden="true"></span>
+      <button id="btn-notation-ref" aria-label="Notation" class="btn subtle" title="Everything you can type on a chart line"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2zM6 18a2 2 0 0 1 2-2h10"/></svg><span class="btn-text">Notation</span></button>
+      <button id="btn-help" class="icon-btn" aria-label="How this works" aria-expanded="false" aria-controls="help-strip" title="How this works"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01"/></svg></button>
+      <button id="btn-theme" class="icon-btn" aria-label="Light or dark" title="Light or dark (follows your system until you choose)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></button>
+    </nav>
     <div id="topbar-right">
-      <button id="btn-help" class="icon-btn" title="How this works">?</button>
-      <button id="btn-notation-ref" class="btn subtle" title="Everything you can type on a chart line">Notation ⌘</button>
-      <button id="btn-transpose" class="btn" title="Transpose the whole song or one section, without rewriting what you typed">Transpose ↕</button>
-      <button id="btn-lyrics" class="btn" title="Paste, import or mark up lyrics, and give each marked block to its section">Lyrics 📝</button>
-      <button id="btn-riffs" class="btn" title="The riff library: name a run of chart line once and play it anywhere by its name">Riffs 🔁</button>
-      <button id="btn-chords" class="btn" title="Chord shapes: the voicings you had to work out, printed once at the start or the end of the chart">Chords 🎸</button>
-      <button id="btn-preview-toggle" class="btn">Preview</button>
-      <button id="btn-save" class="btn">Save</button>
+      <span id="save-status" class="save-status" aria-live="polite"></span>
+      <button id="btn-preview-toggle" aria-label="Preview" class="btn song-tool" aria-pressed="false" aria-controls="preview-pane" title="Show the text export beside the song as you type"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span class="btn-text">Preview</span></button>
+      <button id="btn-save" class="btn song-tool" title="Save this song (Ctrl/Cmd+S)">Save</button>
       <div class="dropdown">
-        <button id="btn-export" class="btn accent">Export ▾</button>
-        <div id="export-menu" class="dropdown-menu hidden">
-          <button data-fmt="txt">Export TXT</button>
-          <button data-fmt="pdf">Export PDF (portrait)</button>
-          <button data-fmt="pdf-landscape">Export PDF (landscape)</button>
-          <button data-fmt="print">Print…</button>
+        <button id="btn-export" class="btn accent song-tool" aria-haspopup="menu" aria-expanded="false">Export<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div id="export-menu" class="dropdown-menu hidden" role="menu">
+          <button data-fmt="txt" role="menuitem">Export TXT</button>
+          <button data-fmt="pdf" role="menuitem">Export PDF (portrait)</button>
+          <button data-fmt="pdf-landscape" role="menuitem">Export PDF (landscape)</button>
+          <button data-fmt="print" role="menuitem">Print…</button>
         </div>
       </div>
-      <button id="btn-close" class="btn subtle" title="Save this song, then close the window (or stop the server in a browser tab)">⏻ Save &amp; Close</button>
+      <button id="btn-close" class="icon-btn" aria-label="Save and close" title="Save this song, then close the window (or stop the server in a browser tab)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button>
     </div>
   </header>
 
@@ -52,18 +63,20 @@
         <code>[5A 7D]x2</code> plays the pair twice, then carries on, and
         <code>[G D Em C]x2</code> plays the whole line twice.</li>
       <li>Riffs: a block used by name in more than one section. Edit it once and every
-        section that uses it changes. <strong>Riffs 🔁</strong> at the top lists them;
+        section that uses it changes. <strong>Riffs</strong> at the top lists them;
         select part of a chart line and click <strong>→ riff</strong> to make one from
         it. While you type, a short list suggests the song's riffs, its sections after
         <code>=</code> and its named licks after <code>{</code>.</li>
-      <li><strong>Transpose ↕</strong> shifts every chord and fret in a section, or the
+      <li><strong>Transpose</strong> shifts every chord and fret in a section, or the
         whole song, by semitones without rewriting what you typed. Transposing back
         undoes it.</li>
       <li>Rests: type <code>rest</code> in a chart line for a measure you do not play.
         It shows as "rest" in the chart and the export.</li>
-      <li>Tab grid: set a section's render mode to Tab or Both (the menu in the section
-        header) to get a tablature grid you can edit. Add measures with
-        <strong>+ Measure</strong> and type fret numbers into the cells.</li>
+      <li>Tab grid: click <strong>Tab</strong> or <strong>Both</strong> in the section
+        header to get a tablature grid you can edit. Add measures with
+        <strong>+ Measure</strong> and type fret numbers into the cells. Out of room in
+        a measure? <strong>+2</strong> and <strong>+4</strong> over it add empty beats to
+        every string of that measure, and <strong>−</strong> takes empty ones off the end.</li>
       <li>Long sections: put <code>//</code> where the chart should start a new line.
         Each line lines up its own columns. <code>//&gt;</code> starts a new line and
         indents it, so a phrase can sit inside the one above.</li>
@@ -78,42 +91,43 @@
         <code>[pm 5A 5A 5A]</code> palm mute, <code>[cresc A D E]</code>,
         <code>[dim E D A]</code>.</li>
       <li>Parts: <strong>+ Part</strong> under a section adds another instrument's line,
-        such as the guitar chords under the bass. <strong>⚙ Layout → Instruments</strong>
+        such as the guitar chords under the bass. <strong>Layout → Instruments</strong>
         picks which instruments print.</li>
       <li>Named licks: give a lick a name, <code>{Riff1 = G 5 7 5 | D - - 3}</code>,
         and play it again anywhere in the song as <code>{Riff1}</code>, with a repeat if
         you like: <code>{Riff1}x3</code>. Edit the lick once and every place that plays
         it follows, as with a section reference.</li>
-      <li><strong>Lyrics 📝</strong>: paste the words, import a .txt file, or search for
+      <li><strong>Lyrics</strong>: paste the words, import a .txt file, or search for
         them online (nothing is fetched for you). Mark the sheet with
         <code>=== Verse 1 ===</code> lines by dragging the section chips in the Lyrics
         dialog, and <strong>Split by markers</strong> gives each block to its section.
         Markers never print, and the words are never lined up with the chart. Whether
         and where they print (all together at the start, at the end or down a left
-        column, with each section, or not at all) is set in <strong>⚙ Layout</strong>,
+        column, with each section, or not at all) is set in <strong>Layout</strong>,
         bottom left.</li>
-      <li><strong>⚙ Layout</strong> (bottom left) holds every print setting: size,
+      <li><strong>Layout</strong> (bottom left) holds every print setting: size,
         columns, colour, section names, lyrics, licks and chord shapes.</li>
-      <li><strong>Chords 🎸</strong> keeps a list of voicings (<code>x32010</code> is C)
+      <li><strong>Chords</strong> keeps a list of voicings (<code>x32010</code> is C)
         and prints them as diagrams at the start or the end of the chart.</li>
       <li>Free text: set a section's render mode to Free for a plain text box instead of
         a chart line. What you type there is kept and exported exactly as typed, for
         whatever this notation does not cover.</li>
-      <li>The buttons beside the chart line put notation in at the cursor (rests, repeat
-        barlines, endings, groups, annotations), so you do not have to remember how to
-        write it.</li>
-      <li>A parse error never clears what you typed. It shows in red under the field, and
-        the last good chart stays visible above it.</li>
+      <li>The buttons under the chart line you are typing in put notation in at the
+        cursor (rests, repeat barlines, endings, groups, annotations), so you do not have
+        to remember how to write it.</li>
+      <li>A mistake never clears what you typed. It shows in red under the field, and
+        the last chart that worked stays visible, dimmed, until the line is fixed.</li>
+      <li>Escape closes any dialog.</li>
       <li>Every PDF export carries its song. <strong>Import song…</strong> (left, under
         the song list) opens such a PDF, or a .sng file, as a new song.</li>
     </ul>
   </section>
 
   <div id="layout">
-    <aside id="sidebar">
+    <aside id="sidebar" aria-label="Songs">
       <div id="sidebar-header">
         <span>Songs</span>
-        <button id="btn-new-song" class="icon-btn" title="New song">+</button>
+        <button id="btn-new-song" class="icon-btn" aria-label="New song" title="New song"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
       <ul id="song-list"></ul>
       <button id="btn-open-example" class="btn subtle">Open example song</button>
@@ -145,7 +159,7 @@
       <div id="sidebar-footer">
         <button id="btn-layout" class="btn layout-btn" disabled
                 title="How this song comes out on paper: page size, columns, colour, where the lyrics go, licks and chord shapes">
-          <span class="layout-btn-icon">⚙</span> Layout
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg> Layout
         </button>
         <span id="layout-summary" class="layout-summary"></span>
       </div>
@@ -155,7 +169,7 @@
          aria-label="Layout settings">
       <div class="layout-panel-head">
         <span>Layout: how this song prints</span>
-        <button id="layout-close" class="icon-btn" title="Close (Esc)">×</button>
+        <button id="layout-close" class="icon-btn" aria-label="Close" title="Close (Esc)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
 
       <div class="layout-group">
@@ -185,7 +199,7 @@
         <label>Recalled licks <select id="meta-lick-refs"></select></label>
         <p class="layout-hint">{Riff1} printed as its tab again, or only its name and count: "Riff1 (x3)".</p>
         <label>Chord shapes <select id="meta-chord-sheet"></select></label>
-        <p class="layout-hint">Edit the shapes with Chords 🎸 in the toolbar.</p>
+        <p class="layout-hint">Edit the shapes with Chords in the toolbar.</p>
       </div>
 
       <div class="layout-group">
@@ -199,12 +213,13 @@
     <main id="main">
       <!-- First-launch / empty state -->
       <section id="start-here" class="hidden">
-        <h2>Start here</h2>
-        <p>Nothing is open yet. Pick one:</p>
+        <img src="/logo/icon.svg" alt="" width="56" height="56" class="start-logo">
+        <h2>Write down a song</h2>
+        <p>Chords, tab and repeats on one page, ready to print. Nothing is open yet.</p>
         <div id="start-actions">
-          <button id="start-new" class="btn accent">New song</button>
-          <button id="start-example" class="btn">Open example</button>
-          <button id="start-import" class="btn" title="A .sng file, or a PDF exported by this app">Import song…</button>
+          <button id="start-new" class="start-card primary-card"><strong>New song</strong><span>Start from a title and a key.</span></button>
+          <button id="start-example" class="start-card"><strong>Open the example</strong><span>A short song with a chart, repeats and a note.</span></button>
+          <button id="start-import" class="start-card" title="A .sng file, or a PDF exported by this app"><strong>Import…</strong><span>A .sng file, or a PDF this app made.</span></button>
         </div>
       </section>
 
@@ -227,20 +242,20 @@
         <button id="btn-add-section" class="btn subtle" title="Add an empty section (Verse, Chorus…) at the end">+ Add section</button>
       </section>
 
-      <section id="preview-pane" class="hidden">
-        <div id="preview-header">
-          <span>Preview: how the export will look</span>
-          <button id="btn-preview-close" class="icon-btn" title="Close preview">×</button>
-        </div>
-        <pre id="preview-text"></pre>
-      </section>
     </main>
+    <section id="preview-pane" class="hidden" aria-label="Preview">
+      <div id="preview-header">
+        <span>Preview <span class="preview-sub">· the text export, as you type</span></span>
+        <button id="btn-preview-close" class="icon-btn" aria-label="Close preview" title="Close preview"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <pre id="preview-text"></pre>
+    </section>
   </div>
 
   <!-- New-song modal -->
-  <div id="modal-backdrop" class="modal-backdrop hidden">
-    <div id="new-song-modal" class="modal">
-      <h3>New song</h3>
+  <div id="modal-backdrop" class="modal-backdrop hidden" data-close="new-song-cancel">
+    <div id="new-song-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="new-song-title">
+      <h3 id="new-song-title">New song</h3>
       <label>Title <input id="new-title" type="text"></label>
       <label>Artist <input id="new-artist" type="text"></label>
       <label>Key <input id="new-key" type="text"></label>
@@ -254,9 +269,9 @@
   </div>
 
   <!-- Transpose modal -->
-  <div id="transpose-modal-backdrop" class="modal-backdrop hidden">
-    <div class="modal">
-      <h3>Transpose</h3>
+  <div id="transpose-modal-backdrop" class="modal-backdrop hidden" data-close="transpose-cancel">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="transpose-title">
+      <h3 id="transpose-title">Transpose</h3>
       <label>Scope
         <select id="transpose-scope"></select>
       </label>
@@ -273,9 +288,9 @@
   <!-- Search-lyrics-online modal — asks for song/artist rather than
        assuming the doc's meta fields, since those might be empty or
        describe this arrangement rather than the published song. -->
-  <div id="lyrics-search-modal-backdrop" class="modal-backdrop hidden">
-    <div class="modal">
-      <h3>Search lyrics online</h3>
+  <div id="lyrics-search-modal-backdrop" class="modal-backdrop hidden" data-close="lyrics-search-cancel">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lyrics-search-heading">
+      <h3 id="lyrics-search-heading">Search lyrics online</h3>
       <label>Song title <input id="lyrics-search-title" type="text"></label>
       <label>Artist <input id="lyrics-search-artist" type="text"></label>
       <div class="modal-actions">
@@ -286,12 +301,13 @@
   </div>
 
   <!-- Lyrics modal -->
-  <div id="lyrics-modal-backdrop" class="modal-backdrop hidden">
-    <div class="modal modal-wide">
-      <h3>Lyrics</h3>
-      <label>Scope
-        <select id="lyrics-scope"></select>
-      </label>
+  <div id="lyrics-modal-backdrop" class="modal-backdrop hidden" data-close="lyrics-close">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="lyrics-title">
+      <h3 id="lyrics-title">Lyrics</h3>
+      <!-- Which words you are editing. The chips below choose it; the
+           select stays as the one place that holds the choice. -->
+      <select id="lyrics-scope" class="hidden" aria-hidden="true" tabindex="-1"></select>
+      <span class="modal-label">Words for</span>
       <!-- The song's sections, one chip each: click to write that section's
            words. The dropdown above still works; this is the same list laid
            out so you can see at a glance which sections already have lyrics
@@ -318,36 +334,36 @@
            the words, the Layout panel is for the page. -->
       <p class="modal-hint lyrics-where">
         <span id="lyrics-where-text"></span>
-        <button id="lyrics-open-layout" type="button" class="btn subtle">⚙ Layout…</button>
+        <button id="lyrics-open-layout" type="button" class="btn subtle">Change in Layout…</button>
       </p>
-      <div class="modal-actions" style="justify-content: space-between;">
-        <div>
-          <button id="lyrics-import" class="btn subtle">Import from file…</button>
-          <button id="lyrics-search" class="btn subtle">Search online ↗</button>
-          <button id="lyrics-add-section" class="btn subtle hidden"
+      <div class="modal-tools">
+          <button id="lyrics-import" class="btn">Import from file…</button>
+          <button id="lyrics-search" class="btn">Search online ↗</button>
+          <button id="lyrics-add-section" class="btn hidden"
                   title="Create a section from here. It appears in the editor behind this dialog, and its marker goes in at the cursor.">+ Section…</button>
-          <button id="lyrics-apply-markers" class="btn subtle hidden"
+          <button id="lyrics-apply-markers" class="btn hidden"
                   title="Give each marked block to the section it names. Sections the sheet does not name are left as they are.">Split by markers</button>
-          <button id="lyrics-split" class="btn subtle hidden"
+          <button id="lyrics-split" class="btn hidden"
                   title="For a sheet without markers: split it at blank lines and choose which section gets which block.">Split on blank lines…</button>
           <input id="lyrics-file-input" type="file" accept=".txt,text/plain" class="hidden">
-        </div>
-        <button id="lyrics-close" class="btn accent">Done</button>
       </div>
       <p class="modal-hint">The words are kept for reference and never lined up with
         the chart automatically. Where they print (all together at the start, at the end
         or down a left-hand column, with each section, or not at all) is set in
-        <strong>⚙ Layout</strong> at the bottom left. <strong>Search online ↗</strong>
+        <strong>Layout</strong> at the bottom left. <strong>Search online ↗</strong>
         asks for the song title and artist, then opens a DuckDuckGo search in a new tab.
         Nothing is fetched or pasted in for you.</p>
+      <div class="modal-actions">
+        <button id="lyrics-close" class="btn accent">Done</button>
+      </div>
     </div>
   </div>
 
 
   <!-- Change songs folder: what the move would do, asked before doing it -->
-  <div id="folder-modal-backdrop" class="modal-backdrop hidden">
-    <div class="modal modal-wide">
-      <h3>Change songs folder</h3>
+  <div id="folder-modal-backdrop" class="modal-backdrop hidden" data-close="folder-cancel">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="folder-title">
+      <h3 id="folder-title">Change songs folder</h3>
       <div class="folder-paths">
         <div><span class="folder-lbl">From</span> <code id="folder-from"></code></div>
         <div><span class="folder-lbl">To</span> <code id="folder-to"></code></div>
@@ -369,45 +385,45 @@
   </div>
 
   <!-- Chord shapes -->
-  <div id="chords-modal-backdrop" class="modal-backdrop hidden">
-    <div class="modal modal-wide">
-      <h3>Chord shapes</h3>
+  <div id="chords-modal-backdrop" class="modal-backdrop hidden" data-close="chords-close">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="chords-title">
+      <h3 id="chords-title">Chord shapes</h3>
       <p class="modal-hint" style="margin-top:0">
         One fret per string, lowest string first, as a chord chart writes it:
         <code>x32010</code> is C, <code>320003</code> is G. Frets above 9 need
         spaces: <code>x 0 12 12 12 x</code>. Use <code>x</code> for a string you do not
         play. The shapes print once, as a block of diagrams, where
-        <strong>⚙ Layout</strong> → Chord shapes (bottom left) says.
+        <strong>Layout</strong> → Chord shapes (bottom left) says.
       </p>
       <p id="chords-transposed" class="modal-hint chord-transposed hidden"></p>
       <div id="chords-rows" class="chord-rows"></div>
       <p id="chords-coverage" class="modal-hint chord-coverage"></p>
-      <div class="modal-actions" style="justify-content: space-between;">
-        <div>
-          <button id="chords-add" class="btn subtle">+ Chord</button>
-          <button id="chords-from-chart" class="btn subtle"
+      <div class="modal-tools">
+          <button id="chords-add" class="btn">+ Chord</button>
+          <button id="chords-from-chart" class="btn"
                   title="Add a row for every chord the chart plays that has no shape yet, as printed (so after any transpose). Only guitar sections count, if the song has any.">+ From chart</button>
           <label class="chord-where">Print
             <select id="chords-where"></select>
           </label>
-        </div>
-        <button id="chords-close" class="btn accent">Done</button>
       </div>
       <div id="chords-preview" class="chord-preview"></div>
+      <div class="modal-actions">
+        <button id="chords-close" class="btn accent">Done</button>
+      </div>
     </div>
   </div>
 
   <!-- Split lyrics into sections -->
-  <div id="lyrics-split-backdrop" class="modal-backdrop hidden">
-    <div class="modal modal-wide">
-      <h3>Split lyrics into sections</h3>
+  <div id="lyrics-split-backdrop" class="modal-backdrop hidden" data-close="lyrics-split-cancel">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="lyrics-split-title">
+      <h3 id="lyrics-split-title">Split lyrics into sections</h3>
       <p class="modal-hint" style="margin-top:0">
         One row per section, one block per row. The same block can go to as many
         sections as sing it, so a chorus written once can be played three times.
       </p>
       <div id="lyrics-split-rows" class="split-rows"></div>
       <p class="modal-hint">Whether and where the words print is set in
-        <strong>⚙ Layout</strong>, bottom left.</p>
+        <strong>Layout</strong>, bottom left.</p>
       <div class="modal-actions">
         <button id="lyrics-split-cancel" class="btn subtle">Cancel</button>
         <button id="lyrics-split-apply" class="btn accent">Assign</button>
@@ -419,9 +435,9 @@
   </div>
 
   <!-- Notation reference modal -->
-  <div id="notation-ref-backdrop" class="modal-backdrop hidden">
-    <div class="modal modal-wide">
-      <h3>Notation reference</h3>
+  <div id="notation-ref-backdrop" class="modal-backdrop hidden" data-close="notation-ref-close">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="notation-ref-title">
+      <h3 id="notation-ref-title">Notation reference</h3>
       <p class="modal-hint" style="margin-top:0">Everything you can type in a chart line, at a glance.</p>
 
       <div class="notation-ref-body">
@@ -586,8 +602,8 @@
            Free: a plain text box instead. Nothing in it is parsed, transposed or
            checked, and the TXT and PDF exports print it exactly as typed. Use it for a
            section the notation above does not cover.</p>
-        <p class="modal-hint">Switch with the menu in each section's header. The tab grid
-           has its own <strong>+ Measure</strong> button and a beats-per-measure menu.</p>
+        <p class="modal-hint">Switch with Chart, Tab, Both and Free in each section's header. The tab grid
+           has its own <strong>+ Measure</strong> button, a length for new measures, and <strong>+2</strong>, <strong>+4</strong> and <strong>−</strong> over each measure to make it longer or shorter.</p>
       </div>
 
       <div class="modal-actions">
@@ -596,9 +612,9 @@
     </div>
   </div>
   <!-- The riff library -->
-  <div id="riffs-modal-backdrop" class="modal-backdrop hidden">
-    <div class="modal modal-wide">
-      <h3>Riffs</h3>
+  <div id="riffs-modal-backdrop" class="modal-backdrop hidden" data-close="riffs-close">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="riffs-title">
+      <h3 id="riffs-title">Riffs</h3>
       <p class="modal-hint" style="margin-top:0">A riff is a run of chart line with a
         name. Type the name on any chart line to play it there (<code>Riff1 x3</code>),
         and edit it here once to change every place that plays it. To make one from a
@@ -618,8 +634,8 @@
   </div>
 
   <!-- About and updates -->
-  <div id="about-modal-backdrop" class="modal-backdrop hidden">
-    <div class="modal modal-wide">
+  <div id="about-modal-backdrop" class="modal-backdrop hidden" data-close="about-close">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="about-title">
       <h3 id="about-title">Song Notation Tool</h3>
       <p id="about-sub" class="modal-hint" style="margin-top:0"></p>
       <div id="about-notes" class="about-notes hidden"></div>
@@ -645,7 +661,7 @@
 
   <div id="toast" class="hidden"></div>
 
-  <!-- "Copy to…": opened by a section's ⧉ button. Lists every place the
+  <!-- "Copy to…": opened from a section's ⋯ menu. Lists every place the
        copy can go; one click puts it there. Filled in by openCopyPicker(). -->
   <div id="copy-picker" class="copy-picker hidden" role="dialog" aria-labelledby="copy-picker-title">
     <div class="copy-picker-title" id="copy-picker-title"></div>
@@ -657,64 +673,88 @@
   <template id="section-template">
     <div class="section-card" data-id="">
       <div class="section-head">
-        <span class="drag-handle" tabindex="0" role="button" aria-label="Move this section" title="Drag to move this section. Or click here and use the up and down arrow keys.">⠿</span>
-        <input class="sec-name" type="text" title="Section name, e.g. Verse 1">
-        <select class="sec-type" title="Section type, which sets its colour"></select>
-        <select class="sec-instrument" title="Instrument / tuning for this section"></select>
+        <span class="drag-handle" tabindex="0" role="button" aria-label="Move this section" title="Drag to move this section. Or click here and use the up and down arrow keys."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <select class="sec-type" aria-label="Section type" title="Section type, which sets its colour"></select>
+        <input class="sec-name" type="text" aria-label="Section name" title="Section name, e.g. Verse 1">
+        <select class="sec-instrument" aria-label="Instrument" title="Instrument / tuning for this section"></select>
         <button type="button" class="sec-repeat-chip hidden"
                 title="From an older song: this whole section plays more than once and prints (xN) after its name. Click to remove it, and write repeats in the chart line instead, such as [G D Em C]x2."></button>
-        <select class="sec-render" title="Render mode: Chart (chords and notes), Tab (tablature grid), Both, or Free (any text, kept as typed)">
-          <option value="chart">Chart</option>
-          <option value="tab">Tab</option>
-          <option value="both">Both</option>
-          <option value="free">Free</option>
-        </select>
-        <select class="sec-size" title="Print this section smaller or larger than the rest of the song">
-          <option value="normal">Size</option>
-          <option value="smaller">Smaller</option>
-          <option value="larger">Larger</option>
-        </select>
-        <button class="btn icon-btn sec-dup" title="Copy as a reference and choose where it goes. The copy plays whatever this section holds.">⧉</button>
-        <button class="btn icon-btn sec-del" title="Delete section">🗑</button>
+        <div class="seg sec-render" role="group" aria-label="Show this section as"
+             title="Chart (chords and notes), Tab (tablature grid), Both, or Free (any text, kept as typed)">
+          <button type="button" data-mode="chart" aria-pressed="false">Chart</button>
+          <button type="button" data-mode="tab" aria-pressed="false">Tab</button>
+          <button type="button" data-mode="both" aria-pressed="false">Both</button>
+          <button type="button" data-mode="free" aria-pressed="false">Free</button>
+        </div>
+        <span class="sec-size-badge hidden" title="This section prints at another size than the rest of the song. Change it with the ⋯ menu."></span>
+        <div class="sec-more-wrap">
+          <button type="button" class="icon-btn sec-more" aria-label="More for this section: size, copy, delete" aria-haspopup="menu" aria-expanded="false" title="Print size, copy, delete"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg></button>
+          <div class="sec-menu dropdown-menu hidden" role="menu">
+            <div class="menu-label">Print this section</div>
+            <button type="button" role="menuitemradio" data-size="normal" aria-checked="true">At the song's size</button>
+            <button type="button" role="menuitemradio" data-size="smaller" aria-checked="false">Smaller</button>
+            <button type="button" role="menuitemradio" data-size="larger" aria-checked="false">Larger</button>
+            <div class="menu-sep" role="separator"></div>
+            <button type="button" role="menuitem" class="sec-dup" title="Copy as a reference and choose where it goes. The copy plays whatever this section holds."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy as a reference…</button>
+            <button type="button" role="menuitem" class="sec-del danger"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Delete section</button>
+          </div>
+        </div>
       </div>
       <div class="sec-line-row">
-        <input class="sec-chart-line" type="text" placeholder="Type the chart line, e.g. B F# G E   or  [C D]x2 G"
+        <input class="sec-chart-line" type="text" aria-label="Chart line" spellcheck="false" placeholder="Type the chart line, e.g. B F# G E   or  [C D]x2 G"
                title="Chord and fret symbols in order, separated by spaces. Put a fret right before a symbol (5A). Group and repeat with [ ]xN.">
-        <!-- Quick-insert palette: every button drops its notation at the
-             caret, so the chart line stays typed text you can still edit
-             by hand. data-ins is the literal text; data-caret is how far
-             back from the end to leave the caret (e.g. inside [ ] or " "). -->
-        <div class="sec-insert-strip" title="Insert notation at the cursor">
-          <button type="button" class="ins-btn" data-ins="//" title="Line break: start a new line here in the export, print and preview">//</button>
-          <button type="button" class="ins-btn" data-ins="//&gt;" title="Line break, indented: start a new line, indented one step. Add more &gt; to indent further.">//&gt;</button>
-          <button type="button" class="ins-btn" data-ins="rest" title="Rest / tacet: a measure you do not play">rest</button>
-          <button type="button" class="ins-btn" data-ins="%" title="Simile: play like the previous bar">%</button>
-          <button type="button" class="ins-btn" data-ins="|:" title="Repeat-open barline">|:</button>
-          <button type="button" class="ins-btn" data-ins=":|" title="Repeat-close barline">:|</button>
-          <button type="button" class="ins-btn" data-ins="|1." title="1st ending">|1.</button>
-          <button type="button" class="ins-btn" data-ins="|2." title="2nd ending">|2.</button>
-          <button type="button" class="ins-btn" data-ins="x2" title="Repeat the item before the cursor twice">x2</button>
-          <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat; the cursor lands inside the brackets">[ ]x2</button>
-          <button type="button" class="ins-btn" data-ins="&quot;&quot;" data-caret="1" title="Free annotation in quotes">&quot;&quot;</button>
-          <button type="button" class="ins-btn" data-ins-lick="6" title="A lick: a short tab figure printed among the chords. Inserts an empty grid (every string of this section's instrument, six positions wide) to type frets over.">{ tab }</button>
-          <button type="button" class="ins-btn" data-ins-lick-named="6" title="The same, with a name: the lick prints with its name in front and can be played again anywhere in the song as {Riff1}, like a section reference.">{ name = tab }</button>
-          <!-- Every lick already named in this song, one button each:
-               inserts the reference rather than the notes. Filled in by
-               renderLickChips(). -->
-          <span class="sec-lick-refs"></span>
-          <button type="button" class="ins-btn" data-promote="1" title="Turn the part of this line you selected into a riff, and put the riff's name in its place">→ riff</button>
-          <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
-          <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
-          <button type="button" class="ins-btn" data-ins="dc" title="D.C.: repeat from the beginning">dc</button>
-          <button type="button" class="ins-btn" data-ins="ds" title="D.S.: repeat from the segno">ds</button>
+        <!-- Quick-insert palette, shown under the line you are typing in
+             only. Every button drops its notation at the caret, so the
+             chart line stays typed text you can still edit by hand.
+             data-ins is the literal text; data-caret is how far back from
+             the end to leave the caret (e.g. inside [ ] or " "). -->
+        <div class="sec-error hidden" role="alert"></div>
+        <div class="sec-insert-strip" role="toolbar" aria-label="Insert notation at the cursor">
+          <div class="ins-group"><span class="ins-label">Lines</span>
+            <button type="button" class="ins-btn" data-ins="//" title="Line break: start a new line here in the export, print and preview">//</button>
+            <button type="button" class="ins-btn" data-ins="//&gt;" title="Line break, indented: start a new line, indented one step. Add more &gt; to indent further.">//&gt;</button>
+            <button type="button" class="ins-btn" data-ins="rest" title="Rest / tacet: a measure you do not play">rest</button>
+            <button type="button" class="ins-btn" data-ins="%" title="Simile: play like the previous bar">%</button>
+          </div>
+          <div class="ins-group"><span class="ins-label">Repeats</span>
+            <button type="button" class="ins-btn" data-ins="|:" title="Repeat-open barline">|:</button>
+            <button type="button" class="ins-btn" data-ins=":|" title="Repeat-close barline">:|</button>
+            <button type="button" class="ins-btn" data-ins="|1." title="1st ending">|1.</button>
+            <button type="button" class="ins-btn" data-ins="|2." title="2nd ending">|2.</button>
+            <button type="button" class="ins-btn" data-ins="x2" title="Repeat the item before the cursor twice">x2</button>
+            <button type="button" class="ins-btn" data-ins="[ ]x2" data-caret="4" title="Group and repeat; the cursor lands inside the brackets">[ ]x2</button>
+          </div>
+          <div class="ins-group"><span class="ins-label">Licks</span>
+            <button type="button" class="ins-btn" data-ins-lick="6" title="A lick: a short tab figure printed among the chords. Inserts an empty grid (every string of this section's instrument, six positions wide) to type frets over.">{ tab }</button>
+            <button type="button" class="ins-btn" data-ins-lick-named="6" title="The same, with a name: the lick prints with its name in front and can be played again anywhere in the song as {Riff1}, like a section reference.">{ name = tab }</button>
+            <!-- Every lick already named in this song, one button each:
+                 inserts the reference rather than the notes. Filled in by
+                 renderLickChips(). -->
+            <span class="sec-lick-refs"></span>
+            <button type="button" class="ins-btn" data-promote="1" title="Turn the part of this line you selected into a riff, and put the riff's name in its place">→ riff</button>
+          </div>
+          <div class="ins-group"><span class="ins-label">Marks</span>
+            <button type="button" class="ins-btn" data-ins="segno" title="Segno mark">segno</button>
+            <button type="button" class="ins-btn" data-ins="coda" title="Coda mark">coda</button>
+            <button type="button" class="ins-btn" data-ins="dc" title="D.C.: repeat from the beginning">dc</button>
+            <button type="button" class="ins-btn" data-ins="ds" title="D.S.: repeat from the segno">ds</button>
+            <button type="button" class="ins-btn" data-ins="&quot;&quot;" data-caret="1" title="Free annotation in quotes">&quot;&quot;</button>
+          </div>
         </div>
       </div>
       <textarea class="sec-free-text hidden" rows="6" spellcheck="false"
                 placeholder="Free text: anything you like, kept and exported exactly as typed."
                 title="This section is free text: nothing here is parsed, transposed or checked."></textarea>
-      <div class="sec-preview">
+      <div class="sec-preview is-empty" aria-label="How this section prints">
         <div class="sec-preview-fret"></div>
         <div class="sec-preview-sym"></div>
+      </div>
+      <div class="sec-tab-grid hidden">
+        <div class="tab-grid-toolbar">
+          <button class="btn tab-add-measure" title="Add a measure to this section's tab grid">+ Measure</button>
+          <label class="tab-beats-label">New measures start with <select class="tab-beats-select"></select></label>
+        </div>
+        <div class="tab-grid-body"></div>
       </div>
       <!-- The annotation had no home in the UI: typing "..." on the chart
            line set it, unparse() then left it out of the line, and nothing
@@ -726,17 +766,9 @@
       <button type="button" class="btn subtle sec-add-part"
               title="Add another instrument's line to this section, such as the guitar under the bass">+ Part</button>
       <input class="sec-annotation" type="text"
-             placeholder="Annotation (optional), printed in quotes under this section"
+             placeholder="Add a note to print under this section…" aria-label="Note printed under this section"
              title="A free note printed under this section in the export. Clear it to remove it.">
-      <div class="sec-error hidden"></div>
       <div class="sec-empty-hint hidden">This section has no measures yet. Type a chart line above to start.</div>
-      <div class="sec-tab-grid hidden">
-        <div class="tab-grid-toolbar">
-          <button class="btn subtle tab-add-measure" title="Add a measure to this section's tab grid">+ Measure</button>
-          <label class="tab-beats-label">Beats: <select class="tab-beats-select"></select></label>
-        </div>
-        <div class="tab-grid-body"></div>
-      </div>
     </div>
   </template>
 

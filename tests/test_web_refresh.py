@@ -42,7 +42,8 @@ def test_every_dialog_names_the_button_escape_presses():
 def test_every_dialog_is_a_labelled_modal_dialog():
     for m in re.finditer(r'<div[^>]*class="modal( modal-wide)?"[^>]*>', INDEX):
         tag = m.group(0)
-        assert 'role="dialog"' in tag and 'aria-modal="true"' in tag, tag
+        # A question before deleting is an alertdialog, the rest dialogs.
+        assert re.search(r'role="(alert)?dialog"', tag) and 'aria-modal="true"' in tag, tag
         label = re.search(r'aria-labelledby="([\w-]+)"', tag).group(1)
         assert f'id="{label}"' in INDEX, label
 

@@ -248,6 +248,7 @@ def server(store):
         except urllib.error.HTTPError as e:
             return e.code, json.loads(e.read()), e.headers
 
+    call.base = base
     yield call
     httpd.shutdown()
     httpd.server_close()
@@ -310,3 +311,22 @@ def test_open_example_unhides_the_example(server, store):
     _, body, _ = server("POST", "/api/songs/example", {})
     assert body["filename"] == name
     assert store.library.view()["hidden"] == []
+
+
+def test_trash_and_library_routes_take_json_only(server, store):
+    """A form or plain-text POST from another site must not empty the trash."""
+    store.delete(A)
+    for ctype in ("text/plain", "application/x-www-form-urlencoded", None):
+        headers = {"Content-Type": ctype} if ctype else {}
+        status, body, _ = _raw_post(server, "/api/trash", b'{"op": "empty"}', headers)
+        assert status == 415, ctype
+    assert [t["name"] for t in store.library.trash_view()] == [A]
+
+
+def _raw_post(call, path, data, headers):
+    req = urllib.request.Request(call.base + path, data=data, method="POST", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return r.status, json.loads(r.read()), r.headers
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read()), e.headers

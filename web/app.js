@@ -22,6 +22,14 @@ const API = {
     method: "POST", body: JSON.stringify({ filename, data }),
   }),
   deleteSong: (name) => fetchJSON(`/api/songs/${encodeURIComponent(name)}`, { method: "DELETE" }),
+  library: () => fetchJSON("/api/library"),
+  libraryOp: (op, fields) => fetchJSON("/api/library", {
+    method: "POST", body: JSON.stringify(Object.assign({ op }, fields || {})),
+  }),
+  trash: () => fetchJSON("/api/trash"),
+  trashOp: (op, fields) => fetchJSON("/api/trash", {
+    method: "POST", body: JSON.stringify(Object.assign({ op }, fields || {})),
+  }),
   // `doc` is optional context so the server can expand =section / riff
   // references into the items they point at for the preview row.
   parseLine: (line, doc, items) => fetchJSON("/api/parse", {
@@ -155,26 +163,536 @@ function defaultInstrument() {
 }
 
 // ---------------------------------------------------------------------------
-//  Rendering: song list
+//  Rendering: song list, collections, hidden songs and the trash
+//
+//  The list shows one view at a time: all songs (hidden ones left out), a
+//  collection in its own order, the hidden songs, or the deleted ones.
+//  Hidden songs and collections live in library.json in the songs folder;
+//  a deleted song sits in "Deleted songs" there until the trash is emptied.
 // ---------------------------------------------------------------------------
+let SONGS = [];
+let LIBRARY = { collections: [], hidden: [], trash_count: 0 };
+// "all", "hidden", "trash" or "col:<id>". Remembered per browser only.
+let songView = "all";
+try { songView = localStorage.getItem("snt.songView") || "all"; } catch (e) { /* storage off */ }
+
+function setSongView(v) {
+  songView = v;
+  try { localStorage.setItem("snt.songView", v); } catch (e) { /* storage off */ }
+  return refreshSongList();
+}
+
+function viewCollection() {
+  if (!songView.startsWith("col:")) return null;
+  return LIBRARY.collections.find((c) => "col:" + c.id === songView) || null;
+}
+
+function songLabel(s) {
+  return s.title || s.filename.replace(/\.sng$/i, "");
+}
+
 async function refreshSongList() {
-  const songs = await API.songs();
+  const [songs, lib] = await Promise.all([API.songs(), API.library()]);
+  SONGS = songs;
+  LIBRARY = lib;
+  if (songView.startsWith("col:") && !viewCollection()) songView = "all";
+  if (songView === "trash" && !lib.trash_count) songView = "all";
+  renderViewPicker();
+
   const ul = document.getElementById("song-list");
+  const note = document.getElementById("song-view-note");
   ul.innerHTML = "";
-  for (const s of songs) {
+  document.getElementById("btn-empty-trash").classList.toggle("hidden", songView !== "trash");
+  if (songView === "trash") return renderTrash(ul, note);
+
+  const col = viewCollection();
+  let list;
+  if (col) {
+    const byName = new Map(songs.map((s) => [s.filename, s]));
+    list = col.songs.map((f) => byName.get(f)).filter(Boolean);
+  } else if (songView === "hidden") {
+    list = songs.filter((s) => s.hidden);
+  } else {
+    list = songs.filter((s) => !s.hidden);
+  }
+  ul.classList.toggle("is-collection", !!col);
+
+  let msg = "";
+  if (col && !list.length) {
+    msg = "No songs here yet. In All songs, use a song's ⋯ menu to add it.";
+  } else if (col && list.length > 1) {
+    msg = "Drag a song to change the order, or select it and press Alt with ↑ or ↓.";
+  } else if (songView === "hidden" && !list.length) {
+    msg = "No hidden songs.";
+  } else if (songView === "hidden") {
+    msg = "Hidden songs are kept, but left out of All songs.";
+  }
+  note.textContent = msg;
+  note.classList.toggle("hidden", !msg);
+
+  list.forEach((s, i) => ul.appendChild(songListItem(s, i, list.length, col)));
+}
+
+function songListItem(s, index, count, col) {
+  const li = document.createElement("li");
+  li.className = s.filename === currentFilename ? "active" : "";
+  li.dataset.filename = s.filename;
+  // A real button, so the list can be used from the keyboard.
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "song-item";
+  if (s.filename === currentFilename) btn.setAttribute("aria-current", "true");
+  const tag = s.hidden && songView !== "hidden"
+    ? `<span class="song-tag" title="Hidden from All songs">hidden</span>` : "";
+  btn.innerHTML = (col ? `<span class="song-pos">${index + 1}</span>` : "") +
+    `<span class="song-text"><span class="song-title">${escapeHtml(songLabel(s))}${tag}</span>` +
+    (s.artist ? `<span class="song-artist">${escapeHtml(s.artist)}</span>` : "") + "</span>";
+  btn.addEventListener("click", () => openSong(s.filename).catch((e) => toast(String(e))));
+  li.appendChild(btn);
+
+  const more = document.createElement("button");
+  more.type = "button";
+  more.className = "icon-btn song-more";
+  more.setAttribute("aria-label", `More for ${songLabel(s)}: collections, hide, delete`);
+  more.setAttribute("aria-haspopup", "menu");
+  more.setAttribute("aria-expanded", "false");
+  more.title = "Collections, hide, delete";
+  more.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>';
+  more.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openSongMenu(s, more, index, count, col);
+  });
+  li.appendChild(more);
+
+  if (col) {
+    // The running order: drag, or Alt + arrow keys on the song.
+    li.draggable = true;
+    li.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", s.filename);
+      li.classList.add("dragging");
+    });
+    li.addEventListener("dragend", () => {
+      li.classList.remove("dragging");
+      document.querySelectorAll("#song-list .drop-before, #song-list .drop-after")
+        .forEach((n) => n.classList.remove("drop-before", "drop-after"));
+    });
+    li.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const r = li.getBoundingClientRect();
+      const after = e.clientY > r.top + r.height / 2;
+      li.classList.toggle("drop-after", after);
+      li.classList.toggle("drop-before", !after);
+    });
+    li.addEventListener("dragleave", () => li.classList.remove("drop-before", "drop-after"));
+    li.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const moving = e.dataTransfer.getData("text/plain");
+      const after = li.classList.contains("drop-after");
+      li.classList.remove("drop-before", "drop-after");
+      if (!moving || moving === s.filename) return;
+      const order = col.songs.filter((f) => f !== moving);
+      let to = order.indexOf(s.filename);
+      if (to < 0) return;
+      if (after) to += 1;
+      moveInCollection(col, moving, to);
+    });
+    btn.addEventListener("keydown", (e) => {
+      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+      e.preventDefault();
+      const to = index + (e.key === "ArrowUp" ? -1 : 1);
+      if (to < 0 || to >= count) return;
+      moveInCollection(col, s.filename, to, true);
+    });
+  }
+  return li;
+}
+
+async function moveInCollection(col, filename, to, refocus) {
+  await libraryOp("move", { id: col.id, song: filename, to });
+  if (refocus) {
+    const li = [...document.querySelectorAll("#song-list li")]
+      .find((n) => n.dataset.filename === filename);
+    if (li) li.querySelector(".song-item").focus();
+  }
+}
+
+/** The view picker over the list: All songs, each collection, Hidden, Deleted. */
+function renderViewPicker() {
+  const sel = document.getElementById("song-view");
+  sel.innerHTML = "";
+  const add = (parent, value, text) => {
+    const o = document.createElement("option");
+    o.value = value; o.textContent = text;
+    parent.appendChild(o);
+  };
+  const visible = SONGS.filter((s) => !s.hidden).length;
+  add(sel, "all", `All songs (${visible})`);
+  if (LIBRARY.collections.length) {
+    const g = document.createElement("optgroup");
+    g.label = "Collections";
+    LIBRARY.collections.forEach((c) => add(g, "col:" + c.id, `${c.name} (${c.songs.length})`));
+    sel.appendChild(g);
+  }
+  if (LIBRARY.hidden.length || songView === "hidden") {
+    add(sel, "hidden", `Hidden songs (${LIBRARY.hidden.length})`);
+  }
+  if (LIBRARY.trash_count) add(sel, "trash", `Deleted songs (${LIBRARY.trash_count})`);
+  sel.value = songView;
+  if (sel.value !== songView) { songView = "all"; sel.value = "all"; }
+}
+
+async function libraryOp(op, fields) {
+  const res = await API.libraryOp(op, fields);
+  if (!res.ok) toast(res.error || "That didn't work", true);
+  await refreshSongList();
+  return res;
+}
+
+// ── the song's ⋯ menu ────────────────────────────────────────────────────
+function closeSongMenu() {
+  const menu = document.getElementById("song-menu");
+  if (menu.classList.contains("hidden")) return;
+  menu.classList.add("hidden");
+  if (menu._anchor) {
+    menu._anchor.setAttribute("aria-expanded", "false");
+    if (menu.contains(document.activeElement)) menu._anchor.focus();
+  }
+  menu._anchor = null;
+}
+
+/** Fill and place a menu next to `anchor`. `items` are
+ *  {label, run, danger, checked, disabled} or {sep:true} or {heading}. */
+function showMenu(menu, anchor, items) {
+  menu.innerHTML = "";
+  for (const it of items) {
+    if (it.sep) { const d = document.createElement("div"); d.className = "menu-sep"; menu.appendChild(d); continue; }
+    if (it.heading) { const d = document.createElement("div"); d.className = "menu-label"; d.textContent = it.heading; menu.appendChild(d); continue; }
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = it.label;
+    b.setAttribute("role", it.checked === undefined ? "menuitem" : "menuitemcheckbox");
+    if (it.checked !== undefined) b.setAttribute("aria-checked", String(!!it.checked));
+    if (it.danger) b.classList.add("danger");
+    if (it.disabled) b.disabled = true;
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeSongMenu(); closeViewMenu();
+      Promise.resolve(it.run()).catch((err) => toast(String(err), true));
+    });
+    menu.appendChild(b);
+  }
+  menu.classList.remove("hidden");
+  return menu;
+}
+
+function placeMenu(menu, anchor) {
+  const r = anchor.getBoundingClientRect();
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  let top = r.bottom + 4;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 4);
+  const left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+  menu.style.top = `${top}px`;
+  menu.style.left = `${left}px`;
+}
+
+function wireMenuKeys(menu, close) {
+  menu.addEventListener("keydown", (e) => {
+    const items = [...menu.querySelectorAll("button:not(:disabled)")];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = items.length;
+      if (n) items[(i + (e.key === "ArrowDown" ? 1 : n - 1) + n) % n].focus();
+    } else if (e.key === "Tab") { close(); }
+  });
+}
+
+function openSongMenu(s, anchor, index, count, col) {
+  const menu = document.getElementById("song-menu");
+  if (!menu.classList.contains("hidden") && menu._anchor === anchor) return closeSongMenu();
+  closeSongMenu(); closeViewMenu();
+  const items = [];
+  if (col) {
+    items.push({ heading: col.name });
+    items.push({ label: "Move up", disabled: index === 0,
+                 run: () => moveInCollection(col, s.filename, index - 1) });
+    items.push({ label: "Move down", disabled: index >= count - 1,
+                 run: () => moveInCollection(col, s.filename, index + 1) });
+    items.push({ label: "Remove from this collection",
+                 run: () => libraryOp("remove", { id: col.id, song: s.filename }) });
+    items.push({ sep: true });
+  }
+  items.push({ heading: "In collections" });
+  for (const c of LIBRARY.collections) {
+    const isIn = (s.collections || []).includes(c.id);
+    items.push({ label: c.name, checked: isIn,
+                 run: () => libraryOp(isIn ? "remove" : "add", { id: c.id, song: s.filename }) });
+  }
+  items.push({ label: "New collection with this song…", run: () => newCollection([s.filename]) });
+  items.push({ sep: true });
+  items.push(s.hidden
+    ? { label: "Show in All songs", run: () => libraryOp("hide", { song: s.filename, hidden: false }) }
+    : { label: "Hide from All songs", run: () => hideSong(s) });
+  items.push({ label: "Delete…", danger: true, run: () => deleteSong(s) });
+  showMenu(menu, anchor, items);
+  menu._anchor = anchor;
+  anchor.setAttribute("aria-expanded", "true");
+  placeMenu(menu, anchor);
+  const first = menu.querySelector("button:not(:disabled)");
+  if (first) first.focus();
+}
+
+async function hideSong(s) {
+  await libraryOp("hide", { song: s.filename, hidden: true });
+  toast(`"${songLabel(s)}" is hidden. Find it under Hidden songs.`);
+}
+
+async function deleteSong(s) {
+  const isOpen = s.filename === currentFilename;
+  const unsaved = isOpen && currentDoc && JSON.stringify(currentDoc) !== savedSnapshot;
+  const ok = await confirmDialog({
+    title: "Delete this song?",
+    message: `"${songLabel(s)}" moves to Deleted songs. You can restore it from there ` +
+      "until you empty the trash." +
+      (unsaved ? " Its changes that are not saved yet are lost." : ""),
+    confirm: "Delete",
+  });
+  if (!ok) return;
+  await API.deleteSong(s.filename);
+  if (isOpen) closeCurrentSong();
+  await refreshSongList();
+  toast(`"${songLabel(s)}" moved to Deleted songs.`);
+}
+
+/** The open song went away (deleted): back to the start screen. */
+function closeCurrentSong() {
+  currentFilename = null;
+  currentDoc = null;
+  markSaved();
+  document.getElementById("editor").classList.add("hidden");
+  document.getElementById("start-here").classList.remove("hidden");
+  setSongToolsEnabled(false);
+}
+
+// ── collections: the ⋯ menu beside the view picker ─────────────────────
+function closeViewMenu() {
+  const menu = document.getElementById("view-menu");
+  if (menu.classList.contains("hidden")) return;
+  menu.classList.add("hidden");
+  const btn = document.getElementById("btn-view-more");
+  btn.setAttribute("aria-expanded", "false");
+  if (menu.contains(document.activeElement)) btn.focus();
+}
+
+function openViewMenu() {
+  const menu = document.getElementById("view-menu");
+  const btn = document.getElementById("btn-view-more");
+  if (!menu.classList.contains("hidden")) return closeViewMenu();
+  closeSongMenu();
+  const col = viewCollection();
+  const items = [{ label: "New collection…", run: () => newCollection([]) }];
+  if (col) {
+    const empty = !col.songs.length;
+    items.push({ sep: true }, { heading: col.name });
+    items.push({ label: "Export as one PDF", disabled: empty, run: () => exportCollection(col, "portrait") });
+    items.push({ label: "Export as one PDF, landscape", disabled: empty, run: () => exportCollection(col, "landscape") });
+    items.push({ label: "Rename…", run: () => renameCollection(col) });
+    items.push({ label: "Delete collection…", danger: true, run: () => deleteCollection(col) });
+  }
+  showMenu(menu, btn, items);
+  btn.setAttribute("aria-expanded", "true");
+  placeMenu(menu, btn);
+  const first = menu.querySelector("button:not(:disabled)");
+  if (first) first.focus();
+}
+
+async function newCollection(songs) {
+  const name = await nameDialog({
+    title: "New collection",
+    hint: "A setlist, an album, or any group of songs. A song can be in several.",
+    value: "", confirm: "Create",
+  });
+  if (!name) return;
+  const res = await API.libraryOp("create", { name, songs });
+  if (!res.ok) return toast(res.error, true);
+  await setSongView("col:" + res.collection.id);
+  toast(songs.length ? `Added to "${res.collection.name}"`
+                     : `"${res.collection.name}" is empty. Add songs from All songs with their ⋯ menu.`, true);
+}
+
+async function renameCollection(col) {
+  const name = await nameDialog({ title: "Rename collection", value: col.name, confirm: "Rename" });
+  if (!name || name === col.name) return;
+  await libraryOp("rename", { id: col.id, name });
+}
+
+async function deleteCollection(col) {
+  const ok = await confirmDialog({
+    title: "Delete this collection?",
+    message: `"${col.name}" goes away. Its ${col.songs.length} song` +
+      `${col.songs.length === 1 ? "" : "s"} stay in your songs folder, and in any other collection.`,
+    confirm: "Delete collection",
+  });
+  if (!ok) return;
+  await libraryOp("delete", { id: col.id });
+  await setSongView("all");
+}
+
+async function exportCollection(col, orient) {
+  // The PDF is made from the saved files: save the open song first if it
+  // is in this collection and has changes, so the PDF shows them.
+  if (currentDoc && col.songs.includes(currentFilename)
+      && JSON.stringify(currentDoc) !== savedSnapshot) {
+    await saveCurrent();
+  }
+  const api = nativeApi();
+  if (api && api.export_collection) {
+    const res = await api.export_collection(col.id, orient);
+    if (res && res.ok) toast(`Saved to ${res.path}` + exportWarningText(res.warnings), true);
+    else if (!(res && res.cancelled)) toast(`Export failed: ${(res && res.error) || "unknown error"}`, true);
+    return;
+  }
+  const res = await fetch(`/api/collections/${encodeURIComponent(col.id)}/export.pdf?orient=${orient}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    toast(`Export failed: ${err.error || res.statusText}`, true);
+    return;
+  }
+  const m = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "");
+  const filename = m ? m[1] : "Collection.pdf";
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  let warnings = [];
+  try { warnings = JSON.parse(res.headers.get("X-Export-Warnings") || "[]"); } catch (e) { warnings = []; }
+  toast(`Downloaded ${filename}. It is in your browser's downloads folder.` + exportWarningText(warnings), true);
+}
+
+// ── the trash ───────────────────────────────────────────────────────────
+async function renderTrash(ul, note) {
+  ul.classList.remove("is-collection");
+  const trash = await API.trash();
+  note.textContent = trash.length
+    ? "Deleted songs stay here until you empty the trash. Restore puts a song back in its collections."
+    : "The trash is empty.";
+  note.classList.remove("hidden");
+  for (const t of trash) {
     const li = document.createElement("li");
-    li.className = s.filename === currentFilename ? "active" : "";
-    // A real button, so the list can be used from the keyboard.
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "song-item";
-    if (s.filename === currentFilename) btn.setAttribute("aria-current", "true");
-    btn.innerHTML = `<span class="song-title">${escapeHtml(s.title || s.filename)}</span>` +
-      (s.artist ? `<span class="song-artist">${escapeHtml(s.artist)}</span>` : "");
-    btn.addEventListener("click", () => openSong(s.filename).catch((e) => toast(String(e))));
-    li.appendChild(btn);
+    li.className = "trash-item";
+    const when = t.deleted_at ? new Date(t.deleted_at) : null;
+    const whenText = when && !isNaN(when) ? "Deleted " + when.toLocaleDateString() : "";
+    li.innerHTML = `<div class="song-text"><span class="song-title">${escapeHtml(t.title || t.original.replace(/\.sng$/i, ""))}</span>` +
+      `<span class="song-artist">${escapeHtml([t.artist, whenText].filter(Boolean).join(" · "))}</span></div>`;
+    const actions = document.createElement("div");
+    actions.className = "trash-actions";
+    const restore = document.createElement("button");
+    restore.type = "button"; restore.className = "btn subtle"; restore.textContent = "Restore";
+    restore.addEventListener("click", async () => {
+      const res = await API.trashOp("restore", { name: t.name });
+      if (!res.ok) return toast(res.error, true);
+      await refreshSongList();
+      toast(`Restored "${t.title || res.filename}".`);
+    });
+    const purge = document.createElement("button");
+    purge.type = "button"; purge.className = "btn subtle danger-text"; purge.textContent = "Delete forever";
+    purge.addEventListener("click", async () => {
+      const ok = await confirmDialog({
+        title: "Delete forever?",
+        message: `"${t.title || t.original}" is deleted from your computer. This can't be undone.`,
+        confirm: "Delete forever",
+      });
+      if (!ok) return;
+      const res = await API.trashOp("purge", { name: t.name });
+      if (!res.ok) toast(res.error, true);
+      await refreshSongList();
+    });
+    actions.append(restore, purge);
+    li.appendChild(actions);
     ul.appendChild(li);
   }
+}
+
+async function emptyTrash() {
+  const n = LIBRARY.trash_count;
+  const ok = await confirmDialog({
+    title: "Empty the trash?",
+    message: `${n} deleted song${n === 1 ? " is" : "s are"} deleted from your computer for good. This can't be undone.`,
+    confirm: "Empty trash",
+  });
+  if (!ok) return;
+  const res = await API.trashOp("empty");
+  if (!res.ok) return toast(res.error, true);
+  await setSongView("all");
+  toast(`Deleted ${res.deleted} song${res.deleted === 1 ? "" : "s"} for good.`);
+}
+
+// ── the two small dialogs: confirm, and a name ─────────────────────────
+function confirmDialog({ title, message, confirm = "OK", danger = true }) {
+  return new Promise((resolve) => {
+    const bd = document.getElementById("confirm-modal-backdrop");
+    const ok = document.getElementById("confirm-ok");
+    const cancel = document.getElementById("confirm-cancel");
+    document.getElementById("confirm-title").textContent = title;
+    document.getElementById("confirm-message").textContent = message;
+    ok.textContent = confirm;
+    ok.classList.toggle("danger", danger);
+    ok.classList.toggle("accent", !danger);
+    const done = (v) => {
+      ok.onclick = cancel.onclick = null;
+      bd.classList.add("hidden");
+      resolve(v);
+    };
+    ok.onclick = () => done(true);
+    cancel.onclick = () => done(false);
+    bd.classList.remove("hidden");
+  });
+}
+
+function nameDialog({ title, hint = "", value = "", confirm = "OK" }) {
+  return new Promise((resolve) => {
+    const bd = document.getElementById("name-modal-backdrop");
+    const input = document.getElementById("name-input");
+    const ok = document.getElementById("name-ok");
+    const cancel = document.getElementById("name-cancel");
+    document.getElementById("name-title").textContent = title;
+    const h = document.getElementById("name-hint");
+    h.textContent = hint;
+    h.classList.toggle("hidden", !hint);
+    input.value = value;
+    ok.textContent = confirm;
+    const done = (v) => {
+      ok.onclick = cancel.onclick = input.onkeydown = null;
+      bd.classList.add("hidden");
+      resolve(v);
+    };
+    ok.onclick = () => { const v = input.value.trim(); if (v) done(v); else input.focus(); };
+    cancel.onclick = () => done(null);
+    input.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); ok.click(); } };
+    bd.classList.remove("hidden");
+    setTimeout(() => input.select(), 0);
+  });
+}
+
+function wireSongLibrary() {
+  document.getElementById("song-view").addEventListener("change", (e) =>
+    setSongView(e.target.value).catch((err) => toast(String(err))));
+  const viewBtn = document.getElementById("btn-view-more");
+  viewBtn.addEventListener("click", (e) => { e.stopPropagation(); openViewMenu(); });
+  wireMenuKeys(document.getElementById("view-menu"), closeViewMenu);
+  wireMenuKeys(document.getElementById("song-menu"), closeSongMenu);
+  document.getElementById("btn-empty-trash").addEventListener("click", () =>
+    emptyTrash().catch((err) => toast(String(err), true)));
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#song-menu")) closeSongMenu();
+    if (!e.target.closest("#view-menu")) closeViewMenu();
+  });
+  // A menu placed against the list would drift as it scrolls: close it.
+  document.getElementById("sidebar").addEventListener("scroll", () => { closeSongMenu(); closeViewMenu(); });
+  window.addEventListener("resize", () => { closeSongMenu(); closeViewMenu(); });
 }
 
 function escapeHtml(s) {
@@ -3461,10 +3979,12 @@ async function init() {
     if (mod && e.key === "e") { e.preventDefault(); exportCurrent("txt").catch((err) => toast(String(err))); }
   });
 
+  wireSongLibrary();
   await refreshSongList();
-  const songs = await API.songs();
-  if (songs.length) {
-    await openSong(songs[0].filename);
+  // The first song that shows in All songs: a hidden one is not opened.
+  const first = SONGS.find((s) => !s.hidden);
+  if (first) {
+    await openSong(first.filename);
   } else {
     document.getElementById("start-here").classList.remove("hidden");
   }

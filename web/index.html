@@ -129,7 +129,19 @@
         <span>Songs</span>
         <button id="btn-new-song" class="icon-btn" aria-label="New song" title="New song"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
+      <!-- Which songs the list shows: all of them, one collection (a
+           setlist, an album) in its own order, the hidden songs, or the
+           deleted ones. The ⋯ beside it makes and manages collections. -->
+      <div id="song-view-bar">
+        <select id="song-view" aria-label="Which songs to show"
+                title="All your songs, one collection, the hidden songs, or the deleted ones"></select>
+        <button id="btn-view-more" type="button" class="icon-btn" aria-label="Collections: new, export, rename, delete"
+                aria-haspopup="menu" aria-expanded="false" title="New collection, and more for the one shown"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg></button>
+      </div>
+      <p id="song-view-note" class="song-view-note hidden"></p>
       <ul id="song-list"></ul>
+      <button id="btn-empty-trash" type="button" class="btn subtle danger-text hidden"
+              title="Delete every song in Deleted songs for good">Empty trash…</button>
       <button id="btn-open-example" class="btn subtle">Open example song</button>
       <button id="btn-import" class="btn subtle" title="Open a .sng file, or a PDF exported by this app (every PDF carries its song), as a new song in your songs folder">Import song…</button>
       <input id="import-file" type="file" accept=".sng,.json,.pdf,application/pdf,application/json" hidden>
@@ -370,8 +382,8 @@
       </div>
       <p id="folder-summary" class="folder-summary"></p>
       <p id="folder-clashes" class="modal-hint folder-clashes hidden"></p>
-      <p class="modal-hint">Only song files (<code>.sng</code>) move, and anything else in
-        the folder stays where it is. A song that already exists in the new folder is
+      <p class="modal-hint">Only song files (<code>.sng</code>) move, with your collections
+        and deleted songs, and anything else in the folder stays where it is. A song that already exists in the new folder is
         never overwritten, and the old folder is not deleted.</p>
       <div class="modal-actions" style="justify-content: space-between;">
         <button id="folder-cancel" class="btn subtle">Cancel</button>
@@ -668,6 +680,36 @@
     <div class="copy-picker-note">The copy is a reference: it plays whatever the original holds, so you only edit it once.</div>
     <div class="copy-picker-list"></div>
     <div class="copy-picker-foot"><button type="button" class="btn copy-picker-cancel">Cancel</button></div>
+  </div>
+
+  <!-- The menus of the song list. One of each, placed beside the ⋯
+       that opened it, so the list itself stays plain. -->
+  <div id="song-menu" class="dropdown-menu floating-menu hidden" role="menu" aria-label="Song"></div>
+  <div id="view-menu" class="dropdown-menu floating-menu hidden" role="menu" aria-label="Collections"></div>
+
+  <!-- Asked before anything is deleted. Cancel comes first and has the
+       focus, so Enter or Escape never deletes by accident. -->
+  <div id="confirm-modal-backdrop" class="modal-backdrop hidden" data-close="confirm-cancel">
+    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <h3 id="confirm-title"></h3>
+      <p id="confirm-message" class="confirm-message"></p>
+      <div class="modal-actions">
+        <button id="confirm-cancel" type="button" class="btn subtle">Cancel</button>
+        <button id="confirm-ok" type="button" class="btn danger"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="name-modal-backdrop" class="modal-backdrop hidden" data-close="name-cancel">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="name-title">
+      <h3 id="name-title"></h3>
+      <p id="name-hint" class="modal-hint hidden"></p>
+      <label>Name <input id="name-input" type="text" maxlength="80" autocomplete="off"></label>
+      <div class="modal-actions">
+        <button id="name-cancel" type="button" class="btn subtle">Cancel</button>
+        <button id="name-ok" type="button" class="btn accent"></button>
+      </div>
+    </div>
   </div>
 
   <template id="section-template">

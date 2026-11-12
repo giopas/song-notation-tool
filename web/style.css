@@ -359,6 +359,66 @@ button:disabled { cursor: default; }
 #song-list .song-title { display: block; font-weight: 600; }
 #song-list .song-artist { display: block; font-size: 12px; color: var(--lbl-gray); }
 
+/* Collections, hidden songs and the trash (v0.35.0). */
+#song-view-bar { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; }
+#song-view {
+  flex: 1; min-width: 0; font: inherit; font-size: 13px;
+  background: var(--input-bg); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px;
+}
+#song-view:focus { border-color: var(--focus); outline: none; }
+.song-view-note { font-size: 11px; line-height: 1.4; color: var(--lbl-gray); margin: 0 2px 6px; }
+#song-list li { position: relative; display: flex; align-items: stretch; }
+#song-list li .song-item { display: flex; gap: 8px; align-items: baseline; padding-right: 34px; }
+#song-list .song-text { min-width: 0; flex: 1; }
+#song-list .song-title, #song-list .song-artist { overflow-wrap: anywhere; }
+#song-list .song-pos {
+  flex: 0 0 auto; min-width: 1.4em; text-align: right;
+  font-family: var(--mono); font-size: 12px; color: var(--lbl-gray);
+}
+#song-list .song-tag {
+  display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px;
+  font-size: 10px; font-weight: 600; letter-spacing: .03em; vertical-align: 1px;
+  color: var(--lbl-gray); border: 1px solid var(--border-strong);
+}
+#song-list .song-more {
+  position: absolute; right: 4px; top: 6px; width: 28px; height: 28px;
+  opacity: 0; transition: opacity .12s;
+}
+#song-list li:hover .song-more, #song-list li.active .song-more,
+#song-list .song-more:focus-visible, #song-list .song-more[aria-expanded="true"] { opacity: 1; }
+@media (hover: none) { #song-list .song-more { opacity: 1; } }
+#song-list.is-collection li[draggable="true"] .song-item { cursor: grab; }
+#song-list li.dragging { opacity: .45; }
+#song-list li.drop-before::before, #song-list li.drop-after::after {
+  content: ""; position: absolute; left: 6px; right: 6px; height: 2px;
+  background: var(--accent); border-radius: 1px;
+}
+#song-list li.drop-before::before { top: -2px; }
+#song-list li.drop-after::after { bottom: -2px; }
+#song-list li.trash-item {
+  flex-direction: column; gap: 4px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 9px;
+}
+.trash-actions { display: flex; gap: 4px; }
+.trash-actions .btn { padding: 3px 8px; font-size: 12px; }
+.floating-menu { position: fixed; right: auto; top: 0; left: 0; z-index: 60; max-width: 280px;
+  max-height: 70vh; overflow-y: auto; }
+.dropdown-menu button:disabled { opacity: .45; cursor: default; background: transparent; }
+.dropdown-menu [role="menuitemcheckbox"]::before {
+  content: ""; width: 12px; height: 12px; border-radius: 3px; flex: 0 0 auto;
+  border: 1.5px solid var(--lbl-gray); box-sizing: border-box;
+}
+.dropdown-menu [role="menuitemcheckbox"][aria-checked="true"]::before {
+  background: var(--accent); border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--card-bg);
+}
+.btn.danger { background: var(--red); color: var(--bg); border-color: var(--red); font-weight: 600; }
+.btn.danger:hover:not(:disabled) { filter: brightness(1.08); }
+.btn.danger-text, .btn.subtle.danger-text { color: var(--red); }
+#btn-empty-trash { justify-content: flex-start; }
+.confirm-message { font-size: 13px; line-height: 1.5; margin: 0 0 4px; }
+
 /* The editor is form-like — inputs, dropdowns and monospace chart lines —
    and a wide window should give the chart line more room, not park 800px
    of empty space to its right (which a hard `max-width: 980px` did). It
@@ -1189,3 +1249,7 @@ body.dragging-section, body.dragging-section * { cursor: grabbing !important; us
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* The delete and name dialogs can open from the song list, which on a
+   narrow window is a drawer above the page: they go over it. */
+#confirm-modal-backdrop, #name-modal-backdrop { z-index: 55; }

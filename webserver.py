@@ -927,11 +927,20 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json({"ok": True, "filename": filename,
                                         "doc": _with_chart_lines(self.store.load(filename))})
 
-            if path == "/api/library":
-                return self._send_json(self._library_op(self._read_json_body()))
-
-            if path == "/api/trash":
-                return self._send_json(self._trash_op(self._read_json_body()))
+            if path in ("/api/library", "/api/trash"):
+                # JSON only. A page on another site can send a plain-text
+                # or form POST here without asking, but not one marked
+                # application/json: the browser checks with the server
+                # first, and this server never says yes. So no other page
+                # can empty your trash.
+                ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip()
+                if ctype != "application/json":
+                    return self._send_error_json(HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+                                                 "send this as application/json")
+                body = self._read_json_body()
+                if path == "/api/library":
+                    return self._send_json(self._library_op(body))
+                return self._send_json(self._trash_op(body))
 
             if path == "/api/songs":
                 # New song: {name, title, artist, key, time, bpm}

@@ -6,12 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Added — delete, hide and collect songs
+## [0.35.0] — 2026-11-12 — Setlists, hide and delete
 
 The song list held every song in the folder, for good: there was no way
 to remove one from the app, to put an old one out of the way, or to keep
 the songs for one gig together. Now a song can be deleted (and restored),
-hidden, and put in collections: a setlist, an album, a "learn next" pile.
+hidden, and put in collections: a setlist, an album, a "learn next" pile,
+printed as one PDF. GitHub also makes the pitch video for every release.
+The printed page of a song does not change.
+
+### Added — delete, hide and collect songs
 
 - **Delete…** in a song's **⋯** menu asks first, then moves the song to
   *Deleted songs*, a folder inside your songs folder. **Deleted songs** in

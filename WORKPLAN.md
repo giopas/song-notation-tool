@@ -16,14 +16,15 @@ and git hold the history.
   the workflow builds and publishes it. Before it: v0.33.3 (8 November).
   Installed copies up to v0.33.1 cannot update themselves while GitHub's
   download address fails; install v0.33.2 or later by hand once.
-- In progress: `feat/v0.35.0` (12 November), committed locally, not
-  merged. Songs can be deleted (to a trash, restorable, **Empty trash…**),
-  hidden, and put in collections (setlists, albums) with their own order
-  and one PDF per collection. Browser and native window only; the Tkinter
-  desktop app has no song list and is unchanged. `library.py` holds it;
-  CHANGELOG `[Unreleased]`, README and wiki describe it. Before release:
-  bump the version, screenshots (the song menu, a collection and the
-  trash are worth a picture each in `tools/shots.py`), the pitch check.
+- Ready to push: v0.35.0 (12 November), *Setlists, hide and delete*, on
+  `feat/v0.35.0`: songs can be deleted (to a trash, restorable, **Empty
+  trash…**), hidden, and put in collections (setlists, albums) with their
+  own order and one PDF per collection. Browser and native window only;
+  the Tkinter desktop app has no song list and is unchanged. Screenshots
+  retaken (two new: `collection.png`, `delete-confirm.png`). Pitch check:
+  slide 8 is now *Setlists, and Nothing Lost* with a new voice-over, on
+  the two new pictures; the other slides only take the new screenshots.
+  The video and deck are made by the `pitch` workflow after the release.
 - `chore/pitch-ci` and `fix/pitch-skip` are on `main` and pushed
   (ground truth, 12 November); both branches can be deleted. GitHub makes
   the pitch video and the deck for every release (`pitch.yml`, called by

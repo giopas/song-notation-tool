@@ -37,6 +37,13 @@ and git hold the history.
   slides took the v0.34.0 colours and the four moved zoom points
   (measured on the pictures). Pushing it to `main` runs `pitch` once and
   attaches the files to v0.34.0.
+- 12 November: `pitch.yml` skipped a release's own run (called by
+  `release.yml`, `GITHUB_EVENT_NAME` is the tag's `push`), so a release
+  would never get its video; Barline 0.21.0 showed it. Fixed on
+  `fix/pitch-skip`: it skips only on `main` with no tag given, and
+  `pitch.yml` is in its own `push` paths, so pushing the fix makes the
+  video for the latest release. Swiss Knife's `pitch.yml` needs the same
+  check looked at, from that project.
 - QLC+ Swiss Knife's `core/update.py` downloads the same way the old code
   here did (download address only, five seconds for SHA256SUMS), so it
   can fail the same way. Worth the same fix there.

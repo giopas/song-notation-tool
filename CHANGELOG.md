@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   nor with a second voice taking over) and `--poster` (the README
   picture, with no version on it).
 
+### Fixed
+
+- The pitch workflow skipped a release's own video run: called by
+  `release.yml`, it saw the tag's `push` event and took the run for a push
+  of a release commit to `main`. It now skips only on `main` with no tag
+  given, and a change to `pitch.yml` itself makes the video again for the
+  latest release. CI only; the app does not change.
+
 ### Changed
 
 - The pitch slides use the app's v0.34.0 colours, and four zoom points

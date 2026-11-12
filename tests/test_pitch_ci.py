@@ -92,3 +92,15 @@ def test_the_page_plays_the_files_the_workflow_puts_beside_it():
     for name in (f"{m.FILE_STEM}.mp4", f"{m.FILE_STEM}.pdf", "icon.png", "slide-01.png"):
         assert f'"{name}"' in html, name
     assert "<video" in html and "playsinline" in html
+
+
+def test_a_release_called_run_is_not_mistaken_for_a_push_to_main():
+    """Called by release.yml, GITHUB_EVENT_NAME is the tag's "push": the skip
+    for a release commit pushed to main must look at the branch and the input."""
+    text = (WF / "pitch.yml").read_text(encoding="utf-8")
+    line = next(l for l in text.splitlines() if "git tag --points-at HEAD" in l)
+    assert '-z "$IN_TAG"' in line
+    assert '"$GITHUB_REF" = "refs/heads/main"' in line
+    assert "GITHUB_EVENT_NAME" not in line
+    paths = text[text.index("    paths:"):].splitlines()
+    assert paths[1].strip() == '- ".github/workflows/pitch.yml"'

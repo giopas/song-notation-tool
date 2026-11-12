@@ -53,6 +53,8 @@ PICTURES = [
     ("help-strip.png", "the How this works strip"),
     ("export-menu.png", "the Export menu open"),
     ("tab-grid.png", "a section in Tab, one measure made longer with +4"),
+    ("collection.png", "a setlist in the song list, a song's ⋯ menu open"),
+    ("delete-confirm.png", "the question before a song is deleted"),
 ]
 
 
@@ -228,6 +230,42 @@ def take(url: str, out: str) -> list[str]:
         card.locator(".tab-size-btn >> text=+4").nth(1).click()
         card.scroll_into_view_if_needed()
         shot("tab-grid.png", 250)
+
+        # A setlist: three more songs (invented names) and the example, in
+        # a collection in their running order, with one song's menu open.
+        page.goto(url + "/")
+        page.wait_for_timeout(600)
+        page.evaluate("""async () => {
+            const post = (u, b) => fetch(u, {method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(b)}).then(r => r.json());
+            const names = [];
+            for (const t of ['Night Drive', 'Paper Lanterns', 'Slow Burn']) {
+                names.push((await post('/api/songs', {title: t, artist: 'The Invented',
+                    key: 'E', time: '4/4'})).filename);
+            }
+            const songs = await (await fetch('/api/songs')).json();
+            const example = songs.find(s => !names.includes(s.filename)).filename;
+            await post('/api/library', {op: 'create', name: 'Friday set',
+                songs: [names[1], example, names[0], names[2]]});
+            await post('/api/library', {op: 'create', name: 'Album demos',
+                songs: [names[0]]});
+        }""")
+        page.goto(url + "/")
+        page.wait_for_selector("#song-list li")
+        page.select_option("#song-view", label="Friday set (4)")
+        page.wait_for_timeout(400)
+        page.click("#song-list li >> nth=1 >> .song-item")
+        page.wait_for_selector(".section-card")
+        page.wait_for_load_state("networkidle")
+        item = page.locator("#song-list li").nth(2)
+        item.hover()
+        item.locator(".song-more").click()
+        shot("collection.png", 300, park=False)
+
+        page.click("#song-menu >> text=Delete…")
+        shot("delete-confirm.png", 300)
+        page.click("#confirm-cancel")
 
         browser.close()
         if errors:

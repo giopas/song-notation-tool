@@ -60,7 +60,7 @@ def _lex(line: str):
             while j < n and line[j] != '}':
                 j += 1
             if j >= n:
-                raise ParseError(f"unmatched '{{' in: {line!r}")
+                raise ParseError("a '{' is never closed: add '}' where the lick ends")
             # consume any suffix glued to the closing brace ("}x3")
             k = j + 1
             while k < n and not line[k].isspace():
@@ -78,7 +78,7 @@ def _lex(line: str):
                     depth -= 1
                 j += 1
             if depth != 0:
-                raise ParseError(f"unmatched '[' in: {line!r}")
+                raise ParseError("a '[' is never closed: add ']' where the group ends, before its repeat (x2)")
             # consume any suffix directly glued to the closing bracket
             k = j
             while k < n and not line[k].isspace():
@@ -154,11 +154,11 @@ _STANDALONE_SHIFT_RE = re.compile(r'^([+-]\d+)$')
 
 def _apply_repeat(items, n):
     if not items:
-        raise ParseError(f"'x{n}' has no preceding item to repeat")
+        raise ParseError(f"'x{n}' repeats the item before it, and there is nothing before it")
     last = items[-1]
     if last["kind"] not in ("group", "block_ref", "section_ref",
                             "lick", "lick_ref"):
-        raise ParseError(f"repeat is not valid on a {last['kind']} item")
+        raise ParseError(f"a {last['kind']} cannot repeat on its own: put it in brackets with its repeat, [ ... ]x2")
     last["repeat"] = n
 
 
@@ -188,14 +188,14 @@ _LEADING_ZERO_RE = re.compile(r'^0\d')
 
 def _parse_token_or_block(word: str):
     if _LEADING_ZERO_RE.match(word):
-        raise ParseError(f"leading zero not allowed in fret: {word!r}")
+        raise ParseError(f"{word!r}: a fret has no leading zero (write 5A, not 05A)")
 
     m = _TOKEN_RE.match(word)
     if m:
         fret = m.group("fret")
         fret_val = int(fret) if fret is not None else None
         if fret_val is not None and fret_val > MAX_FRET:
-            raise ParseError(f"fret {fret_val} exceeds MAX_FRET ({MAX_FRET}): {word!r}")
+            raise ParseError(f"{word!r}: fret {fret_val} is above the highest fret ({MAX_FRET})")
         symbol = m.group("note") + (m.group("acc") or "") + (m.group("qual") or "")
         return make_token(symbol, fret_val, accent=bool(m.group("accent")))
 
@@ -207,7 +207,7 @@ def _parse_token_or_block(word: str):
     if _IDENT_RE.match(word):
         return make_block_ref(word)
 
-    raise ParseError(f"cannot parse item: {word!r}")
+    raise ParseError(f"{word!r} is not a chord, a fret and note (5A), a mark or a riff name")
 
 
 def _consume_suffix(tail: str):
@@ -217,7 +217,7 @@ def _consume_suffix(tail: str):
         return 1, False, 0
     m = re.fullmatch(r'(?:[xX](\d+)(all)?)?([+-]\d+)?', tail)
     if not m:
-        raise ParseError(f"cannot parse suffix: {tail!r}")
+        raise ParseError(f"{tail!r} after ']' is not a repeat: write the repeat right after the bracket, such as ]x2")
     repeat = int(m.group(1)) if m.group(1) else 1
     all_flag = bool(m.group(2))
     shift = int(m.group(3)) if m.group(3) else 0
@@ -233,7 +233,7 @@ def _find_matching_bracket(word: str) -> int:
             depth -= 1
             if depth == 0:
                 return idx
-    raise ParseError(f"unmatched '[' in: {word!r}")
+    raise ParseError("a '[' is never closed: add ']' where the group ends")
 
 
 def _parse_group(word: str):
@@ -324,7 +324,7 @@ def _parse_lick(word: str):
                     f"(0-{MAX_FRET}, '-' for not played, 'x' for muted, or a "
                     f"fret with h p / \\ b r ~ after it, and ^ for an accent)")
             if not valid_tab_position(f):
-                raise ParseError(f"fret {f} exceeds MAX_FRET ({MAX_FRET}) in lick")
+                raise ParseError(f"fret {f} in a lick is above the highest fret ({MAX_FRET})")
         lines.append({"string": st_name, "frets": frets})
 
     if not lines:
@@ -388,7 +388,7 @@ def parse(text: str):
         if tok.startswith('{'):
             close = tok.rfind('}')
             if close < 0:
-                raise ParseError(f"unmatched '{{' in: {tok!r}")
+                raise ParseError("a '{' is never closed: add '}' where the lick ends")
             item = _parse_lick(tok[:close + 1])
             repeat, all_flag, shift = _consume_suffix(tok[close + 1:])
             if all_flag or shift:

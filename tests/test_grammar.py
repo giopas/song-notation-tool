@@ -269,3 +269,21 @@ def test_lick_name_that_reads_as_a_chord_is_refused():
 def test_named_lick_needs_tab_after_the_equals():
     with pytest.raises(ParseError):
         parse_items("{Riff1 = }")
+
+
+# ── messages in plain words (v0.34.0) ────────────────────────────────────────
+
+@pytest.mark.parametrize("line, words", [
+    ("[G D Em C x2", "is never closed"),
+    ("{G 5 7", "is never closed"),
+    ("G D 99Z", "is not a chord"),
+    ("[G D]]", "is not a repeat"),
+    ("05A", "no leading zero"),
+    ("30A", "above the highest fret"),
+])
+def test_a_mistake_is_explained_in_plain_words(line, words):
+    with pytest.raises(ParseError, match=words) as info:
+        parse(line)
+    # No programmer's wording left in the message.
+    for jargon in ("unmatched", "cannot parse", "suffix", "MAX_FRET"):
+        assert jargon not in str(info.value)

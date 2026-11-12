@@ -58,9 +58,9 @@ def test_a_run_is_a_group_with_a_span():
 @pytest.mark.parametrize("line, words", [
     ("pm 5A", "first in brackets"),
     ("[pm]", "needs the notes"),
-    ("5A^^", "cannot parse"),
+    ("5A^^", "is not a chord"),
     ("{ G 5q7 }", "not a fret"),
-    ("{ G 30 }", "MAX_FRET"),
+    ("{ G 30 }", "highest fret"),
 ])
 def test_mistakes_get_a_message(line, words):
     with pytest.raises(grammar.ParseError, match=words):

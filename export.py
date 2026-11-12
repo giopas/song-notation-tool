@@ -771,6 +771,44 @@ def build_pdf(doc: dict, instruments=None, orient: str = "portrait",
     return _build_pdf(doc, instruments, orient, scale, columns, date=date)[0]
 
 
+def build_collection_pdf(docs, orient: str = "portrait", date=None) -> bytes:
+    """Several songs in one PDF, in the order given: a setlist or an album
+    to print in one go. Each song starts on a new page and is laid out
+    exactly as its own PDF would be (size, columns, orientation), so a
+    page here is the same page as in the song's own export.
+
+    The songs are not attached, so this PDF does not reopen in the app;
+    each song's own PDF does.
+    """
+    pages = []
+    for doc in docs:
+        instruments = instruments_to_print(doc)
+        o = resolve_orient(doc, instruments, orient)
+        columns = resolve_columns(doc, instruments, o)
+        scale = resolve_scale(doc, instruments, o, columns=columns)
+        streams, W, H = _pdf_pages(doc, instruments, o, scale, columns, date=date)
+        pages.extend((ps, W, H) for ps in streams)
+    if not pages:
+        raise ValueError("there are no songs to export")
+    W, H = page_size(orient)
+    return _assemble_pdf(pages, W, H)
+
+
+def prepare_collection_export(docs, orient: str = "portrait", date=None):
+    """Check every song, then build the collection PDF. Returns
+    (bytes, warnings). Raises `ExportBlocked` naming the songs that fail
+    their check; nothing is built then."""
+    errors, warnings = [], []
+    for doc in docs:
+        name = (_meta(doc).get("title") or "").strip() or "Untitled song"
+        report = check_document(doc)
+        errors += [f"{name}: {e}" for e in report["errors"]]
+        warnings += [f"{name}: {w}" for w in report["warnings"]]
+    if errors:
+        raise ExportBlocked(errors)
+    return build_collection_pdf(docs, orient=orient, date=date), warnings
+
+
 def resolve_orient(doc: dict, instruments=None, orient: str = "portrait") -> str:
     """The page orientation a PDF is printed in.
 
@@ -1005,8 +1043,15 @@ def _chord_sheet_lines(doc: dict, width: int = DEFAULT_TXT_WIDTH) -> list:
 # ==============================================================================
 
 def _build_pdf(doc: dict, instruments, orient: str, scale: float,
-                columns=None, date=None):
-    """Render the chart at `scale` and return (pdf_bytes, page_count).
+               columns=None, date=None):
+    """Render the chart at `scale` and return (pdf_bytes, page_count)."""
+    pages, W, H = _pdf_pages(doc, instruments, orient, scale, columns, date=date)
+    return _assemble_pdf(pages, W, H, song=song_bytes(doc)), len(pages)
+
+
+def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
+               columns=None, date=None):
+    """Render the chart at `scale` and return (page_streams, W, H).
 
     Everything that sets the size of the type — line height, font sizes,
     the monospace character width the column maths depends on — is
@@ -1835,7 +1880,7 @@ def _build_pdf(doc: dict, instruments, orient: str, scale: float,
     while side and pn_holder[0] < len(side_pages):
         pn_holder[0] += 1
         finish_page()
-    return _assemble_pdf(pages, W, H, song=song_bytes(doc)), len(pages)
+    return pages, W, H
 
 
 # ── The song inside its PDF ────────────────────────────────────────────
@@ -1936,10 +1981,15 @@ def _assemble_pdf(pages, W, H, song: bytes = None) -> bytes:
     cid = 6
 
     for ps in pages:
+        # A page is its stream, or (stream, W, H) when pages differ in size:
+        # a collection mixes portrait songs with landscape floor sheets.
+        pw, ph = W, H
+        if isinstance(ps, tuple):
+            ps, pw, ph = ps
         kids.append(f"{cid} 0 R")
         po.append(obj(cid,
             f"<< /Type /Page /Parent 2 0 R "
-            f"/MediaBox [0 0 {W:.2f} {H:.2f}] "
+            f"/MediaBox [0 0 {pw:.2f} {ph:.2f}] "
             f"/Contents {cid + 1} 0 R /Resources {font_res} >>"))
         so.append(sobj(cid + 1, ps))
         cid += 2

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.36.0] — 2026-11-13 — Bar lines, repeats and copy in tab
+
 A tab cell has no length, so a long tab measure gave no sense of where
 the beat falls; a tab could not repeat, could not be named and recalled,
 and could not be copied in part; a section copied as a reference left its

@@ -12,21 +12,24 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.34.0 (12 November 2026), tagged by giopas from `main`;
-  the workflow builds and publishes it. Before it: v0.33.3 (8 November).
-  Installed copies up to v0.33.1 cannot update themselves while GitHub's
-  download address fails; install v0.33.2 or later by hand once.
-- Ready to push: v0.35.1 (12 November), *Setlists, hide and delete*, on
-  `fix/v0.35.1`. v0.35.0 was tagged and pushed but its builds failed on
-  three pitch tests that need Pillow (not installed in CI); nothing was
-  published, so there is no release to delete. In v0.35.1, songs can be
-  deleted (to a trash, restorable, **Empty trash…**), hidden, and put in collections (setlists, albums) with their
-  own order and one PDF per collection. Browser and native window only;
-  the Tkinter desktop app has no song list and is unchanged. Screenshots
-  retaken (two new: `collection.png`, `delete-confirm.png`). Pitch check:
-  slide 8 is now *Setlists, and Nothing Lost* with a new voice-over, on
-  the two new pictures; the other slides only take the new screenshots.
-  The video and deck are made by the `pitch` workflow after the release.
+- Released: v0.35.1 (12 November 2026), *Setlists, hide and delete*,
+  tagged from `main` (v0.35.0 was tagged but never published: its builds
+  stopped on three pitch tests that need Pillow). Installed copies up to
+  v0.33.1 cannot update themselves while GitHub's download address fails;
+  install v0.33.2 or later by hand once.
+- Ready to merge: v0.36.0 (13 November), *Bar lines, repeats and copy in
+  tab*, on `feat/v0.36.0`. Built in a cloud session while giopas was away
+  from the Mac, so the branch reaches the Mac as a git bundle (see "What
+  is left"). giopas's eight requests of 13 November: bar lines inside a
+  tab measure (1), repeats of all or part of a tab (2), a reference copy
+  that brings every part (3), a name for a tab (4), copying all or part of
+  a tab (5), a PDF preview (7), and older songs with tab kept as text
+  opening in the grid (8). Also fixed: the PDF drew tab grid rows as one
+  proportional string, so beats drifted and strings did not line up.
+  Screenshots retaken (`tab-grid.png` shows bar lines, a repeat and a
+  name). Pitch check: no picture changes (`paper-marks-and-techniques.png`
+  is cropped above the tab grid that changed); one wording proposal below.
+  Test suite: 644 tests.
 - `chore/pitch-ci` and `fix/pitch-skip` are on `main` and pushed
   (ground truth, 12 November); both branches can be deleted. GitHub makes
   the pitch video and the deck for every release (`pitch.yml`, called by
@@ -54,9 +57,19 @@ and git hold the history.
 - Every release from v0.26.3 on has its GitHub release.
 - **Update and restart** is confirmed on the Mac (v0.29.0 to v0.29.1, on
   10 October).
-- Test suite: 599 tests, all passing (`python3 -m pytest -q`).
 
 ## What is left
+
+v0.36.0, first:
+
+1. Bring `feat/v0.36.0` to the Mac (bundle from the cloud session), run
+   the tests, try it (manual checks below), then merge, tag and push.
+2. Confirm the readings taken while giopas was away (decisions table,
+   13 November, "giopas to confirm").
+3. Pitch check proposal for v0.36.0, for approval: slide 3 (*Name a Riff
+   Once, Reuse It*), third bullet "A repeated chorus points to the first
+   one, not a second copy" could become "Bar lines and repeats in tab;
+   a named tab plays anywhere as {Name}". Nothing else is out of date.
 
 Housekeeping, small:
 
@@ -87,6 +100,21 @@ started until giopas picks it.
 - A test file for the Tkinter desktop app (`tests/test_song_writer.py`).
 
 Manual checks waiting for giopas (each stays here until reported back):
+
+- v0.36.0 (feat/v0.36.0) in the native window on the Mac: open the song
+  whose tab was written as text and check it opened in the grid (the
+  message names the sections; Free still shows the text); Save. In a Tab
+  section: type `|` in a cell, click between two cells, use a measure's
+  ⋯ (bar every 4, split, repeat, copy, duplicate); Shift+click four beats,
+  **Copy**, click a cell in another section, Cmd+V; **Repeat ×2** on a
+  selection and change the count over the `:|`; name the tab and type
+  `{Name}` in another section's chart line; rename it and see the
+  `{Name}` follow. **Copy as a reference…** of a section with a part and
+  of a Tab section; **Duplicate as a copy…**. Preview → **PDF**: does the
+  PDF show inside the window (WKWebView)? If it stays blank, the open
+  button beside it must still open it; headless Chromium has no PDF
+  viewer, so this was not seen. Print a tab grid and check the strings
+  line up.
 
 - v0.35.0 (feat/v0.35.0) in the native window on the Mac: make a
   collection, add three songs from their ⋯ menu, drag one to the top and
@@ -211,6 +239,9 @@ and readable on stage without the handwritten sheet.
 | 11 Nov 2026 | Every release includes a pitch check: does the pitch video and slide deck (`tools/make_pitch_video.py`) still tell the truth about the app? Claude reads the version's CHANGELOG.md section against `SLIDES` (a claim now wrong, a feature renamed or removed, a new feature worth a bullet or a slide, a slide's narration that no longer matches), against the `tools/shots.py` report (a retaken screenshot whose zoom point `name.png@x,y,zoom` now lands somewhere else), and against the golden PDFs (a change to the printed output means `--refresh-pages`). It then runs `--stills-only` and looks at the slides. If something needs to change, Claude proposes the exact edit to the script (or the refreshed pictures) with the release, for giopas to approve; if nothing does, the release summary says "Pitch video: no change". The video and deck are always made by giopas on the Mac with exactly `python3 make_pitch_video.py --stills --tts edge` (run from `tools/`): the edge-tts voice for every slide, plus the PNG stills and the PDF deck. Claude gives that command in every release summary whose pitch check changed something, and never proposes another voice or option. The output is never committed (`dist/` is ignored). (giopas, 11 November.) |
 | 11 Nov 2026 | The pitch video's first slide shows a photo of one of giopas's handwritten charts (`tools/pitch_media/paper-handwritten.jpg`), as the "before" next to the app's PDF. This is the one exception to keeping the author's own songs out of the repository. (giopas, 11 November.) |
 | 12 Nov 2026 | GitHub makes the pitch video and the slide deck and attaches them to every release (`pitch.yml`, after `release.yml` publishes), always with the edge voice (`--strict-voice`: no video without it). Nobody makes or uploads them by hand any more; `make_pitch_video.py --stills --tts edge` on the Mac stays for a look before a release. The README links to the latest release's files. The pitch check itself (Claude proposes, giopas approves the words and zoom points) is unchanged. This replaces the 11 November rule that giopas makes the video on the Mac. Adapted from QLC+ Swiss Knife. (giopas, 12 November.) |
+| 13 Nov 2026 | Tab measures carry inner bar lines (`bars`), and repeats as `repeat_open` / `repeat_close` (the count) on measures; a repeat of part of a measure cuts the measure there. A grid can have a name (`tab_name`, lick rules) and `{Name}` plays it as a lick. (giopas asked for bar lines, repeats, names and copy, 13 November; the model is Claude's reading, giopas to confirm.) |
+| 13 Nov 2026 | "Copy as a reference" brings every part, as part references (`ref`), and a Tab section's copy plays its grid; "Duplicate as a copy" makes an independent one. (giopas asked that a copy bring all parts; keeping the copy a reference follows the 8 November decision. Claude's reading, giopas to confirm.) |
+| 13 Nov 2026 | Older songs move tab kept as text into the grid when opened in the browser app or native window, once per song (`tab_layout: 2`): a Free section or part of text tab, and a chart line of only licks. Licks among chords stay licks; the Free text is kept. (giopas asked for the upgrade; which forms count as "tab written in text form" is Claude's reading, to check against his song.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

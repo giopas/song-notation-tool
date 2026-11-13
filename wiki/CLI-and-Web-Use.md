@@ -189,7 +189,28 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
 - an editable tab grid: add measures, type fret numbers into the cells,
   delete measures, and make one measure longer with **+2** or **+4** (empty
   beats on every string) or shorter with **−** (empty beats only). → in
-  the very last cell adds two beats;
+  the very last cell adds two beats. New measures can start with 3, 4, 6,
+  8, 12, 16, 32 or 64 beats;
+- bar lines inside a tab measure: type `|` in a cell for one after it, or
+  click the gap between two cells (click it again to take it away). A
+  measure's **⋯** menu puts one every 2, 3, 4, 6 or 8 beats, or takes them
+  all away, and can split the measure at the selected beat, repeat it,
+  copy it or duplicate it;
+- selecting beats in a tab grid: Shift+click, Shift with ← or →, or drag
+  across the cells; Ctrl/Cmd+A selects the whole grid. **Copy** (or
+  Ctrl/Cmd+C) takes the selection, or the whole tab when nothing is
+  selected, and puts it on the clipboard as text tab too; **Paste** (or
+  Ctrl/Cmd+V) writes it from the cell you clicked last, over what is there,
+  in this grid or any other one in the song. Ctrl/Cmd+X cuts, Delete
+  empties the selected beats;
+- repeats in a tab grid: **Repeat ×2** repeats the selected beats (or the
+  measure the cursor is in), cutting measures where the repeat starts and
+  ends. A repeat shows as **|:** before its first measure (click it to
+  remove it) and **:| ×2** over its last, where the count can be changed;
+- a name for a tab (**Name** beside **+ Measure**): it prints over the
+  grid, and `{Name}` on any chart line plays the tab there, as a named lick
+  does. The name follows the lick rules (a letter first, not starting
+  like a chord). Renaming it renames every `{Name}` in the song;
 - the insert buttons under the chart line you are typing in, in four
   groups: Lines, Repeats, Licks and Marks;
 - a mistake in a chart line explained under it in plain words, with the
@@ -198,15 +219,26 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   **⠿** handle to move it: the cards fold down to their names while you
   drag, so the whole song is on screen, and Escape cancels. With the
   handle clicked, the up and down arrow keys move it one place. The
-  card's **⋯** menu holds its print size, Delete, and **Copy as a
-  reference…**, which opens a short list of every place a copy can go (the top, or after any
-  section); the copy is a reference to the original, as in the desktop
-  app;
+  card's **⋯** menu holds its print size, Delete, **Copy as a
+  reference…** and **Duplicate as a copy…**. Both open a short list of
+  every place the copy can go (the top, or after any section). A reference
+  plays the original, with every part (each one shows which part it
+  plays, with **Make it its own copy**) and, for a tab section, its tab
+  grid. A duplicate is independent: its chart line, tab, parts and text
+  are its own;
 - a "how this works" help strip you can fold away, and the **Notation**
   panel, which explains every mark;
 - a "Start here" panel (New song, Open example) when nothing is open;
-- a live Preview showing the whole TXT export as it will look, beside the
-  song, so Save and Export stay in reach;
+- a live Preview beside the song, so Save and Export stay in reach: **Text**
+  shows the whole TXT export as you type, **PDF** shows the PDF as it will
+  print (portrait or landscape) a moment after you stop typing, and the
+  open button beside it opens that PDF in your browser or PDF viewer;
+- an older song whose tab was typed as text opens with that tab in the
+  grid: a Free section (or part) of text tab (`G|--5--7--|` rows), or a
+  chart line of nothing but licks, becomes a tab grid with its bars and
+  repeats (`|:`, `:|`, an `x4` line) and its name. It happens once per
+  song, when it is opened; the file changes when you save it, and the
+  Free text stays in the section, so switching back to Free shows it;
 - dialogs that close with Escape and keep the keyboard inside them while
   open; song tools that stay greyed out until a song is open;
 - a light and a dark theme (**◐**; the system's until you choose), and a

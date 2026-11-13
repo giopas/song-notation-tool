@@ -6,6 +6,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+A tab cell has no length, so a long tab measure gave no sense of where
+the beat falls; a tab could not repeat, could not be named and recalled,
+and could not be copied in part; a section copied as a reference left its
+parts behind; the only preview was the text one; and a song whose tab was
+typed as text before the grid could grow opened as text. This version
+answers each of those. The printed tab grid also lines up now.
+
+### Added — tab grid
+
+- **Bar lines inside a measure.** Type `|` in a tab cell for a bar line
+  after it, or click the gap between two cells (again to remove it). A
+  measure's new **⋯** menu puts one every 2, 3, 4, 6 or 8 beats or takes
+  them away, splits the measure at the selected beat, repeats it, copies
+  it, or duplicates it. The TXT, the PDF and the preview print them as `|`.
+  Stored as `bars` on the measure (the beats a bar line follows).
+- **Select, copy and paste beats.** Shift+click, Shift with ← or →, or a
+  drag selects beats on every string; Ctrl/Cmd+A selects the whole grid.
+  **Copy** (Ctrl/Cmd+C) takes the selection, or the whole tab when nothing
+  is selected, also as text tab on the clipboard; **Paste** (Ctrl/Cmd+V)
+  writes it from the cell clicked last, in any tab grid of the song, with
+  its bar lines, growing the last measure if it runs past the end.
+  Ctrl/Cmd+X cuts, Delete empties the selected beats.
+- **Repeats.** **Repeat ×2** repeats the selected beats, or the measure
+  the cursor is in, cutting measures where the repeat starts and ends. It
+  prints `|:` and `:|` with the count over the last measure (`x3`); the
+  count changes over the `:|` in the editor, and **|:** removes it. Stored
+  as `repeat_open` and `repeat_close` (the count) on the measures.
+- **A name for a tab.** **Name** beside **+ Measure** names a section's or
+  a part's grid (`tab_name`). The name prints over the grid, and `{Name}`
+  on any chart line plays the tab there, as a named lick, with its bar
+  lines. Named tabs join the named licks in the insert strip and the
+  suggestions. Renaming a tab renames every `{Name}` that plays it. The
+  check (`cli.py lint`, and before export) warns about a name that cannot
+  be recalled.
+- New measures can start with 3, 4, 6 or 12 beats as well.
+
+### Added — copies, preview, older songs
+
+- **Copy as a reference…** brings every part of the section along: each
+  part of the copy plays the original's part (`"ref"` on the part), says
+  so, and has **Make it its own copy**. A copy of a tab section plays its
+  tab grid (with **Make it its own copy** too), and `=TabSection` on a
+  chart line prints that tab as a lick. **Duplicate as a copy…** in the
+  same menu makes an independent copy, parts and tab included.
+- **PDF preview.** The Preview has **Text** and **PDF**: the PDF as it
+  will print, in portrait or landscape, remade a moment after you stop
+  typing, with a button that opens it in your browser or PDF viewer. New
+  routes `POST /api/preview.pdf` and `GET /api/preview/<id>.pdf` (the last
+  six previews, in memory only).
+- **Older songs move their tab into the grid when opened** (browser app
+  and native window). A Free section or part holding text tab
+  (`G|--5--7--|`), with its bar lines, `|:` `:|` repeats, an `x4` line and
+  a name line, and a chart line of nothing but licks (`{G 5 7 5 | D - - 3}`,
+  repeated or named), become tab grids. It happens once per song
+  (`tab_layout: 2` in the file) and says which sections changed; the song
+  shows *Not saved* until you save it. The text stays in the section, so
+  switching back to Free shows it. Licks among chords stay licks. Module
+  `tabtext.py`.
+
+### Fixed
+
+- In the PDF, a tab grid's frets drifted off their beats and the strings
+  did not line up, because each row was drawn as one string in a
+  proportional face. Each fret now ends at its beat and each bar line sits
+  at its column, as in the TXT. A second line of measures no longer sits
+  on the rule above it. (Golden files `tab-grid-landscape.pdf` and
+  `marks-and-techniques.pdf` changed; new golden song
+  `tab-bars-and-repeats`.)
+- A section copied as a reference from a Tab section showed an empty grid
+  in the editor and printed nothing.
+
+Browser app and native window only: the Tkinter desktop app prints the
+new marks but has no tools for them, and does not move text tab into the
+grid.
+
 ## [0.35.1] — 2026-11-12 — Setlists, hide and delete
 
 v0.35.0 was tagged but never published: its builds stopped at three

@@ -225,6 +225,11 @@ silent `lp` job: a stage chart is worth checking before it goes on paper.
 A plain browser tab has no save panel to reach, so **Print…** opens the
 same PDF in a new tab, where Cmd/Ctrl+P does the same.
 
+To check the layout without printing, switch the browser app's Preview to
+**PDF**: it shows the PDF as **Print…** would make it (pick portrait or
+landscape beside it), remade a moment after each change. The open button
+beside it opens that PDF in your browser or PDF viewer, to zoom or print.
+
 ## Where the files are
 
 Each song is its own file, named after the song: `Artist - Title.sng`, or
@@ -331,6 +336,13 @@ Every export, from any front end, goes through `export.py`:
   bar lines, so a string reads as one line and frets played together line
   up across strings, even though a "4" is wider than a "-" in a
   proportional font.
+- A tab grid is drawn on the same columns: each fret ends where its beat
+  ends, as in the TXT, and each bar line sits at its own column, so the
+  strings of a measure line up under each other. (Before 0.36 a grid row
+  was drawn as one string and drifted off its beats.) A bar line inside a
+  measure prints as `|`, a repeat as `|:` and `:|` with the count (`x3`)
+  over the measure where it ends, and a named grid prints its name, in
+  bold, over its first line of measures.
 - A named lick's name sits in front of its tab, on its first string line
   (`Riff1 |D|-----3---|`), with the other strings indented to match. A
   recalled lick printed "name only" shows as `Riff1 (x3)` on the chord row

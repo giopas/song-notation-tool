@@ -173,7 +173,11 @@ content, the way you would write "same as Verse 1":
 `all` (only after a section reference) repeats everything in that section,
 not only its chart line. **Copy as a reference…** in a section card's **⋯** menu in the browser
 inserts one for you and asks where it goes; **Duplicate as reference**
-(Ctrl/Cmd+D) in the desktop app puts it right after the original.
+(Ctrl/Cmd+D) in the desktop app puts it right after the original. In the
+browser the copy also brings every part of the section, each one playing
+the original part (stored as `"ref": {"section": id, "part": id}` on the
+part), and a copy of a tab section plays its tab grid. A reference to a
+Tab section on a chart line (`=Intro`) prints its tab as a lick.
 
 ### Names on screen, ids in the file
 
@@ -353,6 +357,10 @@ group with what comes before it and repeat the group (see
 ```
 [3B 2F# {Riff3 = G - - - - | D 4 - - - | A - 4 5 4 | E - - - -}]x4
 ```
+
+A tab grid with a name plays the same way: name a tab section's grid
+**Hook** in the browser app and `{Hook}x2` on any chart line prints its
+notes there, with its bar lines, as a lick named Hook.
 
 Braces recall a lick, and `=` recalls a section. `{Riff1}` plays the lick
 named Riff1. `=Riff1` looks for a section called Riff1, and if there is

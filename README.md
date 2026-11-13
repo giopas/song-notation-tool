@@ -111,7 +111,14 @@ Writing the chart
 - While you type a chart line, the browser app suggests the song's riffs,
   sections (after `=`) and named licks (after `{`).
 - A tab grid is there for the occasional bar you want fully written out.
-  The rest of the song stays in the chart line.
+  The rest of the song stays in the chart line. A tab cell has no length,
+  so bar lines can go anywhere inside a measure (type `|` in a cell, or
+  click between two cells) to show where the beat falls. Select beats to
+  copy and paste them, or repeat them (`|: … :| ×3`). A tab can have a
+  name, and `{Name}` on any chart line plays it again.
+- An older song whose tab was typed as text (a Free section of text tab,
+  or a chart line of nothing but licks) opens with that tab in the grid,
+  ready for measures, bar lines and repeats. Free mode still has the text.
 - Free-text sections are a fourth render mode for what this notation does
   not cover: a plain text box, printed exactly as typed. Switching to it
   keeps the chart line, so switching back restores it.
@@ -190,7 +197,8 @@ Printing and export
 - A floor sheet: the largest type that fits on one page, to read from a
   page at your feet, with tab printed smaller. Any section can also print
   smaller or larger than the rest.
-- The live Preview shows the TXT and PDF output as you edit.
+- The live Preview shows the TXT output as you edit, or the PDF as it
+  will print (portrait or landscape), to check the layout before printing.
 
 Files
 
@@ -402,7 +410,13 @@ Tab-grid sections can be edited in the browser as well: switch a section
 to Tab or Both, add measures, and type fret numbers into the cells.
 **+2** and **+4** over a measure add empty beats to every string of that
 measure when you need room for more notes, **−** takes empty beats off its
-end, and → in the very last cell adds two more. The
+end, and → in the very last cell adds two more. Type `|` in a cell for a
+bar line after it, or click between two cells; a measure's **⋯** menu puts
+one every 2, 3, 4, 6 or 8 beats, splits the measure, repeats it, copies it
+or duplicates it. Shift+click, Shift with the arrow keys, or a drag selects
+beats: **Copy** and **Paste** (or the usual keys) move them to any tab grid
+in the song, **Repeat ×2** repeats them, and **Name** names the tab so
+`{Name}` plays it on any chart line. The
 render mode decides what prints. Chart prints the chart line, Tab prints
 the grid, and Both prints both, so a grid left behind when you switch a
 section back to Chart stays out of the export, as it stays out of the

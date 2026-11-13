@@ -792,7 +792,7 @@ class Handler(BaseHTTPRequestHandler):
                     "render_modes": RENDER_MODE_LABELS,
                     "instruments": INSTRUMENT_STRINGS,
                     "tab_beats_default": TAB_BEATS_DEFAULT,
-                    "tab_beats_options": [8, 16, 32, 64],
+                    "tab_beats_options": [3, 4, 6, 8, 12, 16, 32, 64],
                 })
             if path == "/api/songs":
                 return self._send_json(self.store.list_songs())

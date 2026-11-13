@@ -52,7 +52,7 @@ PICTURES = [
     ("notation-reference.png", "the Notation ⌘ reference"),
     ("help-strip.png", "the How this works strip"),
     ("export-menu.png", "the Export menu open"),
-    ("tab-grid.png", "a section in Tab, one measure made longer with +4"),
+    ("tab-grid.png", "a section in Tab: +4, bar lines, a repeat and a name"),
     ("collection.png", "a setlist in the song list, a song's ⋯ menu open"),
     ("delete-confirm.png", "the question before a song is deleted"),
 ]
@@ -228,6 +228,15 @@ def take(url: str, out: str) -> list[str]:
                                 (3, 8, "3"), (2, 10, "5"), (1, 13, "7"), (3, 12, "5")]:
             rows.nth(row).locator("input.tab-cell").nth(beat).fill(fret)
         card.locator(".tab-size-btn >> text=+4").nth(1).click()
+        # A bar line every four beats in the first measure, the second one
+        # repeated, and a name to play it again elsewhere.
+        card.locator(".tab-measure-more").nth(0).click()
+        page.locator("#tab-measure-menu .tab-menu-row button", has_text="4").first.click()
+        rows.nth(3).locator("input.tab-cell").nth(9).click()
+        card.locator(".tab-repeat").click()
+        card.locator(".tab-name").fill("Hook")
+        page.mouse.click(5, 5)
+        page.wait_for_timeout(300)
         card.scroll_into_view_if_needed()
         shot("tab-grid.png", 250)
 

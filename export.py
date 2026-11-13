@@ -101,6 +101,16 @@ def uniform_instrument(doc: dict, instruments=None):
 _PROPORTIONAL_EM = 0.58
 
 
+# Helvetica's advance widths, in thousandths of the type size, for what a
+# tab cell can hold; anything else counts as a digit.
+_HELV_W = {"-": 333, "/": 278, "\\": 278, "~": 584, "^": 469, "x": 500,
+           "h": 556, "p": 556, "b": 556, "r": 333, "|": 260, ":": 278}
+
+
+def _helvetica_width(text: str, size: float) -> float:
+    return sum(_HELV_W.get(ch, 556) for ch in text) * size / 1000.0
+
+
 def _fit_text_size(text: str, max_width: float, desired: float) -> float:
     """`desired`, or smaller if the text wouldn't fit in `max_width`."""
     n = len(text or "")
@@ -1854,6 +1864,10 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
             cy -= LINE_H
         for bs in range(0, len(measures), mpl):
             batch = list(range(bs, min(bs + mpl, len(measures))))
+            if bs:
+                # Clear of the rule under the line before, or the measure
+                # numbers sit on it.
+                cy -= LINE_H * 0.5
 
             def col_x(i, batch=batch):
                 return col_x0() + SN_W + sum(
@@ -1875,10 +1889,22 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
             for st in strings:
                 color(*_mix(rgb, 0.35))
                 txt(col_x0(), cy, f"{st}|", sz=MONO_SZ)
+                color(0, 0, 0)
                 for i, m_idx in enumerate(batch):
                     row_str = render.measure_text(measures[m_idx], st, tok_w)
-                    color(0, 0, 0)
-                    txt(col_x(i), cy, row_str, sz=MONO_SZ)
+                    # Each fret and each bar line at the column it was
+                    # counted at: the face is proportional, so the row
+                    # drawn as one string drifted off its beats, and the
+                    # strings no longer lined up under each other.
+                    # A fret ends where its beat ends, as in the TXT, so a
+                    # "5h7" and a "-" in the same beat line up on the right.
+                    for mt in re.finditer(r"[^\s|:]+|[|:]", row_str):
+                        tok = mt.group(0)
+                        x0 = col_x(i) + mt.start() * CHAR_W
+                        if tok not in "|:":
+                            x0 = (col_x(i) + (mt.end() - 0.4) * CHAR_W
+                                  - _helvetica_width(tok, MONO_SZ))
+                        txt(x0, cy, tok, sz=MONO_SZ)
                 cy -= LINE_H
                 if cy < FOOTER_H + LINE_H:
                     cy = next_column()

@@ -1,0 +1,180 @@
+{
+  "format": 2,
+  "app_version": "0.16",
+  "meta": {
+    "title": "Cut Time",
+    "artist": "The Placeholders",
+    "key": "E",
+    "time": "4/4",
+    "bpm": "120"
+  },
+  "transpose": 0,
+  "lyrics_text": "",
+  "print_lyrics": false,
+  "lyrics_layout": "none",
+  "lick_refs": "tab",
+  "chords": [],
+  "chord_sheet": "none",
+  "section_layout": "banner",
+  "color_mode": "color",
+  "pdf_scale": "fit",
+  "pdf_columns": "auto",
+  "print_instruments": [],
+  "blocks": {},
+  "sections": [
+    {
+      "id": "riff",
+      "name": "Riff",
+      "type": "Intro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "tab",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "measure",
+          "beats": 8,
+          "strings": {
+            "A": "5 - 5 - 7 - 7 -",
+            "E": "- 3 - - - 3 - -"
+          },
+          "bars": [
+            4
+          ],
+          "repeat_open": true
+        },
+        {
+          "kind": "measure",
+          "beats": 4,
+          "strings": {
+            "D": "5 - 7 -"
+          },
+          "repeat_close": 3
+        },
+        {
+          "kind": "measure",
+          "beats": 6,
+          "strings": {
+            "E": "0 - - 0 - -"
+          },
+          "bars": [
+            3
+          ]
+        }
+      ],
+      "tab_name": "Hook"
+    },
+    {
+      "id": "verse1",
+      "name": "Verse",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "token",
+          "symbol": "A",
+          "fret": 5
+        },
+        {
+          "kind": "token",
+          "symbol": "D",
+          "fret": 7
+        },
+        {
+          "kind": "lick_ref",
+          "lick": "Hook",
+          "repeat": 2
+        }
+      ],
+      "parts": [
+        {
+          "id": "p1",
+          "instrument": "Guitar (6-string)",
+          "items": [
+            {
+              "kind": "token",
+              "symbol": "Am",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "C",
+              "fret": null
+            },
+            {
+              "kind": "token",
+              "symbol": "G",
+              "fret": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verse2",
+      "name": "Verse again",
+      "type": "Verse",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "chart",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "section_ref",
+          "section": "verse1",
+          "repeat": 1,
+          "all": false,
+          "transpose": 0
+        }
+      ],
+      "parts": [
+        {
+          "id": "q1",
+          "instrument": "Guitar (6-string)",
+          "items": [],
+          "ref": {
+            "section": "verse1",
+            "part": "p1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "outro",
+      "name": "Outro",
+      "type": "Outro",
+      "instrument": "Bass (4-string)",
+      "repeat": 1,
+      "transpose": 0,
+      "render": "tab",
+      "annotation": "",
+      "lyrics_text": "",
+      "print_lyrics": false,
+      "free_text": "",
+      "items": [
+        {
+          "kind": "section_ref",
+          "section": "riff",
+          "repeat": 2,
+          "all": false,
+          "transpose": 0
+        }
+      ]
+    }
+  ]
+}

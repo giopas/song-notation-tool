@@ -28,6 +28,7 @@ sys.path.insert(0, ROOT)
 import export   # noqa: E402
 import grammar  # noqa: E402
 import model    # noqa: E402
+import songmap  # noqa: E402
 
 GOLDEN_DIR = os.path.join(ROOT, "tests", "golden")
 GOLDEN_DATE = datetime.date(2026, 1, 2)
@@ -210,6 +211,31 @@ def song_parts():
     return doc
 
 
+def song_tab_bars_and_repeats():
+    """v0.36: bar lines inside a tab measure, a repeat over two measures,
+    a named grid recalled on a chart line, and a section copied as a
+    reference that brings its guitar part and its grid."""
+    doc = _doc("Cut Time")
+    riff = _sec("riff", "Riff", "Intro", render="tab")
+    a = model.make_measure(8, {"A": "5 - 5 - 7 - 7 -", "E": "- 3 - - - 3 - -"})
+    a["bars"] = [4]
+    a["repeat_open"] = True
+    b = model.make_measure(4, {"D": "5 - 7 -"})
+    b["repeat_close"] = 3
+    c = model.make_measure(6, {"E": "0 - - 0 - -"})
+    c["bars"] = [3]
+    riff["items"] = [a, b, c]
+    riff["tab_name"] = "Hook"
+    verse = _sec("verse1", "Verse", "Verse", "5A 7D {Hook}x2")
+    verse["parts"] = [model.make_part("p1", "Guitar (6-string)",
+                                      grammar.parse("Am C G")[0])]
+    again = _sec("verse2", "Verse again", "Verse", "=verse1")
+    again["parts"] = [songmap.make_part_ref("q1", "verse1", "p1", "Guitar (6-string)")]
+    outro = _sec("outro", "Outro", "Outro", "=riff x2", render="tab")
+    doc["sections"] = [riff, verse, again, outro]
+    return doc
+
+
 SONGS = {
     "basics": (song_basics, "portrait"),
     "gutter-bw-two-columns": (song_gutter_bw_two_columns, "portrait"),
@@ -223,6 +249,7 @@ SONGS = {
     "tab-grid-landscape": (song_tab_grid_landscape, "landscape"),
     "marks-and-techniques": (song_marks_and_techniques, "portrait"),
     "parts": (song_parts, "portrait"),
+    "tab-bars-and-repeats": (song_tab_bars_and_repeats, "portrait"),
 }
 
 

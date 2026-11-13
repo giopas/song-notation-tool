@@ -136,10 +136,73 @@ def lick_index(doc: dict) -> dict:
                 out.setdefault(_ident(it["name"]), it)
     for sec in doc.get("sections", []) or []:
         collect(sec.get("items", []))
+        for owner in [sec] + list(sec.get("parts") or []):
+            grid = named_grid_lick(owner, sec)
+            if grid is not None:
+                out.setdefault(_ident(grid["name"]), grid)
     for block in (doc.get("blocks") or {}).values():
         collect(block.get("items", []))
     for name, lick in (doc.get("licks") or {}).items():
         out.setdefault(_ident(name), lick)
+    return out
+
+
+def named_grid_lick(owner: dict, sec: dict = None):
+    """A section's (or a part's) tab grid with a name, as a lick, so that
+    `{Name}` on any chart line plays it: or None when it has no name or no
+    measures. `sec` gives the instrument when a part has none of its own."""
+    name = (owner.get("tab_name") or "").strip()
+    if not name:
+        return None
+    measures = measure_items(owner)
+    if not measures:
+        return None
+    import render
+    from constants import INSTRUMENT_STRINGS
+    instrument = owner.get("instrument") or (sec or {}).get("instrument")
+    strings = INSTRUMENT_STRINGS.get(instrument, ["e", "B", "G", "D", "A", "E"])
+    lick = render.measures_to_lick(measures, strings, name=name)
+    lick["grid"] = True
+    return lick
+
+
+_TAB_NAME_RE = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
+
+
+def check_tab_name(doc: dict, name: str, owner: dict = None) -> str:
+    """Why `name` cannot name a tab grid, or "" when it can. The name is
+    recalled as `{name}` on a chart line, so it follows the lick rules: a
+    letter first, then letters, digits or "_", not starting like a note
+    (A1 reads as fret 1 on A), and not already the name of another lick
+    or tab grid in the song."""
+    name = (name or "").strip()
+    if not name:
+        return ""
+    if not _TAB_NAME_RE.match(name):
+        return "use letters, digits and _ only, starting with a letter"
+    if not model.validate_block_name(name):
+        return "a name cannot start like a note or chord (A to G)"
+    key = _ident(name)
+    for sec in doc.get("sections", []) or []:
+        for o in [sec] + list(sec.get("parts") or []):
+            if o is owner:
+                continue
+            if _ident(o.get("tab_name") or "") == key and measure_items(o):
+                return "another tab grid already has this name"
+        for it in _walk_items(sec.get("items", [])):
+            if it.get("kind") == "lick" and _ident(it.get("name") or "") == key:
+                return "a lick in this song already has this name"
+    return ""
+
+
+def grid_names(doc: dict) -> list:
+    """Every named tab grid in the song, in chart order, as written."""
+    out = []
+    for sec in doc.get("sections", []) or []:
+        for owner in [sec] + list(sec.get("parts") or []):
+            name = (owner.get("tab_name") or "").strip()
+            if name and measure_items(owner) and name not in out:
+                out.append(name)
     return out
 
 
@@ -448,3 +511,98 @@ def duplicate_as_reference(doc: dict, index: int, new_id: str, new_name: str):
     new_sec["items"] = [model.make_section_ref(source["id"])]
     sections.insert(index + 1, new_sec)
     return new_sec
+
+
+# ==============================================================================
+#  Linked copies: a section copied as a reference brings its parts and its
+#  tab grid with it
+# ==============================================================================
+
+def make_part_ref(part_id: str, section_id: str, target_part_id: str,
+                  instrument: str = "") -> dict:
+    """A part that plays another section's part: what "Copy as a
+    reference" makes for each part of the section it copies. It prints the
+    other part as it is now, so editing that part changes both."""
+    return {"id": str(part_id), "instrument": instrument,
+            "items": [], "ref": {"section": str(section_id),
+                                 "part": str(target_part_id)}}
+
+
+def find_part(doc: dict, section_key: str, part_id: str):
+    sec = find_section(doc, section_key)
+    if sec is None:
+        return None
+    for p in sec.get("parts") or []:
+        if str(p.get("id")) == str(part_id):
+            return p
+    return None
+
+
+def linked_measures(doc: dict, sec: dict):
+    """The tab grid a section shows when it has none of its own and its
+    chart line is only a reference to a section that has one: "same as
+    the intro" for a tab section. The reference's repeat becomes a repeat
+    around the whole grid. None when that does not apply."""
+    if measure_items(sec):
+        return None
+    chart = chart_items(sec)
+    if len(chart) != 1 or chart[0].get("kind") != "section_ref":
+        return None
+    ref = chart[0]
+    target = find_section(doc, ref.get("section", ""))
+    if target is None or target is sec:
+        return None
+    measures = [dict(m, strings=dict(m.get("strings") or {}))
+                for m in measure_items(target)]
+    if not measures:
+        return None
+    rep = int(ref.get("repeat", 1) or 1)
+    if rep >= 2:
+        measures[0]["repeat_open"] = True
+        last = measures[-1]
+        if int(last.get("repeat_close") or 0) and len(measures) == 1:
+            last["repeat_close"] = int(last["repeat_close"]) * rep
+        else:
+            last["repeat_close"] = rep
+    return measures
+
+
+def expand_links(doc: dict) -> dict:
+    """The song as it prints: every part reference replaced by the part it
+    plays, and every linked tab section given the grid it plays (see
+    `linked_measures`). Returns `doc` itself when nothing is linked, a
+    copy otherwise; `doc` is never changed."""
+    if not doc:
+        return doc
+    needs = any(
+        any(p.get("ref") for p in (s.get("parts") or []))
+        or (s.get("render") in ("tab", "both") and linked_measures(doc, s))
+        for s in doc.get("sections", []) or [])
+    if not needs:
+        return doc
+    out = dict(doc)
+    out["sections"] = []
+    for sec in doc.get("sections", []) or []:
+        new = dict(sec)
+        if sec.get("render") in ("tab", "both"):
+            linked = linked_measures(doc, sec)
+            if linked:
+                new["items"] = chart_items(sec) + linked
+                new["_linked_tab"] = True
+        if sec.get("parts"):
+            parts = []
+            for p in sec["parts"]:
+                ref = p.get("ref")
+                if ref:
+                    target = find_part(doc, ref.get("section", ""), ref.get("part", ""))
+                    if target is not None and not target.get("ref"):
+                        q = dict(target)
+                        q["id"] = p.get("id")
+                        q.pop("tab_name", None)
+                        parts.append(q)
+                        continue
+                parts.append(p)
+            new["parts"] = parts
+        out["sections"].append(new)
+    return out
+

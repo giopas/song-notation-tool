@@ -77,6 +77,7 @@ import userpaths
 import lyrics as lyrics_mod
 import model
 import songmap
+import tabtext
 import transpose
 import update
 import render as render_mod
@@ -494,6 +495,20 @@ class SongStore:
 #  the browser equivalent of the Tkinter chart editor bar's live re-render.
 # ==============================================================================
 
+# The last few PDF previews, by a random name. Kept in memory only, never
+# written to disk, and dropped oldest first.
+_PREVIEW_PDFS: dict = {}
+_PREVIEW_KEEP = 6
+
+
+def _remember_preview(data: bytes) -> str:
+    token = os.urandom(8).hex()
+    _PREVIEW_PDFS[token] = data
+    while len(_PREVIEW_PDFS) > _PREVIEW_KEEP:
+        _PREVIEW_PDFS.pop(next(iter(_PREVIEW_PDFS)))
+    return token
+
+
 def _with_chart_lines(doc: dict) -> dict:
     """Return a shallow copy of `doc` with each section annotated with a
     transient `chart_line` string — the browser's chart-line <input>
@@ -793,6 +808,21 @@ class Handler(BaseHTTPRequestHandler):
                 orient = (qs.get("orient", ["portrait"])[0])
                 return self._send_collection_export(m.group(1), orient)
 
+            m = re.match(r"^/api/preview/([0-9a-f]{16})\.pdf$", path)
+            if m:
+                data = _PREVIEW_PDFS.get(m.group(1))
+                if data is None:
+                    return self._send_error_json(HTTPStatus.NOT_FOUND,
+                                                 "this preview has expired")
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "application/pdf")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Content-Disposition", 'inline; filename="preview.pdf"')
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+
             m = re.match(r"^/api/songs/([^/]+)/export\.(txt|pdf)$", path)
             if m:
                 filename, fmt = m.group(1), m.group(2)
@@ -808,7 +838,15 @@ class Handler(BaseHTTPRequestHandler):
                 filename = m.group(1)
                 if not self.store.exists(filename):
                     return self._send_error_json(HTTPStatus.NOT_FOUND, "no such song")
-                return self._send_json(_with_chart_lines(self.store.load(filename)))
+                doc = self.store.load(filename)
+                # Tab an older song kept as text moves into the tab grid
+                # when the song is opened (once; see tabtext.py). The file
+                # changes only when the song is saved.
+                upgraded = tabtext.upgrade_tab_layout(doc)
+                out = _with_chart_lines(doc)
+                if upgraded:
+                    out["_upgraded"] = upgraded
+                return self._send_json(out)
 
             if path.startswith("/api/"):
                 return self._send_error_json(HTTPStatus.NOT_FOUND, "unknown route")
@@ -949,6 +987,8 @@ class Handler(BaseHTTPRequestHandler):
                     title=body.get("title", ""), artist=body.get("artist", ""),
                     key=body.get("key", ""), time=body.get("time", "4/4"),
                     bpm=body.get("bpm", ""))
+                # A new song has no tab kept as text to move into the grid.
+                doc["tab_layout"] = tabtext.TAB_LAYOUT_VERSION
                 # Named after the song from the start; a second song with
                 # the same title and artist becomes "… (2)" rather than an
                 # error, so creating one can't fail over a name.
@@ -1072,6 +1112,22 @@ class Handler(BaseHTTPRequestHandler):
                               for c in (doc.get("chords") or []))]
                 cov["transpose"] = n
                 return self._send_json(cov)
+
+            if path == "/api/preview.pdf":
+                # The PDF preview: the song as it will print, kept for a
+                # short while under a random name the preview frame loads.
+                body = self._read_json_body()
+                doc = model.migrate_document(body.get("doc") or {})
+                try:
+                    data, warnings = export.prepare_export(
+                        doc, "pdf", orient=body.get("orient", "portrait"))
+                except export.ExportBlocked as exc:
+                    return self._send_json({"ok": False, "errors": exc.errors,
+                                            "error": "; ".join(exc.errors)},
+                                           status=HTTPStatus.UNPROCESSABLE_ENTITY)
+                token = _remember_preview(data)
+                return self._send_json({"ok": True, "url": f"/api/preview/{token}.pdf",
+                                        "warnings": warnings})
 
             if path == "/api/export.txt" or path == "/api/export.pdf":
                 # Ad-hoc export of an unsaved doc straight from the editor.

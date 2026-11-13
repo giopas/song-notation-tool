@@ -387,7 +387,12 @@ def _tab_block_units(doc: dict, instruments) -> float:
                  for sec in doc.get("sections", [])
                  if instruments is None or sec.get("instrument") in instruments
                  if sec.get("render", "chart") in ("tab", "both")), default=3)
-    return 0.0 if not beats else STRING_LABEL_W + (tok_w * beats + 1) * MONO_CHAR_W
+    widest = max((render.measure_width(m, tok_w)
+                  for sec in doc.get("sections", [])
+                  if instruments is None or sec.get("instrument") in instruments
+                  if sec.get("render", "chart") in ("tab", "both")
+                  for m in songmap.measure_items(sec)), default=0)
+    return 0.0 if not beats else STRING_LABEL_W + max(tok_w * beats + 1, widest) * MONO_CHAR_W
 
 
 def _fit_scale(doc: dict, instruments, orient: str, columns: int = 1) -> float:
@@ -453,6 +458,7 @@ def resolve_scale(doc: dict, instruments=None, orient: str = "portrait",
     fits a different size of type than a whole one — so `columns` is
     resolved from the document unless the caller has already done it.
     """
+    doc = songmap.expand_links(doc)
     if columns is None:
         columns = resolve_columns(doc, instruments, orient)
     raw = doc.get("pdf_scale", "fit")
@@ -540,6 +546,7 @@ def _floor_columns(doc: dict, instruments, orient: str) -> int:
 def resolve_columns(doc: dict, instruments=None, orient: str = "portrait") -> int:
     """How many text columns a document's `pdf_columns` setting asks for.
     Unknown or missing values fall back to auto."""
+    doc = songmap.expand_links(doc)
     # Words down a column of their own take the page's first column; the
     # chart gets the second, and only that. Whatever Columns says, that is
     # two — the setting steps aside rather than fighting the lyrics for it.
@@ -652,6 +659,10 @@ def check_document(doc: dict) -> dict:
             if bad:
                 warnings.append(f"[{label}] tab cells that are not "
                                 f"frets: " + ", ".join(bad))
+            why = songmap.check_tab_name(doc, holder.get("tab_name", ""), holder)
+            if why and songmap.measure_items(holder):
+                warnings.append(f"[{label}] the tab's name "
+                                f"{holder.get('tab_name')!r} cannot be recalled: {why}")
     if doc.get("chords"):
         cov = chords_mod.coverage(doc)
         if cov["missing"]:
@@ -815,6 +826,7 @@ def resolve_orient(doc: dict, instruments=None, orient: str = "portrait") -> str
     What the caller asked for, except on a floor sheet, where the type size
     is the whole point: both orientations are tried and the one that gives
     the bigger chart wins. A tie keeps the one asked for."""
+    doc = songmap.expand_links(doc)
     if not is_floor(doc):
         return orient
     if instruments is None:
@@ -836,6 +848,7 @@ def _gutter_label(sec: dict) -> str:
 
 def build_song_lines(doc: dict, instruments=None) -> list[str]:
     """Render `doc` into the one-page TXT chart layout (design section 7)."""
+    doc = songmap.expand_links(doc)
     W = DEFAULT_TXT_WIDTH
     div = lambda c="=": c * W
     lines = []
@@ -965,7 +978,8 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
 
         measures = songmap.measure_items(sec) if main_prints else []
         if sec.get("render", "chart") in ("tab", "both") and measures:
-            body += render.tab_grid_lines(measures, sec.get("instrument"), body_w)
+            body += render.tab_grid_lines(measures, sec.get("instrument"), body_w,
+                                          name=sec.get("tab_name", ""))
 
         if sec.get("annotation"):
             body.append(" " * body_indent + f'"{sec["annotation"]}"')
@@ -1062,6 +1076,7 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
     columns, filled top to bottom and then left to right; None asks the
     document what it wants.
     """
+    doc = songmap.expand_links(doc)
     if instruments is None:
         instruments = instruments_to_print(doc)
     if columns is None:
@@ -1502,9 +1517,11 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
          for m in songmap.measure_items(s)),
         default=TAB_BEATS_DEFAULT,
     )
-    def mpl_for(n_measures, tok_w=TOKEN_W):
+    def mpl_for(n_measures, tok_w=TOKEN_W, measures=()):
         usable = COL_W_TEXT - SN_W
-        meas_w = tok_w * max_beats * CHAR_W + CHAR_W
+        # Bar lines and repeat signs inside a measure make it wider.
+        widest = max((render.measure_width(m, tok_w) for m in measures), default=0)
+        meas_w = max(tok_w * max_beats + 1, widest) * CHAR_W
         return max(1, min(n_measures, int(usable / meas_w)))
 
     # A floor sheet has one page and spends it on the chart: the banner is
@@ -1681,7 +1698,7 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
                    if measures else [])
         # A cell with a technique ("5h7") widens every cell of this grid.
         tok_w = render.tab_token_width(measures)
-        mpl = mpl_for(len(measures), tok_w) if measures else 1
+        mpl = mpl_for(len(measures), tok_w, measures) if measures else 1
 
         # Acceptance criterion (design section 10): never split a section
         # across a page break.
@@ -1829,32 +1846,37 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
             cy -= 2 * SS
 
         use_scale(TAB_S)
-        mpl = mpl_for(len(measures), tok_w) if measures else 1
+        mpl = mpl_for(len(measures), tok_w, measures) if measures else 1
+        tab_name = (sec.get("tab_name") or "").strip() if measures else ""
+        if tab_name:
+            color(*_mix(rgb, 0.2))
+            txt(col_x0() + SN_W, cy, tab_name, sz=MONO_SZ, bold=True)
+            cy -= LINE_H
         for bs in range(0, len(measures), mpl):
             batch = list(range(bs, min(bs + mpl, len(measures))))
 
             def col_x(i, batch=batch):
                 return col_x0() + SN_W + sum(
-                    tok_w * measures[batch[j]].get("beats", TAB_BEATS_DEFAULT)
-                    * CHAR_W + CHAR_W
+                    render.measure_width(measures[batch[j]], tok_w) * CHAR_W
                     for j in range(i))
 
             color(*_mix(rgb, 0.5))
             for i, m_idx in enumerate(batch):
+                m = measures[m_idx]
                 txt(col_x(i), cy, f"M{m_idx + 1}", sz=7 * SS)
+                times = render.measure_repeat(m)
+                if times:
+                    # Over the closing ":|", how many times the repeat plays.
+                    w = render.measure_width(m, tok_w)
+                    txt(col_x(i) + (w - 3) * CHAR_W, cy, f"x{times}",
+                        sz=MONO_SZ * 0.9, bold=True)
             cy -= LINE_H
 
             for st in strings:
                 color(*_mix(rgb, 0.35))
                 txt(col_x0(), cy, f"{st}|", sz=MONO_SZ)
                 for i, m_idx in enumerate(batch):
-                    beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-                    raw = measures[m_idx].get("strings", {}).get(st, "")
-                    tokens = [tok for tok in raw.split() if tok]
-                    while len(tokens) < beats:
-                        tokens.append("-")
-                    tokens = tokens[:beats]
-                    row_str = "".join(f"{tok:>{tok_w}}" for tok in tokens) + "|"
+                    row_str = render.measure_text(measures[m_idx], st, tok_w)
                     color(0, 0, 0)
                     txt(col_x(i), cy, row_str, sz=MONO_SZ)
                 cy -= LINE_H

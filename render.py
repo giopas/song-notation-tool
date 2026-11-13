@@ -193,12 +193,14 @@ def _lick_lines(item: dict):
     lines = item.get("lines", [])
     if not lines:
         return []
-    fret_w = max((len(f) for ln in lines for f in ln.get("frets", [])),
+    fret_w = max((len(f) for ln in lines for f in ln.get("frets", []) if f != "|"),
                  default=1) or 1
     name_w = max((len(str(ln.get("string", ""))) for ln in lines), default=1)
     out = []
     for ln in lines:
-        cells = "".join("-" + str(f).ljust(fret_w, "-")
+        # A "|" position is a bar line (a recalled tab grid has them): it
+        # takes one column on every string, so the columns stay in line.
+        cells = "".join("|" if str(f) == "|" else "-" + str(f).ljust(fret_w, "-")
                         for f in ln.get("frets", []))
         out.append(f"|{str(ln.get('string', '')):<{name_w}}|{cells}-|")
     return out
@@ -851,6 +853,15 @@ def resolve_references(items, doc: dict, _seen=None, _depth=0):
             body = resolve_references(
                 [i for i in target.get("items", []) if i.get("kind") != "measure"],
                 doc, _seen | {marker}, _depth + 1)
+            if not body and target.get("render") in ("tab", "both"):
+                # A tab section has its notes in its grid: on a chart line
+                # they play as a lick, so "=Intro" shows the intro's tab.
+                import songmap as _sm
+                grid = _sm.measure_items(target)
+                if grid:
+                    from constants import INSTRUMENT_STRINGS
+                    body = [measures_to_lick(grid, INSTRUMENT_STRINGS.get(
+                        target.get("instrument"), ["e", "B", "G", "D", "A", "E"]))]
             if not body:
                 out.append(_ref_placeholder(it, doc))
                 continue
@@ -984,41 +995,143 @@ def section_parts(sec: dict) -> list:
     return [p for p in (sec.get("parts") or []) if part_has_content(p)]
 
 
-def tab_grid_lines(measures, instrument: str, width: int = DEFAULT_TXT_WIDTH) -> list:
+def measure_bars(m: dict) -> list:
+    """The inner bar lines of a tab measure: after which beats a "|" is
+    drawn inside it (1 to beats-1), sorted, each once. A measure's own end
+    always has one; these mark where a bar ends inside a longer measure,
+    so the rhythm reads at a glance even though a cell has no length."""
+    from constants import TAB_BEATS_DEFAULT
+    beats = int(m.get("beats", TAB_BEATS_DEFAULT) or TAB_BEATS_DEFAULT)
+    out = set()
+    for b in m.get("bars") or []:
+        try:
+            b = int(b)
+        except (TypeError, ValueError):
+            continue
+        if 0 < b < beats:
+            out.add(b)
+    return sorted(out)
+
+
+def measure_repeat(m: dict) -> int:
+    """How many times a repeat that ends at this measure is played: 0 when
+    no repeat ends here, otherwise 2 or more."""
+    try:
+        n = int(m.get("repeat_close") or 0)
+    except (TypeError, ValueError):
+        return 0
+    return n if n >= 2 else 0
+
+
+def measure_tokens(m: dict, st: str) -> list:
+    """One string of a measure as its beats, padded with "-"."""
+    from constants import TAB_BEATS_DEFAULT
+    beats = int(m.get("beats", TAB_BEATS_DEFAULT) or TAB_BEATS_DEFAULT)
+    tokens = _row_tokens((m.get("strings") or {}).get(st, ""))
+    while len(tokens) < beats:
+        tokens.append("-")
+    return tokens[:beats]
+
+
+def measure_text(m: dict, st: str, tok_w: int = TOKEN_W) -> str:
+    """One string of one measure as printed: each beat right-aligned in
+    `tok_w` characters, a "|" after every inner bar, and the measure's
+    closing bar line. A repeat that starts here prints ":" first (read
+    after the bar line before it, "|:"); one that ends here closes with
+    ":|". The TXT and the PDF both print this, so they cannot differ."""
+    bars = set(measure_bars(m))
+    out = ":" if m.get("repeat_open") else ""
+    for i, tok in enumerate(measure_tokens(m, st)):
+        if i in bars:
+            out += "|"
+        out += f"{tok:>{tok_w}}"
+    out += ":|" if measure_repeat(m) else "|"
+    return out
+
+
+def measure_width(m: dict, tok_w: int = TOKEN_W) -> int:
+    """Printed width of a measure, its bar lines and repeat marks included."""
+    return len(measure_text(m, "", tok_w))
+
+
+def measure_header(m: dict, index: int, tok_w: int = TOKEN_W) -> str:
+    """The text over a measure: its number on the left and, over a repeat
+    that ends here, how many times it plays ("x3") on the right."""
+    w = measure_width(m, tok_w)
+    label = f"M{index + 1}"
+    n = measure_repeat(m)
+    if n:
+        times = f"x{n}"
+        if len(label) + 1 + len(times) <= w:
+            return label + " " * (w - len(label) - len(times)) + times
+        return (label + " " + times).ljust(w)
+    return label.ljust(w)
+
+
+def grid_mpl(measures, width: int, tok_w: int, prefix_w: int = 4) -> int:
+    """How many measures go on one line: as measures_per_line, measured
+    on the widest measure (its bar lines and repeat signs included)."""
+    if not measures:
+        return 1
+    col_w = max(measure_width(m, tok_w) for m in measures)
+    usable = max(width - prefix_w, col_w)
+    return max(1, min(len(measures), usable // col_w))
+
+
+def tab_grid_lines(measures, instrument: str, width: int = DEFAULT_TXT_WIDTH,
+                   name: str = "") -> list:
     """A tab grid as text: for each line of measures, a header (M1 M2 …)
     and one row per string that has something on it, then a blank line.
-    The TXT export prints a section's grid with this, and a part's grid is
-    built from it too."""
-    from constants import INSTRUMENT_STRINGS, TAB_BEATS_DEFAULT
+    A named grid prints its name on a line above it. The TXT export
+    prints a section's grid with this, and a part's grid is built from it
+    too."""
+    from constants import INSTRUMENT_STRINGS
     if not measures:
         return []
     all_strings = INSTRUMENT_STRINGS.get(instrument, ["e", "B", "G", "D", "A", "E"])
     strings = active_strings([m.get("strings", {}) for m in measures],
                              all_strings) or all_strings
-    max_beats = max((m.get("beats", TAB_BEATS_DEFAULT) for m in measures),
-                    default=TAB_BEATS_DEFAULT)
     tok_w = tab_token_width(measures)
-    mpl = measures_per_line(len(measures), max_beats, width=width, token_w=tok_w)
+    mpl = grid_mpl(measures, width, tok_w)
     out = []
+    if (name or "").strip():
+        out.append(name.strip())
+    lab_w = max(len(st) for st in strings)
     for chunk_start in range(0, len(measures), mpl):
         chunk = range(chunk_start, min(chunk_start + mpl, len(measures)))
-        hdr = " " * (max(len(st) for st in strings) + 3)
+        hdr = " " * (lab_w + 3)
         for m_idx in chunk:
-            beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-            hdr += f"{'M' + str(m_idx + 1):<{tok_w * beats + 1}}"
+            hdr += measure_header(measures[m_idx], m_idx, tok_w)
         out.append(hdr)
         for st in strings:
-            row = f"{st}| "
+            row = f"{st:<{lab_w}}| "
             for m_idx in chunk:
-                beats = measures[m_idx].get("beats", TAB_BEATS_DEFAULT)
-                raw = measures[m_idx].get("strings", {}).get(st, "")
-                tokens = [tok for tok in raw.split() if tok]
-                while len(tokens) < beats:
-                    tokens.append("-")
-                row += "".join(f"{tok:>{tok_w}}" for tok in tokens[:beats]) + "|"
+                row += measure_text(measures[m_idx], st, tok_w)
             out.append(row)
         out.append("")
     return out
+
+
+def measures_to_lick(measures, strings, name: str = "") -> dict:
+    """A tab grid as a lick, for a `{Name}` recall inside a chart line:
+    the beats of every measure one after another, with a "|" position at
+    each bar line between and inside the measures."""
+    from model import make_lick
+    strings = active_strings([m.get("strings", {}) for m in measures],
+                             strings) or list(strings)
+    lines = []
+    for st in strings:
+        frets = []
+        for mi, m in enumerate(measures):
+            if mi:
+                frets.append("|")
+            bars = set(measure_bars(m))
+            for i, tok in enumerate(measure_tokens(m, st)):
+                if i in bars:
+                    frets.append("|")
+                frets.append(tok)
+        lines.append({"string": st, "frets": frets})
+    return make_lick(lines, name=name)
 
 
 def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT,
@@ -1049,7 +1162,8 @@ def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT,
             rows += chart_body_rows(resolve_display_items(items, eff), "", indent, tight)
     if mode in ("tab", "both"):
         measures = [i for i in part.get("items", []) if i.get("kind") == "measure"]
-        grid = tab_grid_lines(measures, part.get("instrument"), max(20, width - indent))
+        grid = tab_grid_lines(measures, part.get("instrument") or sec.get("instrument"),
+                              max(20, width - indent), name=part.get("tab_name", ""))
         while grid and not grid[-1].strip():
             grid.pop()
         rows += [_row(pad + ln if ln else "", ROLE_GRID) for ln in grid]
@@ -1406,6 +1520,8 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
             n_rows = len(strings) if strings else 4
             n_groups = -(-len(measures) // mpl)  # ceil division
             lines += n_groups * n_rows
+            if (section.get("tab_name") or "").strip():
+                lines += 1
 
     if doc is not None:
         lines += len(printed_part_rows(doc, section, None, 0))

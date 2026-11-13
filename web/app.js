@@ -135,6 +135,13 @@ function namedLicks() {
     if (it.kind === "lick" && it.name && !out.includes(it.name)) out.push(it.name);
   });
   ((currentDoc && currentDoc.sections) || []).forEach((s) => walk(s.items));
+  // A named tab grid plays the same way: {Name} on any chart line.
+  ((currentDoc && currentDoc.sections) || []).forEach((s) => {
+    [s, ...(s.parts || [])].forEach((o) => {
+      const n = (o.tab_name || "").trim();
+      if (n && measureItems(o).length && !out.some((x) => x.toLowerCase() === n.toLowerCase())) out.push(n);
+    });
+  });
   return out;
 }
 
@@ -706,11 +713,22 @@ function escapeHtml(s) {
 // ---------------------------------------------------------------------------
 async function openSong(filename) {
   const doc = await API.loadSong(filename);
+  // Tab this song kept as text was moved into the tab grid as it opened
+  // (tabtext.py on the server). The file changes when the song is saved.
+  const upgraded = doc._upgraded;
+  delete doc._upgraded;
   currentFilename = filename;
   currentDoc = doc;
   showEditor();
   renderEditor();
   markSaved();
+  if (upgraded && upgraded.length) {
+    savedSnapshot = null;           // shows "Not saved": Save keeps it
+    updateSaveStatus();
+    const names = [...new Set(upgraded.map((u) => u.section + (u.part ? ` (${u.part})` : "")))];
+    toast(`Tab written as text is now in the tab grid: ${names.join(", ")}. `
+          + "Save to keep it this way. Free mode still has the text.", true);
+  }
   refreshSongList();
   schedulePreviewUpdate();
 }
@@ -1249,10 +1267,61 @@ function wireSectionEvents(node, sec, idx) {
     toggleSectionMenu(node, false);
     openCopyPicker(sec.id, node.querySelector(".sec-more"));
   });
+  node.querySelector(".sec-dup-copy").addEventListener("click", () => {
+    toggleSectionMenu(node, false);
+    openCopyPicker(sec.id, node.querySelector(".sec-more"), "copy");
+  });
   node.querySelector(".sec-del").addEventListener("click", () => {
     toggleSectionMenu(node, false);
     deleteSection(sec.id);
   });
+}
+
+/**
+ * A part that plays another section's part (made by "Copy as a
+ * reference"): one line saying which, with a way to make it its own.
+ */
+function renderPartRef(node, sec, box, part) {
+  const row = document.createElement("div");
+  row.className = "sec-part sec-part-ref";
+  const src = currentDoc.sections.find((s) => s.id === part.ref.section);
+  const target = src && (src.parts || []).find((p) => p.id === part.ref.part);
+  const text = document.createElement("span");
+  text.className = "part-ref-text";
+  text.textContent = target
+    ? `${target.instrument || "Part"}: plays the part in "${src.name || "(no name)"}". Edit it there, and this copy follows.`
+    : `${part.instrument || "Part"}: the part this copy played is gone, so it prints nothing.`;
+  const own = document.createElement("button");
+  own.type = "button";
+  own.className = "btn subtle";
+  own.textContent = "Make it its own copy";
+  own.title = "Copy this part's notes into this section, to change them here only";
+  own.disabled = !target;
+  own.addEventListener("click", () => {
+    const copy = JSON.parse(JSON.stringify(target));
+    Object.keys(part).forEach((k) => { if (k !== "id") delete part[k]; });
+    Object.assign(part, copy, { id: part.id });
+    delete part.tab_name;
+    if (!part.chart_line && chartItems(part).length) part.chart_line = target.chart_line || "";
+    renderParts(node, sec);
+    schedulePreviewUpdate();
+  });
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "icon-btn";
+  del.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  del.title = "Remove this part";
+  del.setAttribute("aria-label", "Remove this part");
+  del.addEventListener("click", () => {
+    sec.parts = (sec.parts || []).filter((p) => p !== part);
+    renderParts(node, sec);
+    schedulePreviewUpdate();
+  });
+  const head = document.createElement("div");
+  head.className = "sec-part-head";
+  head.append(text, own, del);
+  row.appendChild(head);
+  box.appendChild(row);
 }
 
 /**
@@ -1264,6 +1333,7 @@ function renderParts(node, sec) {
   if (!box) return;
   box.innerHTML = "";
   (sec.parts || []).forEach((part) => {
+    if (part.ref) { renderPartRef(node, sec, box, part); return; }
     const row = document.createElement("div");
     row.className = "sec-part";
     const head = document.createElement("div");
@@ -1735,21 +1805,56 @@ function sectionGridBody(node) {
 
 function rebuildTabGrid(node, sec, body) {
   body = body || sectionGridBody(node);
+  ensureGridTools(node, sec, body);
   const measures = measureItems(sec);
   const strings = stringsForInstrument(sec.instrument);
 
+  // A copy made with "Copy as a reference" of a tab section has no grid
+  // of its own: it plays the original's, and says so.
+  const isSection = !!(currentDoc && currentDoc.sections.includes(sec));
+  const linked = isSection && !measures.length ? linkedSource(sec) : null;
+  const tools = body.previousElementSibling;
+  if (tools) tools.classList.toggle("is-linked", !!linked);
+  if (linked) {
+    body.innerHTML = "";
+    const p = document.createElement("p");
+    p.className = "tab-linked";
+    p.textContent = `Plays the tab of "${linked.name || "(no name)"}". Edit it there, and this copy follows.`;
+    const own = document.createElement("button");
+    own.type = "button";
+    own.className = "btn subtle tab-make-own";
+    own.textContent = "Make it its own copy";
+    own.title = "Copy the notes into this section, so you can change them here without changing the original";
+    own.addEventListener("click", () => {
+      unlinkTab(sec, linked);
+      const lineInput = node.querySelector(":scope > .sec-line-row .sec-chart-line");
+      if (lineInput) lineInput.value = sec.chart_line || "";
+      rebuildTabGrid(node, sec, body);
+      schedulePreviewUpdate();
+      toast("This section has its own copy of the tab now");
+    });
+    p.appendChild(document.createElement("br"));
+    p.appendChild(own);
+    body.appendChild(p);
+    return;
+  }
+
   if (!measures.length) {
     body.innerHTML = '<p class="tab-empty">No measures yet. Click <strong>+ Measure</strong> to add one.</p>';
+    body._sel = null;
+    updateGridTools(body, sec);
     return;
   }
   // Beats just added by +2 / +4: tinted for a moment, so you see where they went.
   const fresh = body._fresh || null;
   body._fresh = null;
+  const { starts, total } = gridLayout(measures);
+  if (body._sel && (body._sel.anchor >= total || body._sel.focus >= total)) body._sel = null;
 
   const table = document.createElement("table");
   table.className = "tab-grid-table";
 
-  // Header row: measure numbers with delete buttons
+  // Header row: measure numbers, their length, repeats and the tools.
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   headerRow.appendChild(document.createElement("th")); // empty corner
@@ -1759,6 +1864,23 @@ function rebuildTabGrid(node, sec, body) {
     const beats = m.beats || 8;
     const hdr = document.createElement("span");
     hdr.className = "tab-measure-header";
+    // No wider than the measure's own cells (or a little room for the
+    // buttons): the buttons wrap, the cells stay close together.
+    hdr.style.maxWidth = `${Math.max(beats * 40, 150)}px`;
+    if (m.repeat_open) {
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "tab-rep-chip";
+      open.textContent = "|:";
+      open.title = "A repeat starts here. Click to remove it.";
+      open.setAttribute("aria-label", `Remove the repeat start at measure ${mi + 1}`);
+      open.addEventListener("click", () => {
+        delete m.repeat_open;
+        rebuildTabGrid(node, sec, body);
+        schedulePreviewUpdate();
+      });
+      hdr.appendChild(open);
+    }
     const name = document.createElement("span");
     name.className = "tab-measure-name";
     name.textContent = `M${mi + 1} · ${beats}`;
@@ -1777,6 +1899,7 @@ function rebuildTabGrid(node, sec, body) {
       b.disabled = !!disabled;
       b.addEventListener("click", fn);
       hdr.appendChild(b);
+      return b;
     };
     mk("+2", `Add 2 beats to measure ${mi + 1}`,
        () => resizeMeasure(node, sec, body, mi, 2), beats >= TAB_BEATS_MAX);
@@ -1784,6 +1907,10 @@ function rebuildTabGrid(node, sec, body) {
        () => resizeMeasure(node, sec, body, mi, 4), beats >= TAB_BEATS_MAX);
     mk("−", `Remove empty beats from the end of measure ${mi + 1}`,
        () => resizeMeasure(node, sec, body, mi, -2), emptyTail(m, strings) < 1 || beats <= 1);
+    const more = mk("⋯", `More for measure ${mi + 1}: bar lines, repeat, split, copy`,
+       (e) => openMeasureMenu(e.currentTarget, node, sec, body, mi));
+    more.classList.add("tab-measure-more");
+    more.setAttribute("aria-haspopup", "menu");
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "tab-del-measure";
@@ -1794,10 +1921,35 @@ function rebuildTabGrid(node, sec, body) {
       const allMeasures = measureItems(sec);
       allMeasures.splice(mi, 1);
       setMeasureItems(sec, allMeasures);
+      body._sel = null;
       rebuildTabGrid(node, sec, body);
       schedulePreviewUpdate();
     });
     hdr.appendChild(delBtn);
+    const times = repeatTimes(m);
+    if (times) {
+      // How many times the repeat that ends here plays; "no repeat" removes it.
+      const sel = document.createElement("select");
+      sel.className = "tab-rep-times";
+      sel.title = "A repeat ends here: how many times it plays";
+      sel.setAttribute("aria-label", `Repeat ending at measure ${mi + 1}: times played`);
+      const none = document.createElement("option");
+      none.value = "0"; none.textContent = ":| no repeat";
+      sel.appendChild(none);
+      for (let n = 2; n <= Math.max(8, times); n += 1) {
+        const o = document.createElement("option");
+        o.value = String(n); o.textContent = `:| ×${n}`;
+        if (n === times) o.selected = true;
+        sel.appendChild(o);
+      }
+      sel.addEventListener("change", () => {
+        const n = parseInt(sel.value, 10) || 0;
+        if (n >= 2) m.repeat_close = n; else delete m.repeat_close;
+        rebuildTabGrid(node, sec, body);
+        schedulePreviewUpdate();
+      });
+      hdr.appendChild(sel);
+    }
     th.appendChild(hdr);
     headerRow.appendChild(th);
   });
@@ -1806,7 +1958,7 @@ function rebuildTabGrid(node, sec, body) {
 
   // One row per string
   const tbody = document.createElement("tbody");
-  strings.forEach((st) => {
+  strings.forEach((st, row) => {
     const tr = document.createElement("tr");
     const label = document.createElement("td");
     label.className = "tab-string-label";
@@ -1815,15 +1967,35 @@ function rebuildTabGrid(node, sec, body) {
 
     measures.forEach((m, mi) => {
       const beats = m.beats || 8;
-      const raw = (m.strings || {})[st] || "";
-      const tokens = raw.split(/\s+/).filter(Boolean);
-      while (tokens.length < beats) tokens.push("-");
+      const tokens = measureTokens(m, st);
+      const bars = new Set(measureBars(m));
 
       for (let bi = 0; bi < beats; bi++) {
+        const g = starts[mi] + bi;
         const td = document.createElement("td");
+        if (bi === 0) td.classList.add("tab-measure-start");
+        if (bars.has(bi)) td.classList.add("tab-bar-before");
+        if (bi === 0 && m.repeat_open) td.classList.add("tab-rep-open");
+        if (bi === beats - 1 && repeatTimes(m)) td.classList.add("tab-rep-close");
+        if (bi > 0) {
+          // Click the gap between two beats to put a bar line there.
+          const hit = document.createElement("span");
+          hit.className = "tab-bar-hit";
+          hit.title = bars.has(bi) ? "Remove this bar line" : "Add a bar line here";
+          hit.addEventListener("mousedown", (e) => e.preventDefault());
+          hit.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleBar(sec, mi, bi);
+            rebuildTabGrid(node, sec, body);
+            schedulePreviewUpdate();
+          });
+          td.appendChild(hit);
+        }
         const input = document.createElement("input");
         input.type = "text";
         input.className = "tab-cell" + (bi === beats - 1 ? " tab-cell-last" : "");
+        input.dataset.g = String(g);
+        input.dataset.row = String(row);
         if (fresh && fresh.mi === mi && bi >= fresh.from) input.classList.add("tab-cell-new");
         input.setAttribute("aria-label", `${st} string, measure ${mi + 1}, beat ${bi + 1}`);
         input.value = tokens[bi] || "-";
@@ -1835,53 +2007,31 @@ function rebuildTabGrid(node, sec, body) {
         input.maxLength = 8;
         input.title = "A fret, - for not played, x for muted; techniques: "
           + "5h7 hammer-on, 7p5 pull-off, 5/7 or 7\\5 slide, 7b9 bend, 7b9r7 "
-          + "bend and release, 7~ vibrato, 5^ accent";
+          + "bend and release, 7~ vibrato, 5^ accent. Type | for a bar line after this beat. "
+          + "Shift+click or Shift+arrows to select beats, then copy and paste them.";
         input.addEventListener("input", () => {
-          commitTabCell(sec, mi, st, beats, body);
+          setTabCell(sec, mi, bi, st, input.value.trim());
         });
-        input.addEventListener("focus", () => input.select());
-        // Arrow key navigation between cells
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "ArrowRight" || (e.key === "Tab" && !e.shiftKey)) {
-            const next = td.nextElementSibling;
-            if (next && next.querySelector("input")) {
-              e.preventDefault();
-              next.querySelector("input").focus();
-            } else if (e.key === "ArrowRight" && mi === measures.length - 1
-                       && beats < TAB_BEATS_MAX) {
-              // → past the very last cell: the last measure grows by two
-              // beats and the caret moves into the first new one.
-              e.preventDefault();
-              const row = strings.indexOf(st);
-              resizeMeasure(node, sec, body, mi, 2);
-              const cells = body.querySelectorAll("tbody tr")[row]
-                ?.querySelectorAll("input.tab-cell-new");
-              if (cells && cells.length) cells[0].focus();
-            }
-          } else if (e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey)) {
-            const prev = td.previousElementSibling;
-            if (prev && prev.querySelector("input")) {
-              e.preventDefault();
-              prev.querySelector("input").focus();
-            }
-          } else if (e.key === "ArrowDown") {
-            const rowIdx = Array.from(tr.parentElement.children).indexOf(tr);
-            const colIdx = Array.from(tr.children).indexOf(td);
-            const nextRow = tr.parentElement.children[rowIdx + 1];
-            if (nextRow && nextRow.children[colIdx]) {
-              const nextInput = nextRow.children[colIdx].querySelector("input");
-              if (nextInput) { e.preventDefault(); nextInput.focus(); }
-            }
-          } else if (e.key === "ArrowUp") {
-            const rowIdx = Array.from(tr.parentElement.children).indexOf(tr);
-            const colIdx = Array.from(tr.children).indexOf(td);
-            const prevRow = tr.parentElement.children[rowIdx - 1];
-            if (prevRow && prevRow.children[colIdx]) {
-              const prevInput = prevRow.children[colIdx].querySelector("input");
-              if (prevInput) { e.preventDefault(); prevInput.focus(); }
-            }
+        input.addEventListener("focus", () => {
+          input.select();
+          body._caret = g;
+        });
+        input.addEventListener("mousedown", (e) => {
+          if (e.shiftKey && body._caret !== undefined && body._caret !== null) {
+            e.preventDefault();
+            const anchor = body._sel ? body._sel.anchor : body._caret;
+            body._sel = { anchor, focus: g };
+            input.focus();
+            body._caret = g;
+            paintGridSelection(body, sec);
+            return;
           }
+          body._sel = null;
+          body._dragFrom = g;
+          paintGridSelection(body, sec);
         });
+        input.addEventListener("keydown", (e) => onTabCellKey(e, node, sec, body, {
+          g, mi, bi, row, st, beats, td, measures, strings, total }));
         td.appendChild(input);
         tr.appendChild(td);
       }
@@ -1891,9 +2041,698 @@ function rebuildTabGrid(node, sec, body) {
   table.appendChild(tbody);
   body.innerHTML = "";
   body.appendChild(table);
+  // Drag across cells to select beats.
+  if (!body._dragWired) {
+    body._dragWired = true;
+    body.addEventListener("pointerover", (e) => {
+      if (!(e.buttons & 1) || body._dragFrom === undefined || body._dragFrom === null) return;
+      const cell = e.target.closest && e.target.closest("input.tab-cell");
+      if (!cell) return;
+      const g = parseInt(cell.dataset.g, 10);
+      if (g === body._dragFrom && !body._sel) return;
+      body._sel = { anchor: body._dragFrom, focus: g };
+      body._caret = g;
+      paintGridSelection(body, body._owner);
+    });
+    document.addEventListener("pointerup", () => { body._dragFrom = null; });
+  }
+  body._owner = sec;
+  paintGridSelection(body, sec);
+}
+
+/** Keys in a tab cell: moving, selecting, bar lines, copy and paste. */
+function onTabCellKey(e, node, sec, body, c) {
+  const mod = e.ctrlKey || e.metaKey;
+  const focusCell = (g, row) => {
+    const el = body.querySelector(`input.tab-cell[data-g="${g}"][data-row="${row}"]`);
+    if (el) { el.focus(); return true; }
+    return false;
+  };
+  if (e.key === "|") {
+    // A bar line after this beat (the end of a measure always has one).
+    e.preventDefault();
+    if (c.bi < c.beats - 1) {
+      toggleBar(sec, c.mi, c.bi + 1);
+      rebuildTabGrid(node, sec, body);
+      focusCell(c.g, c.row);
+      schedulePreviewUpdate();
+    }
+    return;
+  }
+  if (mod && (e.key === "c" || e.key === "C" || e.key === "x" || e.key === "X")) {
+    const r = selRange(body);
+    if (!r) return;               // one cell: the browser copies its text
+    e.preventDefault();
+    copyTabRange(sec, r[0], r[1]);
+    if (e.key === "x" || e.key === "X") {
+      clearTabRange(sec, r[0], r[1]);
+      rebuildTabGrid(node, sec, body);
+      focusCell(c.g, c.row);
+      schedulePreviewUpdate();
+    }
+    return;
+  }
+  if (mod && (e.key === "v" || e.key === "V") && TAB_CLIP) {
+    e.preventDefault();
+    pasteTab(sec, c.g, TAB_CLIP);
+    body._sel = { anchor: c.g, focus: c.g + TAB_CLIP.beats - 1 };
+    rebuildTabGrid(node, sec, body);
+    focusCell(c.g, c.row);
+    schedulePreviewUpdate();
+    return;
+  }
+  if (mod && (e.key === "a" || e.key === "A")) {
+    e.preventDefault();
+    body._sel = { anchor: 0, focus: c.total - 1 };
+    paintGridSelection(body, sec);
+    return;
+  }
+  if (e.key === "Escape" && body._sel) {
+    e.preventDefault();
+    e.stopPropagation();
+    body._sel = null;
+    paintGridSelection(body, sec);
+    return;
+  }
+  if ((e.key === "Delete" || e.key === "Backspace") && selRange(body)) {
+    e.preventDefault();
+    const r = selRange(body);
+    clearTabRange(sec, r[0], r[1]);
+    rebuildTabGrid(node, sec, body);
+    focusCell(c.g, c.row);
+    schedulePreviewUpdate();
+    return;
+  }
+  if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    e.preventDefault();
+    const next = c.g + (e.key === "ArrowRight" ? 1 : -1);
+    if (next < 0 || next >= c.total) return;
+    const anchor = body._sel ? body._sel.anchor : c.g;
+    body._sel = { anchor, focus: next };
+    focusCell(next, c.row);
+    paintGridSelection(body, sec);
+    return;
+  }
+  if (e.key === "ArrowRight" || (e.key === "Tab" && !e.shiftKey)) {
+    if (c.g + 1 < c.total) {
+      e.preventDefault();
+      body._sel = null;
+      focusCell(c.g + 1, c.row);
+      paintGridSelection(body, sec);
+    } else if (e.key === "ArrowRight" && c.beats < TAB_BEATS_MAX) {
+      // → past the very last cell: the last measure grows by two
+      // beats and the caret moves into the first new one.
+      e.preventDefault();
+      resizeMeasure(node, sec, body, c.mi, 2);
+      focusCell(c.g + 1, c.row);
+    }
+  } else if (e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey)) {
+    if (c.g > 0) {
+      e.preventDefault();
+      body._sel = null;
+      focusCell(c.g - 1, c.row);
+      paintGridSelection(body, sec);
+    }
+  } else if (e.key === "ArrowDown") {
+    if (focusCell(c.g, c.row + 1)) e.preventDefault();
+  } else if (e.key === "ArrowUp") {
+    if (focusCell(c.g, c.row - 1)) e.preventDefault();
+  }
 }
 
 const TAB_BEATS_MAX = 64;
+
+// What Copy took from a tab grid, for Paste in any grid of the song (or
+// another song): {beats, strings: {G: ["5", "-", …]}, bars: [2, …]}.
+let TAB_CLIP = null;
+
+/** Where each measure starts, counted in beats from the grid's start. */
+function gridLayout(measures) {
+  const starts = [];
+  let g = 0;
+  measures.forEach((m) => { starts.push(g); g += m.beats || 8; });
+  return { starts, total: g };
+}
+
+/** The measure and beat of beat `g` of the grid. */
+function locateBeat(measures, g) {
+  const { starts } = gridLayout(measures);
+  for (let i = starts.length - 1; i >= 0; i -= 1) {
+    if (g >= starts[i]) return { mi: i, bi: g - starts[i] };
+  }
+  return { mi: 0, bi: 0 };
+}
+
+/** The selected beats, first and last, or null when only one cell is. */
+function selRange(body) {
+  const s = body && body._sel;
+  if (!s || s.anchor === s.focus) return null;
+  return [Math.min(s.anchor, s.focus), Math.max(s.anchor, s.focus)];
+}
+
+function measureBars(m) {
+  const beats = m.beats || 8;
+  return [...new Set((m.bars || []).map((b) => parseInt(b, 10))
+    .filter((b) => b > 0 && b < beats))].sort((a, b) => a - b);
+}
+
+function repeatTimes(m) {
+  const n = parseInt(m.repeat_close, 10) || 0;
+  return n >= 2 ? n : 0;
+}
+
+/** A bar line before beat `bi` of measure `mi`: on, or off again. */
+function toggleBar(owner, mi, bi) {
+  const m = measureItems(owner)[mi];
+  if (!m || bi <= 0 || bi >= (m.beats || 8)) return;
+  const bars = new Set(measureBars(m));
+  if (bars.has(bi)) bars.delete(bi); else bars.add(bi);
+  if (bars.size) m.bars = [...bars].sort((a, b) => a - b);
+  else delete m.bars;
+}
+
+/** Bar lines every `n` beats in a measure; 0 takes them all away. */
+function barsEvery(m, n) {
+  const beats = m.beats || 8;
+  const out = [];
+  for (let b = n; n > 0 && b < beats; b += n) out.push(b);
+  if (out.length) m.bars = out; else delete m.bars;
+}
+
+function setTabCell(owner, mi, bi, st, val) {
+  const measures = measureItems(owner);
+  const m = measures[mi];
+  if (!m) return;
+  const tokens = measureTokens(m, st);
+  tokens[bi] = val || "-";
+  if (!m.strings) m.strings = {};
+  m.strings[st] = tokens.join(" ");
+  setMeasureItems(owner, measures);
+  schedulePreviewUpdate();
+}
+
+/**
+ * Cut the measure that holds beat `g` in two, so `g` starts a measure.
+ * The notes, the bar lines and a repeat around it stay where they were.
+ */
+function splitMeasureAt(owner, g) {
+  const measures = measureItems(owner);
+  const { starts, total } = gridLayout(measures);
+  if (g <= 0 || g >= total || starts.includes(g)) return false;
+  const { mi, bi } = locateBeat(measures, g);
+  const m = measures[mi];
+  const beats = m.beats || 8;
+  const a = { kind: "measure", beats: bi, strings: {} };
+  const b = { kind: "measure", beats: beats - bi, strings: {} };
+  const names = new Set([...stringsForInstrument(owner.instrument), ...Object.keys(m.strings || {})]);
+  names.forEach((st) => {
+    const t = measureTokens(m, st);
+    a.strings[st] = t.slice(0, bi).join(" ");
+    b.strings[st] = t.slice(bi).join(" ");
+  });
+  const bars = measureBars(m);
+  const ab = bars.filter((x) => x < bi);
+  const bb = bars.filter((x) => x > bi).map((x) => x - bi);
+  if (ab.length) a.bars = ab;
+  if (bb.length) b.bars = bb;
+  if (m.repeat_open) a.repeat_open = true;
+  if (m.repeat_close) b.repeat_close = m.repeat_close;
+  measures.splice(mi, 1, a, b);
+  setMeasureItems(owner, measures);
+  return true;
+}
+
+/**
+ * Repeat beats `lo` to `hi` `times` times: the measures are cut where the
+ * repeat starts and ends, then marked |: and :| ×N.
+ */
+function repeatTabRange(owner, lo, hi, times) {
+  splitMeasureAt(owner, lo);
+  splitMeasureAt(owner, hi + 1);
+  const measures = measureItems(owner);
+  const { starts } = gridLayout(measures);
+  const first = starts.indexOf(lo);
+  let last = first;
+  while (last + 1 < measures.length && starts[last + 1] <= hi) last += 1;
+  if (first < 0) return;
+  measures[first].repeat_open = true;
+  measures[last].repeat_close = Math.max(2, times || 2);
+}
+
+/** Beats `lo` to `hi` as a clip: notes per string and where bars fall. */
+function tabClip(owner, lo, hi) {
+  const measures = measureItems(owner);
+  const { starts } = gridLayout(measures);
+  const strings = stringsForInstrument(owner.instrument);
+  const clip = { beats: hi - lo + 1, strings: {}, bars: [] };
+  strings.forEach((st) => { clip.strings[st] = []; });
+  for (let g = lo; g <= hi; g += 1) {
+    const { mi, bi } = locateBeat(measures, g);
+    const m = measures[mi];
+    strings.forEach((st) => clip.strings[st].push(measureTokens(m, st)[bi] || "-"));
+    // A bar line, or the start of a measure, inside the clip.
+    if (g > lo && (starts.includes(g) || measureBars(m).includes(bi))) clip.bars.push(g - lo);
+  }
+  return clip;
+}
+
+/** The clip as text tab, for pasting into a message or a document. */
+function clipText(clip) {
+  const strings = Object.keys(clip.strings);
+  const w = Math.max(1, ...strings.flatMap((st) => clip.strings[st].map((t) => t.length)));
+  return strings.map((st) => {
+    let row = st + "|";
+    clip.strings[st].forEach((t, i) => {
+      if (clip.bars.includes(i)) row += "|";
+      row += "-" + (t === "-" ? "-".repeat(w) : t.padEnd(w, "-"));
+    });
+    return row + "-|";
+  }).join("\n");
+}
+
+function copyTabRange(owner, lo, hi) {
+  TAB_CLIP = tabClip(owner, lo, hi);
+  const text = clipText(TAB_CLIP);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+  } catch (_) { /* the copy inside the app still works */ }
+  document.querySelectorAll(".tab-paste").forEach((b) => { b.disabled = false; });
+  toast(`Copied ${TAB_CLIP.beats} beat${TAB_CLIP.beats === 1 ? "" : "s"}. Click a cell and press Paste (or ${navigator.platform.includes("Mac") ? "⌘" : "Ctrl+"}V).`);
+}
+
+function clearTabRange(owner, lo, hi) {
+  const measures = measureItems(owner);
+  const strings = stringsForInstrument(owner.instrument);
+  for (let g = lo; g <= hi; g += 1) {
+    const { mi, bi } = locateBeat(measures, g);
+    const m = measures[mi];
+    strings.forEach((st) => {
+      const t = measureTokens(m, st);
+      t[bi] = "-";
+      if (!m.strings) m.strings = {};
+      m.strings[st] = t.join(" ");
+    });
+  }
+  setMeasureItems(owner, measures);
+}
+
+/**
+ * Write a clip over the grid from beat `g` on: notes on the strings this
+ * instrument has, and the clip's bar lines. Past the end of the grid the
+ * last measure grows (a new measure starts when it is full).
+ */
+function pasteTab(owner, g, clip) {
+  let measures = measureItems(owner);
+  const strings = stringsForInstrument(owner.instrument);
+  if (!measures.length) {
+    measures = [{ kind: "measure", beats: Math.min(clip.beats, TAB_BEATS_MAX), strings: {} }];
+    g = 0;
+  }
+  let { total } = gridLayout(measures);
+  let need = g + clip.beats - total;
+  while (need > 0) {
+    const last = measures[measures.length - 1];
+    const room = TAB_BEATS_MAX - (last.beats || 8);
+    if (room > 0) {
+      const add = Math.min(room, need);
+      strings.forEach((st) => {
+        const t = measureTokens(last, st);
+        while (t.length < (last.beats || 8) + add) t.push("-");
+        if (!last.strings) last.strings = {};
+        last.strings[st] = t.join(" ");
+      });
+      last.beats = (last.beats || 8) + add;
+      need -= add;
+    } else {
+      const add = Math.min(TAB_BEATS_MAX, need);
+      measures.push({ kind: "measure", beats: add, strings: {} });
+      need -= add;
+    }
+  }
+  setMeasureItems(owner, measures);
+  // A clip from another instrument: its strings by name, then by place.
+  const src = Object.keys(clip.strings);
+  const pick = (st, i) => clip.strings[st]
+    || clip.strings[src.find((s) => s.toLowerCase() === st.toLowerCase())]
+    || (src.length === strings.length ? clip.strings[src[i]] : null);
+  const { starts } = gridLayout(measures);
+  for (let k = 0; k < clip.beats; k += 1) {
+    const { mi, bi } = locateBeat(measures, g + k);
+    const m = measures[mi];
+    strings.forEach((st, i) => {
+      const col = pick(st, i);
+      if (!col) return;
+      const t = measureTokens(m, st);
+      t[bi] = col[k] || "-";
+      if (!m.strings) m.strings = {};
+      m.strings[st] = t.join(" ");
+    });
+    if (clip.bars.includes(k) && !starts.includes(g + k)) {
+      const bars = new Set(measureBars(m));
+      bars.add(bi);
+      m.bars = [...bars].sort((a, b) => a - b);
+    }
+  }
+}
+
+/** The measure's ⋯ menu: bar lines, repeat, split, copy, duplicate. */
+function openMeasureMenu(anchor, node, sec, body, mi) {
+  closeMeasureMenu();
+  const measures = measureItems(sec);
+  const m = measures[mi];
+  if (!m) return;
+  const { starts } = gridLayout(measures);
+  const menu = document.createElement("div");
+  menu.id = "tab-measure-menu";
+  menu.className = "dropdown-menu tab-measure-menu";
+  menu.setAttribute("role", "menu");
+  const done = () => {
+    closeMeasureMenu();
+    rebuildTabGrid(node, sec, body);
+    schedulePreviewUpdate();
+  };
+  const label = (text) => {
+    const d = document.createElement("div");
+    d.className = "menu-label";
+    d.textContent = text;
+    menu.appendChild(d);
+  };
+  const item = (text, title, fn, disabled) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "menuitem");
+    b.textContent = text;
+    if (title) b.title = title;
+    b.disabled = !!disabled;
+    b.addEventListener("click", () => { fn(); done(); });
+    menu.appendChild(b);
+    return b;
+  };
+  label("Bar lines in this measure");
+  const row = document.createElement("div");
+  row.className = "tab-menu-row";
+  [2, 3, 4, 6, 8].forEach((n) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tab-size-btn";
+    b.textContent = String(n);
+    b.title = `A bar line every ${n} beats`;
+    b.setAttribute("aria-label", b.title);
+    b.disabled = n >= (m.beats || 8);
+    b.addEventListener("click", () => { barsEvery(m, n); done(); });
+    row.appendChild(b);
+  });
+  menu.appendChild(row);
+  item("No bar lines inside", "Take away the bar lines inside this measure",
+       () => delete m.bars, !measureBars(m).length);
+  const caret = body._caret;
+  const inside = caret !== undefined && caret !== null
+    && locateBeat(measures, caret).mi === mi && locateBeat(measures, caret).bi > 0;
+  item("Split at the selected beat", "Cut this measure in two where the cursor is",
+       () => splitMeasureAt(sec, caret), !inside);
+  menu.appendChild(Object.assign(document.createElement("div"), { className: "menu-sep" }));
+  item(m.repeat_open && repeatTimes(m) ? "Repeat this measure: one more time" : "Repeat this measure ×2",
+       "Play this measure more than once: |: … :| ×2",
+       () => {
+         if (m.repeat_open && repeatTimes(m)) m.repeat_close = repeatTimes(m) + 1;
+         else { m.repeat_open = true; m.repeat_close = 2; }
+       });
+  item("Copy this measure", "Copy its notes, to paste in any tab grid",
+       () => copyTabRange(sec, starts[mi], starts[mi] + (m.beats || 8) - 1));
+  item("Duplicate this measure", "Put a copy of it right after it",
+       () => {
+         const copy = JSON.parse(JSON.stringify(m));
+         delete copy.repeat_open; delete copy.repeat_close;
+         const all = measureItems(sec);
+         all.splice(mi + 1, 0, copy);
+         setMeasureItems(sec, all);
+       });
+  document.body.appendChild(menu);
+  const a = anchor.getBoundingClientRect();
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.position = "fixed";
+  menu.style.left = `${Math.max(8, Math.min(a.left, window.innerWidth - w - 8))}px`;
+  let top = a.bottom + 4;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, a.top - h - 4);
+  menu.style.top = `${top}px`;
+  menu._return = anchor;
+  const first = menu.querySelector("button:not(:disabled)");
+  if (first) first.focus();
+  setTimeout(() => {
+    document.addEventListener("pointerdown", onMeasureMenuOutside, true);
+    document.addEventListener("keydown", onMeasureMenuKey, true);
+  }, 0);
+}
+function closeMeasureMenu() {
+  const menu = document.getElementById("tab-measure-menu");
+  document.removeEventListener("pointerdown", onMeasureMenuOutside, true);
+  document.removeEventListener("keydown", onMeasureMenuKey, true);
+  if (menu) menu.remove();
+}
+function onMeasureMenuOutside(e) {
+  const menu = document.getElementById("tab-measure-menu");
+  if (menu && !menu.contains(e.target)) closeMeasureMenu();
+}
+function onMeasureMenuKey(e) {
+  const menu = document.getElementById("tab-measure-menu");
+  if (!menu) return;
+  if (e.key === "Escape") {
+    e.preventDefault(); e.stopPropagation();
+    const back = menu._return;
+    closeMeasureMenu();
+    if (back && document.body.contains(back)) back.focus();
+  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const items = [...menu.querySelectorAll("button:not(:disabled)")];
+    const i = items.indexOf(document.activeElement);
+    e.preventDefault();
+    const n = items.length;
+    if (n) items[(i + (e.key === "ArrowDown" ? 1 : n - 1) + n) % n].focus();
+  }
+}
+
+/** Selected beats tinted on every string, and the toolbar told. */
+function paintGridSelection(body, owner) {
+  const r = selRange(body);
+  body.querySelectorAll("input.tab-cell").forEach((el) => {
+    const g = parseInt(el.dataset.g, 10);
+    el.classList.toggle("tab-sel", !!r && g >= r[0] && g <= r[1]);
+  });
+  updateGridTools(body, owner);
+}
+
+/**
+ * The grid's own tools beside + Measure: its name (to recall it as
+ * {Name} on any chart line), Copy, Paste, Repeat and a bar line. Added
+ * once per grid; the section's grid and each part's get the same.
+ */
+function ensureGridTools(node, owner, body) {
+  const bar = body.previousElementSibling;
+  if (!bar || !bar.classList.contains("tab-grid-toolbar")) return;
+  bar._owner = owner;
+  bar._body = body;
+  bar._node = node;
+  if (bar.querySelector(".tab-tools")) {
+    const nameIn = bar.querySelector(".tab-name");
+    if (document.activeElement !== nameIn) nameIn.value = owner.tab_name || "";
+    return;
+  }
+  const wrap = document.createElement("span");
+  wrap.className = "tab-tools";
+  wrap.innerHTML =
+    '<label class="tab-name-label" title="Name this tab to play it again on any chart line of the song as {Name}, like a named lick">Name '
+    + '<input class="tab-name" type="text" maxlength="40" spellcheck="false" placeholder="e.g. Riff1" aria-label="Name of this tab"></label>'
+    + '<span class="tab-name-msg" role="status"></span>'
+    + '<span class="tab-sel-info" role="status"></span>'
+    + '<button type="button" class="btn subtle tab-copy" title="Copy the selected beats, or the whole tab when none are selected (Shift+click or Shift+arrows to select)">Copy</button>'
+    + '<button type="button" class="btn subtle tab-paste" title="Paste what you copied, from the cell you clicked last (or at the end)">Paste</button>'
+    + '<button type="button" class="btn subtle tab-repeat" title="Repeat the selected beats, or the measure you are in: |: … :| ×2">Repeat ×2</button>'
+    + '<button type="button" class="btn subtle tab-bar" title="A bar line after the cell you are in (or type | in a cell). Click between two cells to add or remove one.">| Bar</button>';
+  bar.appendChild(wrap);
+  const nameIn = wrap.querySelector(".tab-name");
+  const msg = wrap.querySelector(".tab-name-msg");
+  nameIn.value = owner.tab_name || "";
+  const showName = () => {
+    const o = bar._owner;
+    const why = tabNameProblem(nameIn.value.trim(), o);
+    msg.textContent = why || (nameIn.value.trim() ? `Play it anywhere as {${nameIn.value.trim()}}` : "");
+    msg.classList.toggle("is-error", !!why);
+  };
+  nameIn.addEventListener("input", () => {
+    const o = bar._owner;
+    const v = nameIn.value.trim();
+    if (v) o.tab_name = v; else delete o.tab_name;
+    showName();
+    document.querySelectorAll(".section-card").forEach((card) => renderLickChips(card));
+    schedulePreviewUpdate();
+  });
+  // Renaming a tab renames every {Name} that plays it, as a riff's rename does.
+  nameIn.addEventListener("focus", () => { nameIn._was = (bar._owner.tab_name || "").trim(); });
+  nameIn.addEventListener("change", () => {
+    const was = nameIn._was, now = nameIn.value.trim();
+    nameIn._was = now;
+    if (!was || !now || was.toLowerCase() === now.toLowerCase() || tabNameProblem(now, bar._owner)) return;
+    const n = renameLickRefs(was, now);
+    if (n) {
+      renderEditor();
+      schedulePreviewUpdate();
+      toast(`Renamed {${was}} to {${now}} in ${n} place${n === 1 ? "" : "s"}`);
+    }
+  });
+  showName();
+  const paste = wrap.querySelector(".tab-paste");
+  paste.disabled = !TAB_CLIP;
+  // The buttons keep the cell's focus from moving away first.
+  wrap.querySelectorAll("button").forEach((b) => b.addEventListener("mousedown", (e) => e.preventDefault()));
+  const refocus = () => {
+    const g = bar._body._caret;
+    const el = g !== undefined && g !== null
+      && bar._body.querySelector(`input.tab-cell[data-g="${g}"]`);
+    if (el) el.focus();
+  };
+  wrap.querySelector(".tab-copy").addEventListener("click", () => {
+    const o = bar._owner, b = bar._body;
+    const { total } = gridLayout(measureItems(o));
+    if (!total) return;
+    const r = selRange(b) || [0, total - 1];
+    copyTabRange(o, r[0], r[1]);
+  });
+  paste.addEventListener("click", () => {
+    const o = bar._owner, b = bar._body;
+    if (!TAB_CLIP) return;
+    const { total } = gridLayout(measureItems(o));
+    const at = (b._caret !== undefined && b._caret !== null && b._caret < total) ? b._caret : total;
+    pasteTab(o, at, TAB_CLIP);
+    b._sel = { anchor: at, focus: at + TAB_CLIP.beats - 1 };
+    b._caret = at;
+    rebuildTabGrid(bar._node, o, b);
+    schedulePreviewUpdate();
+    refocus();
+  });
+  wrap.querySelector(".tab-repeat").addEventListener("click", () => {
+    const o = bar._owner, b = bar._body;
+    const measures = measureItems(o);
+    if (!measures.length) return;
+    let r = selRange(b);
+    if (!r) {
+      const g = (b._caret !== undefined && b._caret !== null) ? b._caret : 0;
+      const { mi } = locateBeat(measures, g);
+      const { starts } = gridLayout(measures);
+      r = [starts[mi], starts[mi] + (measures[mi].beats || 8) - 1];
+    }
+    repeatTabRange(o, r[0], r[1], 2);
+    b._sel = null;
+    rebuildTabGrid(bar._node, o, b);
+    schedulePreviewUpdate();
+    toast("Repeated ×2. Change the count over the :| sign.");
+  });
+  wrap.querySelector(".tab-bar").addEventListener("click", () => {
+    const o = bar._owner, b = bar._body;
+    const measures = measureItems(o);
+    const g = selRange(b) ? selRange(b)[1] : b._caret;
+    if (g === undefined || g === null || !measures.length) {
+      toast("Click a cell first: the bar line goes after it.");
+      return;
+    }
+    const { mi, bi } = locateBeat(measures, g);
+    if (bi >= (measures[mi].beats || 8) - 1) {
+      toast("A measure already ends there.");
+      return;
+    }
+    toggleBar(o, mi, bi + 1);
+    rebuildTabGrid(bar._node, o, b);
+    schedulePreviewUpdate();
+    refocus();
+  });
+}
+
+function updateGridTools(body, owner) {
+  const bar = body.previousElementSibling;
+  if (!bar) return;
+  const info = bar.querySelector(".tab-sel-info");
+  const r = selRange(body);
+  if (info) info.textContent = r ? `${r[1] - r[0] + 1} beats selected` : "";
+  const paste = bar.querySelector(".tab-paste");
+  if (paste) paste.disabled = !TAB_CLIP;
+  const has = measureItems(owner).length > 0;
+  ["tab-copy", "tab-repeat", "tab-bar"].forEach((c) => {
+    const b = bar.querySelector("." + c);
+    if (b) b.disabled = !has;
+  });
+}
+
+/** Every {was} in the song becomes {now}; returns how many changed. */
+function renameLickRefs(was, now) {
+  const key = was.toLowerCase();
+  let n = 0;
+  const walk = (items) => (items || []).forEach((it) => {
+    if (it.kind === "group") walk(it.items);
+    if (it.kind === "lick_ref" && (it.lick || "").toLowerCase() === key) { it.lick = now; n += 1; }
+  });
+  const esc = was.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp("\\{" + esc + "\\}", "gi");
+  ((currentDoc && currentDoc.sections) || []).forEach((s) => {
+    [s, ...(s.parts || [])].forEach((o) => {
+      const before = n;
+      walk(o.items);
+      if (n !== before && o.chart_line) o.chart_line = o.chart_line.replace(re, "{" + now + "}");
+    });
+  });
+  return n;
+}
+
+/** Why `name` cannot name a tab grid, or "" (songmap.check_tab_name). */
+function tabNameProblem(name, owner) {
+  if (!name) return "";
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) return "Use letters, digits and _ only, starting with a letter.";
+  if (/^\d{0,2}[A-Ga-g]([#b])?/.test(name) || ["pp", "p", "mp", "mf", "f", "ff"].includes(name)
+      || ["pm", "cresc", "dim"].includes(name.toLowerCase())) {
+    return "A name cannot start like a note or chord (A to G).";
+  }
+  const key = name.toLowerCase();
+  for (const s of (currentDoc && currentDoc.sections) || []) {
+    for (const o of [s, ...(s.parts || [])]) {
+      if (o !== owner && (o.tab_name || "").toLowerCase() === key && measureItems(o).length) {
+        return "Another tab already has this name.";
+      }
+    }
+    let clash = false;
+    const walk = (items) => (items || []).forEach((it) => {
+      if (it.kind === "group") walk(it.items);
+      if (it.kind === "lick" && (it.name || "").toLowerCase() === key) clash = true;
+    });
+    walk(s.items);
+    if (clash) return "A lick in this song already has this name.";
+  }
+  return "";
+}
+
+/** The section a tab copy plays, when it has no grid of its own. */
+function linkedSource(sec) {
+  if (measureItems(sec).length) return null;
+  const chart = chartItems(sec);
+  if (chart.length !== 1 || chart[0].kind !== "section_ref") return null;
+  const t = currentDoc.sections.find((s) => s.id === chart[0].section);
+  return t && t !== sec && measureItems(t).length ? t : null;
+}
+
+/** Give a linked tab copy its own copy of the notes. */
+function unlinkTab(sec, source) {
+  const ref = chartItems(sec)[0];
+  const copy = JSON.parse(JSON.stringify(measureItems(source)));
+  const rep = (ref && parseInt(ref.repeat, 10)) || 1;
+  if (rep >= 2 && copy.length) {
+    copy[0].repeat_open = true;
+    copy[copy.length - 1].repeat_close = rep;
+  }
+  if ((sec.render || "chart") === "tab") {
+    sec.items = copy;
+    sec.chart_line = "";
+  } else {
+    setMeasureItems(sec, copy);
+  }
+}
 
 /** A measure's tokens for one string, padded with "-" to its length. */
 function measureTokens(m, st) {
@@ -1942,46 +2781,14 @@ function resizeMeasure(node, sec, body, mi, delta) {
   });
   m.beats = next;
   m.strings = Object.assign({}, m.strings || {}, out);
+  if (m.bars) {
+    const bars = measureBars(m);
+    if (bars.length) m.bars = bars; else delete m.bars;
+  }
   setMeasureItems(sec, measures);
+  body._sel = null;
   if (next > beats) body._fresh = { mi, from: beats };
   rebuildTabGrid(node, sec, body);
-  schedulePreviewUpdate();
-}
-
-function commitTabCell(sec, measureIdx, stringName, beats, body) {
-  const table = body.querySelector("table");
-  if (!table) return;
-
-  const strings = stringsForInstrument(sec.instrument);
-  const measures = measureItems(sec);
-  const m = measures[measureIdx];
-  if (!m) return;
-
-  // Find the row for this string
-  const strIdx = strings.indexOf(stringName);
-  const tbody = table.querySelector("tbody");
-  const row = tbody.children[strIdx];
-  if (!row) return;
-
-  // Collect all beat values for this string in this measure
-  // Cells start at column 1 (col 0 is the string label)
-  // We need to figure out the column offset for this measure
-  let colOffset = 1; // skip string label
-  for (let i = 0; i < measureIdx; i++) {
-    colOffset += (measures[i].beats || 8);
-  }
-
-  const tokens = [];
-  for (let bi = 0; bi < beats; bi++) {
-    const cell = row.children[colOffset + bi];
-    const input = cell ? cell.querySelector("input") : null;
-    let val = (input ? input.value.trim() : "-") || "-";
-    tokens.push(val);
-  }
-
-  if (!m.strings) m.strings = {};
-  m.strings[stringName] = tokens.join(" ");
-  setMeasureItems(sec, measures);
   schedulePreviewUpdate();
 }
 
@@ -2144,14 +2951,16 @@ function endSectionDrag(keep) {
 //  of the song, or after any section. One click puts it there. The place
 //  right after the original is highlighted, so Enter does what the button
 //  used to do.
-function openCopyPicker(id, anchor) {
+function openCopyPicker(id, anchor, mode) {
+  const independent = mode === "copy";
   const secs = currentDoc.sections;
   const i = secs.findIndex((s) => s.id === id);
   if (i < 0) return;
   const picker = document.getElementById("copy-picker");
   const label = (s, n) => `${n + 1}. ${s.name || "(no name)"}`;
-  picker.querySelector(".copy-picker-title").textContent =
-    `Copy "${secs[i].name || "(no name)"}" to…`;
+  picker.querySelector(".copy-picker-title").textContent = independent
+    ? `Duplicate "${secs[i].name || "(no name)"}" to…`
+    : `Copy "${secs[i].name || "(no name)"}" to…`;
   const list = picker.querySelector(".copy-picker-list");
   list.innerHTML = "";
   const addRow = (text, at, isDefault) => {
@@ -2161,7 +2970,7 @@ function openCopyPicker(id, anchor) {
     b.textContent = text;
     b.addEventListener("click", () => {
       closeCopyPicker();
-      const sec = duplicateSection(id, at);
+      const sec = independent ? duplicateSectionCopy(id, at) : duplicateSection(id, at);
       if (sec) toast(at === 0 ? `Added "${sec.name}" at the top`
                               : `Added "${sec.name}" after "${secs[at - 1].name}"`);
     });
@@ -2261,6 +3070,39 @@ function duplicateSection(id, at) {
     items: [{ kind: "section_ref", section: source.id, repeat: 1, all: false, transpose: 0 }],
     chart_line: `=${refKeyFor(source)}`,
   };
+  // Every part comes along, each playing the original's part, so the copy
+  // is the whole section and not only its first line.
+  if ((source.parts || []).length) {
+    const stamp = Date.now().toString(36);
+    newSec.parts = source.parts.map((p, n) => ({
+      id: `p${stamp}${n}`, instrument: p.instrument, items: [], chart_line: "",
+      ref: p.ref ? Object.assign({}, p.ref) : { section: source.id, part: p.id },
+    }));
+  }
+  currentDoc.sections.splice(where, 0, newSec);
+  renderEditor();
+  schedulePreviewUpdate();
+  showSectionCard(newSec.id);
+  return newSec;
+}
+
+/**
+ * An independent copy of section `id`: its chart line, tab, parts and
+ * text, all its own, so changing it leaves the original alone. A name on
+ * its tab is not copied (two tabs cannot share one).
+ */
+function duplicateSectionCopy(id, at) {
+  const i = currentDoc.sections.findIndex((s) => s.id === id);
+  if (i < 0) return;
+  const source = currentDoc.sections[i];
+  const where = (at === undefined || at === null)
+    ? i + 1 : Math.max(0, Math.min(currentDoc.sections.length, at));
+  const newSec = JSON.parse(JSON.stringify(source));
+  newSec.id = newSectionId();
+  newSec.name = (source.name || "") + " (copy)";
+  delete newSec.tab_name;
+  const stamp = Date.now().toString(36);
+  (newSec.parts || []).forEach((p, n) => { p.id = `p${stamp}${n}`; delete p.tab_name; });
   currentDoc.sections.splice(where, 0, newSec);
   renderEditor();
   schedulePreviewUpdate();
@@ -2539,9 +3381,70 @@ async function applySongsFolder(move) {
 // ---------------------------------------------------------------------------
 //  Live preview pane
 // ---------------------------------------------------------------------------
+// "text": the TXT export in the pane, as you type. "pdf": the PDF as it
+// will print, made a moment after you stop typing (it takes longer).
+let previewMode = "text";
+let previewPdfUrl = null;
+const schedulePdfPreview = debounce(async () => {
+  if (!previewOpen || !currentDoc || previewMode !== "pdf") return;
+  const msg = document.getElementById("preview-pdf-msg");
+  const frame = document.getElementById("preview-pdf-frame");
+  try {
+    const res = await fetch("/api/preview.pdf", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ doc: currentDoc,
+                             orient: document.getElementById("preview-orient").value }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.url) {
+      msg.textContent = body.error ? friendlyError(body.error) : `The PDF could not be made (${res.status}).`;
+      msg.classList.remove("hidden");
+      return;
+    }
+    msg.classList.add("hidden");
+    previewPdfUrl = body.url;
+    // Fit the page width; the viewer keeps its own zoom and scroll otherwise.
+    frame.src = body.url + "#view=FitH";
+  } catch (err) {
+    msg.textContent = `The PDF could not be made: ${err}`;
+    msg.classList.remove("hidden");
+  }
+}, 700);
+
+function setPreviewMode(mode) {
+  previewMode = mode === "pdf" ? "pdf" : "text";
+  const pdf = previewMode === "pdf";
+  document.querySelectorAll("#preview-mode button").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.preview === previewMode));
+  });
+  document.getElementById("preview-text").classList.toggle("hidden", pdf);
+  document.getElementById("preview-pdf").classList.toggle("hidden", !pdf);
+  document.getElementById("preview-orient").classList.toggle("hidden", !pdf);
+  document.getElementById("btn-preview-open").classList.toggle("hidden", !pdf);
+  document.getElementById("preview-sub").textContent = pdf
+    ? "· the PDF as it will print" : "· the text export, as you type";
+  document.getElementById("preview-pane").classList.toggle("is-pdf", pdf);
+  try { localStorage.setItem("previewMode", previewMode); } catch (_) { /* fine */ }
+  schedulePreviewUpdate();
+}
+
+function wirePreviewMode() {
+  document.querySelectorAll("#preview-mode button").forEach((b) => {
+    b.addEventListener("click", () => setPreviewMode(b.dataset.preview));
+  });
+  document.getElementById("preview-orient").addEventListener("change", () => schedulePdfPreview());
+  document.getElementById("btn-preview-open").addEventListener("click", () => {
+    if (previewPdfUrl) openInBrowser(new URL(previewPdfUrl, window.location.href).href);
+  });
+  let saved = "text";
+  try { saved = localStorage.getItem("previewMode") || "text"; } catch (_) { /* fine */ }
+  if (saved === "pdf") setPreviewMode("pdf");
+}
+
 const schedulePreviewUpdate = debounce(async () => {
   updateSaveStatus();
   if (!previewOpen || !currentDoc) return;
+  if (previewMode === "pdf") { schedulePdfPreview(); return; }
   try {
     const { lines } = await API.render(currentDoc);
     document.getElementById("preview-text").textContent = lines.join("\n");
@@ -3845,6 +4748,7 @@ async function init() {
   });
   document.getElementById("btn-preview-toggle").addEventListener("click", () => togglePreview());
   document.getElementById("btn-preview-close").addEventListener("click", () => togglePreview(false));
+  wirePreviewMode();
   document.getElementById("btn-save").addEventListener("click", () => saveCurrent().catch((e) => toast(String(e))));
   document.getElementById("btn-close").addEventListener("click", () => saveAndClose().catch((e) => toast(String(e))));
   document.getElementById("btn-add-section").addEventListener("click", addSection);

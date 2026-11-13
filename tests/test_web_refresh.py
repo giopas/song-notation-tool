@@ -149,7 +149,8 @@ def test_the_script_can_make_a_measure_longer_and_shorter():
     assert re.search(r"function resizeMeasure\(node, sec, body, mi, delta\)", APP)
     assert re.search(r"function emptyTail\(m, strings\)", APP)
     # Only empty beats are ever taken off.
-    body = APP[APP.index("function resizeMeasure"):APP.index("function commitTabCell")]
+    start = APP.index("function resizeMeasure")
+    body = APP[start:APP.index("\n}\n", start)]
     assert "emptyTail(m, strings)" in body
 
 

@@ -257,10 +257,25 @@
     </main>
     <section id="preview-pane" class="hidden" aria-label="Preview">
       <div id="preview-header">
-        <span>Preview <span class="preview-sub">· the text export, as you type</span></span>
+        <span>Preview <span class="preview-sub" id="preview-sub">· the text export, as you type</span></span>
+        <span class="preview-tools">
+          <span class="seg" id="preview-mode" role="group" aria-label="Preview as">
+            <button type="button" data-preview="text" aria-pressed="true" title="The text export, updated as you type">Text</button>
+            <button type="button" data-preview="pdf" aria-pressed="false" title="The PDF as it will print: pages, columns, size and layout">PDF</button>
+          </span>
+          <select id="preview-orient" class="hidden" aria-label="Page orientation of the PDF preview" title="Page orientation">
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+          <button type="button" id="btn-preview-open" class="icon-btn hidden" aria-label="Open the PDF preview in your PDF viewer" title="Open this PDF in your browser or PDF viewer, to zoom or print it"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+        </span>
         <button id="btn-preview-close" class="icon-btn" aria-label="Close preview" title="Close preview"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <pre id="preview-text"></pre>
+      <div id="preview-pdf" class="hidden">
+        <iframe id="preview-pdf-frame" title="PDF preview"></iframe>
+        <p id="preview-pdf-msg" class="hidden" role="status"></p>
+      </div>
     </section>
   </div>
 
@@ -737,7 +752,8 @@
             <button type="button" role="menuitemradio" data-size="smaller" aria-checked="false">Smaller</button>
             <button type="button" role="menuitemradio" data-size="larger" aria-checked="false">Larger</button>
             <div class="menu-sep" role="separator"></div>
-            <button type="button" role="menuitem" class="sec-dup" title="Copy as a reference and choose where it goes. The copy plays whatever this section holds."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy as a reference…</button>
+            <button type="button" role="menuitem" class="sec-dup" title="Copy as a reference, with every part and the tab, and choose where it goes. The copy plays whatever this section holds."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy as a reference…</button>
+            <button type="button" role="menuitem" class="sec-dup-copy" title="Make an independent copy, with every part and the tab, and choose where it goes. Changing the copy leaves this section alone."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M14 11v6M11 14h6"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Duplicate as a copy…</button>
             <button type="button" role="menuitem" class="sec-del danger"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Delete section</button>
           </div>
         </div>

@@ -1253,3 +1253,74 @@ body.dragging-section, body.dragging-section * { cursor: grabbing !important; us
 /* The delete and name dialogs can open from the song list, which on a
    narrow window is a drawer above the page: they go over it. */
 #confirm-modal-backdrop, #name-modal-backdrop { z-index: 55; }
+
+/* ---------- tab grid: bar lines, repeats, selection, name (v0.36) ---------- */
+/* Every measure starts with a clear bar line, and a bar line inside a
+   measure looks the same, so the rhythm reads at a glance. */
+.tab-grid-table td { position: relative; }
+.tab-grid-table td.tab-measure-start { border-left: 2px solid var(--border-strong); padding-left: 4px; }
+.tab-grid-table td.tab-bar-before { border-left: 2px solid var(--mauve); padding-left: 3px; }
+.tab-grid-table td.tab-rep-open { border-left: 4px double var(--accent); }
+.tab-grid-table td.tab-rep-close { border-right: 4px double var(--accent); padding-right: 3px; }
+.tab-grid-table input.tab-cell-last { margin-right: 2px; }
+/* The gap between two cells: click it for a bar line. */
+.tab-bar-hit {
+  position: absolute; left: -4px; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 1;
+}
+.tab-bar-hit:hover { background: var(--mauve); opacity: 0.45; border-radius: 3px; }
+.tab-grid-table input.tab-cell.tab-sel {
+  background: var(--accent-soft); border-color: var(--accent);
+}
+.tab-rep-chip {
+  background: transparent; color: var(--accent); border: 1px solid var(--accent);
+  border-radius: 6px; height: 24px; padding: 0 6px; font: 700 12px var(--mono); cursor: pointer;
+}
+.tab-rep-chip:hover { background: var(--accent-soft); }
+.tab-rep-times {
+  background-color: var(--input-bg); color: var(--accent); border: 1px solid var(--accent);
+  border-radius: 6px; height: 26px; font: 700 12px var(--mono); padding: 0 4px;
+}
+.tab-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 auto; }
+.tab-tools .btn { height: 32px; padding: 0 10px; font-size: 13px; }
+.tab-tools .btn:disabled { opacity: 0.45; }
+.tab-name-label { font-size: 13px; color: var(--lbl-gray); display: flex; align-items: center; gap: 6px; }
+.tab-name-label input {
+  width: 120px; height: 32px; background: var(--input-bg); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 8px; padding: 0 8px; font: 13px var(--mono);
+}
+.tab-name-msg { font-size: 12px; color: var(--lbl-gray); margin-right: auto; }
+.tab-name-msg.is-error { color: var(--red); }
+.tab-sel-info { font-size: 12px; color: var(--accent); }
+.tab-grid-toolbar.is-linked .tab-tools,
+.tab-grid-toolbar.is-linked .tab-add-measure,
+.tab-grid-toolbar.is-linked .tab-beats-label { display: none; }
+.tab-linked { color: var(--lbl-gray); font-size: 13px; margin: 4px 0; line-height: 1.8; }
+.tab-measure-menu { z-index: 60; min-width: 220px; }
+.tab-menu-row { display: flex; gap: 4px; padding: 2px 8px 6px; }
+.tab-measure-menu .tab-menu-row button { width: auto; padding: 0 8px; }
+.sec-part-ref .part-ref-text { flex: 1 1 260px; color: var(--lbl-gray); font-size: 13px; }
+
+/* ---------- preview: text or PDF ---------- */
+.preview-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: 6px; text-transform: none; letter-spacing: 0; }
+.preview-tools .seg button { font-size: 12px; padding: 4px 10px; }
+#preview-orient {
+  background-color: var(--input-bg); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 8px; height: 28px; font-size: 12px; padding: 0 6px;
+}
+#preview-pdf { flex: 1; display: flex; flex-direction: column; margin: 12px; min-height: 0; }
+#preview-pdf.hidden { display: none; }
+#preview-pdf-frame { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+#preview-pdf-msg { color: var(--red); font-size: 13px; margin: 8px 0 0; }
+/* The PDF needs room for a page: the pane gets wider while it shows one. */
+#preview-pane.is-pdf { flex-basis: min(640px, 50vw); }
+/* The measure's tools wrap inside its header, so a short measure keeps
+   its cells close together instead of being stretched by its buttons. */
+.tab-grid-table th { white-space: normal; vertical-align: bottom; }
+.tab-grid-table .tab-measure-header { flex-wrap: wrap; row-gap: 3px; }
+.tab-measure-menu { right: auto; width: max-content; max-width: 320px; }
+.tab-measure-menu .tab-menu-row button {
+  width: auto; min-height: 28px; height: 28px; padding: 0 10px; justify-content: center;
+  border: 1px solid var(--border); background: var(--btn-bg);
+}
+.tab-measure-menu .tab-menu-row button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.tab-measure-menu button:disabled { opacity: 0.45; cursor: default; }

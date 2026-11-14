@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- The video page has share buttons: the phone's own share sheet, Send on
+  WhatsApp and Copy the link. They send the page link, not the file, so in
+  WhatsApp the video plays in the browser with nothing to download. The
+  message also links the latest release, to try it. When the video ends, a
+  card offers Download the app and Watch again.
+
+### Fixed
+
+- The video page's link preview had no picture in WhatsApp: its `og:image`
+  and `og:video` were relative URLs, which chat apps ignore. They are now
+  absolute.
+
 ## [0.36.1] — 2026-11-14 — Named riffs move into the tab grid
 
 A song written before the grid could grow often starts with rests and

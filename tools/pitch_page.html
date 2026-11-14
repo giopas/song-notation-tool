@@ -8,8 +8,16 @@
 <meta property="og:title" content="Song Notation Tool — the video">
 <meta property="og:description" content="One-page charts for guitar and bass, in a minute and a half.">
 <meta property="og:type" content="video.other">
-<meta property="og:image" content="slide-01.png">
-<meta property="og:video" content="Song_Notation_Tool_Pitch.mp4">
+<meta property="og:site_name" content="Song Notation Tool">
+<!-- Absolute URLs: WhatsApp and the other chat apps ignore relative ones,
+     and then send the link with no picture. -->
+<meta property="og:url" content="https://giopas.github.io/song-notation-tool/">
+<meta property="og:image" content="https://giopas.github.io/song-notation-tool/slide-01.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="Song Notation Tool: one-page charts for guitar and bass, with chords, tabs and repeats">
+<meta property="og:video" content="https://giopas.github.io/song-notation-tool/Song_Notation_Tool_Pitch.mp4">
+<meta property="og:video:type" content="video/mp4">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="icon.png">
 <!-- Published by .github/workflows/pitch-page.yml with the latest release's
      video and slides next to it. Edit it in tools/pitch_page.html. -->
@@ -40,16 +48,32 @@
     border: 1px solid var(--border);
   }
   nav { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-  a.btn {
+  .btn {
     display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
     border-radius: 10px; border: 1px solid var(--border); background: var(--card);
     color: var(--fg); text-decoration: none; font-weight: 500;
   }
-  a.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
-  a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  button.btn { font: inherit; cursor: pointer; }
+  .btn[hidden] { display: none; }  /* else display: inline-flex shows it anyway */
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   footer { color: var(--dim); font-size: 13px; text-align: center; max-width: 520px; }
   footer a { color: inherit; }
-  @media (max-width: 480px) { video { height: auto; width: 100%; } }
+  .player { position: relative; max-width: 100%; }
+  .end {
+    position: absolute; inset: 0; border-radius: 14px; padding: 24px;
+    background: rgba(18, 19, 25, 0.9); color: #e6e8ef;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; text-align: center;
+  }
+  .end[hidden] { display: none; }
+  .end p { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
+  .end small { color: #9aa0b3; font-size: 13px; }
+  .end .btn:not(.primary) { background: #1b1d26; border-color: #2c2f3d; color: #e6e8ef; }
+  .share { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .note { color: var(--accent); font-size: 14px; min-height: 1.5em; margin: -8px 0 0; }
+  @media (max-width: 480px) { .player, video { height: auto; width: 100%; } }
 </style>
 </head>
 <body>
@@ -61,12 +85,31 @@
     </div>
   </header>
 
-  <video controls playsinline preload="metadata" poster="slide-01.png"
-         aria-label="Song Notation Tool in a minute and a half, with captions">
-    <source src="Song_Notation_Tool_Pitch.mp4" type="video/mp4">
-    Your browser does not play this video.
-    <a href="Song_Notation_Tool_Pitch.mp4">Download it</a> instead.
-  </video>
+  <div class="player">
+    <video controls playsinline preload="metadata" poster="slide-01.png"
+           aria-label="Song Notation Tool in a minute and a half, with captions">
+      <source src="Song_Notation_Tool_Pitch.mp4" type="video/mp4">
+      Your browser does not play this video.
+      <a href="Song_Notation_Tool_Pitch.mp4">Download it</a> instead.
+    </video>
+    <!-- Shown when the video ends: the next step is trying it. -->
+    <div class="end" id="end" hidden>
+      <p>Try it now</p>
+      <a class="btn primary" href="https://github.com/giopas/song-notation-tool/releases/latest">Download the app</a>
+      <small>Free, for macOS, Windows and Linux: no account</small>
+      <button class="btn" type="button" id="again">Watch again</button>
+    </div>
+  </div>
+
+  <!-- Sends the link to this page, not the file: in WhatsApp it shows as a
+       card with the first slide, and the video plays in the browser, with
+       nothing to download. The message also has the link to the download. -->
+  <div class="share" role="group" aria-label="Share">
+    <button class="btn" type="button" id="share" hidden>Share the video</button>
+    <a class="btn" id="wa" href="https://wa.me/?text=" target="_blank" rel="noopener">Send on WhatsApp</a>
+    <button class="btn" type="button" id="copy">Copy the link</button>
+  </div>
+  <p class="note" id="note" aria-live="polite"></p>
 
   <nav aria-label="More">
     <a class="btn primary" href="https://github.com/giopas/song-notation-tool/releases/latest">Download the app</a>
@@ -79,5 +122,48 @@
     Free and open source (MIT), for macOS, Windows and Linux.
     The video and slides are made again with every release.
   </footer>
+<script>
+  const PAGE = "https://giopas.github.io/song-notation-tool/";
+  const DOWNLOAD = "https://github.com/giopas/song-notation-tool/releases/latest";
+  const TEXT = "Song Notation Tool: one-page charts for guitar and bass, " +
+    "with chords, tabs and repeats.";
+  // The video link first: WhatsApp makes its preview from the first link.
+  const MESSAGE = TEXT + "\n\u25B6 The video: " + PAGE +
+    "\nTry it now: " + DOWNLOAD;
+
+  const video = document.querySelector("video");
+  const end = document.getElementById("end");
+  const note = document.getElementById("note");
+  const say = (msg) => { note.textContent = msg; setTimeout(() => { note.textContent = ""; }, 3000); };
+
+  video.addEventListener("ended", () => { end.hidden = false; });
+  video.addEventListener("play", () => { end.hidden = true; });
+  document.getElementById("again").addEventListener("click", () => {
+    video.currentTime = 0; video.play();
+  });
+
+  document.getElementById("wa").href = "https://wa.me/?text=" + encodeURIComponent(MESSAGE);
+
+  // The phone's own share sheet (WhatsApp, Messages, Mail...), where there is one.
+  // The links go in text, not url: given both, WhatsApp keeps only the url.
+  const share = document.getElementById("share");
+  if (navigator.share) {
+    share.hidden = false;
+    share.addEventListener("click", async () => {
+      try {
+        await navigator.share({ title: "Song Notation Tool \u2014 the video", text: MESSAGE });
+      } catch (e) { /* closed without sharing */ }
+    });
+  }
+
+  document.getElementById("copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(PAGE);
+      say("Link copied");
+    } catch (e) {
+      window.prompt("Copy the link:", PAGE);
+    }
+  });
+</script>
 </body>
 </html>

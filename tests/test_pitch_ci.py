@@ -99,6 +99,28 @@ def test_the_page_plays_the_files_the_workflow_puts_beside_it():
     assert "<video" in html and "playsinline" in html
 
 
+
+def test_the_page_shares_well_on_whatsapp():
+    html = (ROOT / "tools" / "pitch_page.html").read_text(encoding="utf-8")
+    # chat apps skip relative og: URLs, and the link then comes with no picture
+    site = "https://giopas.github.io/song-notation-tool/"
+    assert f'property="og:image" content="{site}slide-01.png"' in html
+    assert f'property="og:url" content="{site}"' in html
+    assert f'property="og:video" content="{site}Song_Notation_Tool_Pitch.mp4"' in html
+    assert 'property="og:image" content="slide-01.png"' not in html
+    assert 'name="twitter:card" content="summary_large_image"' in html
+    assert "https://wa.me/?text=" in html
+    # the links in text, not url: given a url, WhatsApp drops the text
+    call = html[html.index("navigator.share({"):]
+    call = call[:call.index("})")]
+    assert "text: MESSAGE" in call and "url:" not in call
+    assert f'const PAGE = "{site}";' in html
+    assert 'const DOWNLOAD = "https://github.com/giopas/song-notation-tool/releases/latest";' in html
+    assert html.index('"\\n\\u25B6 The video: " + PAGE') < html.index('"\\nTry it now: " + DOWNLOAD')
+    assert 'video.addEventListener("ended"' in html  # the download when it ends
+    # "Share the video" is hidden where there is no share menu; .btn's display must not undo it
+    assert ".btn[hidden] { display: none; }" in html
+
 def test_a_release_called_run_is_not_mistaken_for_a_push_to_main():
     """Called by release.yml, GITHUB_EVENT_NAME is the tag's "push": the skip
     for a release commit pushed to main must look at the branch and the input."""

@@ -12,24 +12,19 @@ and git hold the history.
 
 ## Where we are
 
-- Released: v0.35.1 (12 November 2026), *Setlists, hide and delete*,
-  tagged from `main` (v0.35.0 was tagged but never published: its builds
-  stopped on three pitch tests that need Pillow). Installed copies up to
-  v0.33.1 cannot update themselves while GitHub's download address fails;
-  install v0.33.2 or later by hand once.
-- Ready to merge: v0.36.0 (13 November), *Bar lines, repeats and copy in
-  tab*, on `feat/v0.36.0`. Built in a cloud session while giopas was away
-  from the Mac, so the branch reaches the Mac as a git bundle (see "What
-  is left"). giopas's eight requests of 13 November: bar lines inside a
-  tab measure (1), repeats of all or part of a tab (2), a reference copy
-  that brings every part (3), a name for a tab (4), copying all or part of
-  a tab (5), a PDF preview (7), and older songs with tab kept as text
-  opening in the grid (8). Also fixed: the PDF drew tab grid rows as one
-  proportional string, so beats drifted and strings did not line up.
-  Screenshots retaken (`tab-grid.png` shows bar lines, a repeat and a
-  name). Pitch check: no picture changes (`paper-marks-and-techniques.png`
-  is cropped above the tab grid that changed); one wording proposal below.
-  Test suite: 644 tests.
+- Released: v0.36.0 (13 November 2026), *Bar lines, repeats and copy in
+  tab*, tagged by giopas from `main` and pushed. Before it: v0.35.1
+  (12 November). Installed copies up to v0.33.1 cannot update themselves
+  while GitHub's download address fails; install v0.33.2 or later by hand
+  once.
+- Ready to push: v0.36.1 (14 November), *Named riffs move into the tab
+  grid*, on `fix/v0.36.1`. giopas's song Resonance (rest rest, then two
+  named licks, recalled as `{Riff1}x3 {Riff2}`) did not move into the grid
+  in v0.36.0: rests and a second name stopped it. Now rests become empty
+  measures, each named lick keeps its name on its measures, and a measure
+  can name a riff in any tab. Upgrade number 3. Test suite: 651 tests.
+  Screenshots: no change needed (the tab-grid picture has no named riff);
+  pitch check: no change.
 - `chore/pitch-ci` and `fix/pitch-skip` are on `main` and pushed
   (ground truth, 12 November); both branches can be deleted. GitHub makes
   the pitch video and the deck for every release (`pitch.yml`, called by
@@ -60,16 +55,14 @@ and git hold the history.
 
 ## What is left
 
-v0.36.0, first:
+v0.36.1, first: push `fix/v0.36.1` to `main`, tag v0.36.1. Then:
 
-1. Bring `feat/v0.36.0` to the Mac (bundle from the cloud session), run
-   the tests, try it (manual checks below), then merge, tag and push.
-2. Confirm the readings taken while giopas was away (decisions table,
+1. Confirm the readings taken while giopas was away (decisions table,
    13 November, "giopas to confirm").
-3. Pitch check proposal for v0.36.0, for approval: slide 3 (*Name a Riff
+2. Pitch check proposal from v0.36.0, for approval: slide 3 (*Name a Riff
    Once, Reuse It*), third bullet "A repeated chorus points to the first
    one, not a second copy" could become "Bar lines and repeats in tab;
-   a named tab plays anywhere as {Name}". Nothing else is out of date.
+   a named tab plays anywhere as {Name}".
 
 Housekeeping, small:
 
@@ -101,7 +94,11 @@ started until giopas picks it.
 
 Manual checks waiting for giopas (each stays here until reported back):
 
-- v0.36.0 (feat/v0.36.0) in the native window on the Mac: open the song
+- v0.36.1 in the native window on the Mac: open Resonance; the Intro is a
+  tab grid with Riff1 and Riff2 over their measures, Verse_1 still plays
+  `{Riff1}x3 {Riff2}`; rename Riff1 over its measure and check Verse_1
+  follows; Save.
+- v0.36.0 in the native window on the Mac: open the song
   whose tab was written as text and check it opened in the grid (the
   message names the sections; Free still shows the text); Save. In a Tab
   section: type `|` in a cell, click between two cells, use a measure's
@@ -241,7 +238,7 @@ and readable on stage without the handwritten sheet.
 | 12 Nov 2026 | GitHub makes the pitch video and the slide deck and attaches them to every release (`pitch.yml`, after `release.yml` publishes), always with the edge voice (`--strict-voice`: no video without it). Nobody makes or uploads them by hand any more; `make_pitch_video.py --stills --tts edge` on the Mac stays for a look before a release. The README links to the latest release's files. The pitch check itself (Claude proposes, giopas approves the words and zoom points) is unchanged. This replaces the 11 November rule that giopas makes the video on the Mac. Adapted from QLC+ Swiss Knife. (giopas, 12 November.) |
 | 13 Nov 2026 | Tab measures carry inner bar lines (`bars`), and repeats as `repeat_open` / `repeat_close` (the count) on measures; a repeat of part of a measure cuts the measure there. A grid can have a name (`tab_name`, lick rules) and `{Name}` plays it as a lick. (giopas asked for bar lines, repeats, names and copy, 13 November; the model is Claude's reading, giopas to confirm.) |
 | 13 Nov 2026 | "Copy as a reference" brings every part, as part references (`ref`), and a Tab section's copy plays its grid; "Duplicate as a copy" makes an independent one. (giopas asked that a copy bring all parts; keeping the copy a reference follows the 8 November decision. Claude's reading, giopas to confirm.) |
-| 13 Nov 2026 | Older songs move tab kept as text into the grid when opened in the browser app or native window, once per song (`tab_layout` in the file): a Free section or part of text tab, and a chart line of only licks. Licks among chords stay licks; the Free text is kept. (giopas asked for the upgrade; which forms count as "tab written in text form" is Claude's reading, to check against his song.) |
+| 13 Nov 2026 | Older songs move tab kept as text into the grid when opened in the browser app or native window, once per song (`tab_layout` in the file): a Free section or part of text tab, and a chart line of only licks and rests (from v0.36.1, each named lick keeps its name on its measures). Licks among chords stay licks; the Free text is kept. (giopas asked for the upgrade; which forms count as "tab written in text form" is Claude's reading, to check against his song.) |
 | 8 Oct 2026 | Claude has no role inside the app. It builds and checks the code only. |
 | 8 Oct 2026 | Test data uses invented band, song and lyric names. The author's own songs stay out of the repository. |
 

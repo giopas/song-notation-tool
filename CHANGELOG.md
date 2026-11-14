@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.36.1] — 2026-11-14 — Named riffs move into the tab grid
+
+A song written before the grid could grow often starts with rests and
+then two named licks on one line, recalled later as `{Riff1}x3 {Riff2}`.
+v0.36.0 left such a line as licks: it only moved a line with no rests and
+at most one name. (Found on a real song, 14 November.)
+
+### Added
+
+- **Riffs named inside a tab.** A measure's **⋯** menu has **Name a riff
+  here**: the name sits over the measure, where it can be changed, and
+  `{Name}` on any chart line plays just that riff's measures. One tab can
+  hold several riffs. Renaming one renames every `{Name}` that plays it.
+  Stored as `name` on the measure, with `span` when the riff covers more
+  than one measure. The TXT and the PDF print the name over its measure.
+
+### Changed
+
+- **Older songs: rests and several named licks move into the grid too.**
+  A chart line of licks and rests (`rest rest {Riff1 = …} {Riff2 = …}`)
+  becomes a tab grid: a rest becomes an empty measure a bar long (the
+  time signature's top number of beats), and each named lick keeps its
+  name on its own measures, so `{Riff1}` elsewhere still plays just
+  Riff1. A line of only rests stays as it is. The upgrade's number goes
+  from 2 to 3, so a song opened and saved with v0.36.0 gets this pass
+  once too.
+- A measure header is never wider than its measure: a long riff name or
+  a repeat count no longer pushes the measures after it out of line in
+  the TXT.
+- A copy of a tab (a duplicate, a linked copy, **Make it its own copy**)
+  leaves the names behind, since a name plays one tab only.
+
 ## [0.36.0] — 2026-11-13 — Bar lines, repeats and copy in tab
 
 A tab cell has no length, so a long tab measure gave no sense of where

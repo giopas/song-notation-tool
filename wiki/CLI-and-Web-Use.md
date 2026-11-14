@@ -211,6 +211,11 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   grid, and `{Name}` on any chart line plays the tab there, as a named lick
   does. The name follows the lick rules (a letter first, not starting
   like a chord). Renaming it renames every `{Name}` in the song;
+- riffs named inside a tab: a measure's **⋯** menu has **Name a riff
+  here**, and the name sits over that measure. `{Name}` on any chart line
+  plays just that riff, so one tab (an intro of two riffs, say) can hold
+  several. A riff that was a named lick before the upgrade keeps its name
+  this way;
 - the insert buttons under the chart line you are typing in, in four
   groups: Lines, Repeats, Licks and Marks;
 - a mistake in a chart line explained under it in plain words, with the
@@ -235,7 +240,9 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   open button beside it opens that PDF in your browser or PDF viewer;
 - an older song whose tab was typed as text opens with that tab in the
   grid: a Free section (or part) of text tab (`G|--5--7--|` rows), or a
-  chart line of nothing but licks, becomes a tab grid with its bars and
+  chart line of nothing but licks and rests (a rest becomes an empty
+  measure, a bar long; each named lick keeps its name on its measures),
+  becomes a tab grid with its bars and
   repeats (`|:`, `:|`, an `x4` line) and its name. It happens once per
   song, when it is opened; the file changes when you save it, and the
   Free text stays in the section, so switching back to Free shows it;

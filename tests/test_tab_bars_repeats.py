@@ -276,8 +276,9 @@ def test_a_section_of_only_licks_becomes_a_grid():
     other["items"], _ = grammar.parse("5A {Riff1}")
     doc["sections"].append(other)
     assert tabtext.upgrade_tab_layout(doc)[0]["from"] == "licks"
-    assert sec["render"] == "tab" and sec["tab_name"] == "Riff1"
+    assert sec["render"] == "tab"
     (m,) = songmap.measure_items(sec)
+    assert m["name"] == "Riff1"
     assert m["strings"]["G"] == "5 7 5" and m["repeat_close"] == 4
     # The verse that recalls it still plays it.
     assert "|G|-5-7-5-|" in "\n".join(export.build_song_lines(doc))
@@ -330,3 +331,84 @@ def test_tab_names_follow_the_lick_rules():
     owner["tab_name"] = "Am"
     assert any("cannot be recalled" in w
                for w in export.check_document(doc)["warnings"])
+
+
+# ── riffs named inside a tab (Resonance, 14 November) ───────────────────
+
+def resonance_like():
+    """Rests, then two named licks on one line, recalled elsewhere: the
+    shape of a real song written before the grid could grow."""
+    doc = model.new_document("Echo Room", "The Testers", time="3/4")
+    intro = model.new_section("i", "Intro", instrument=BASS)
+    intro["items"], _ = grammar.parse(
+        "rest rest {RiffA = A - - 9 10 | E 7 10 - -} {RiffB = A - 9 | E 7 -}")
+    verse = model.new_section("v", "Verse", instrument=BASS)
+    verse["items"], _ = grammar.parse("{RiffA}x3 {RiffB}")
+    doc["sections"] = [intro, verse]
+    return doc
+
+
+def test_rests_and_two_named_licks_become_one_grid():
+    doc = resonance_like()
+    changed = tabtext.upgrade_tab_layout(doc)
+    assert changed == [{"section": "Intro", "part": "", "from": "licks"}]
+    intro, verse = doc["sections"]
+    ms = songmap.measure_items(intro)
+    assert [m["beats"] for m in ms] == [3, 3, 4, 2]     # rests: a 3/4 bar each
+    assert [m.get("name") for m in ms] == [None, None, "RiffA", "RiffB"]
+    assert verse["render"] == "chart"                   # recalls stay recalls
+    text = "\n".join(export.build_song_lines(doc))
+    assert "M3 RiffA" in text and "RiffB" in text.split("Verse")[0]
+    assert "RiffA (x3) |A|-------9--10-|" in text
+    assert "RiffB |A|---9-|" in text
+
+
+def test_a_line_of_only_rests_is_left_alone():
+    doc = model.new_document("Quiet", "The Testers")
+    sec = model.new_section("o", "Outro", instrument=BASS)
+    sec["items"], _ = grammar.parse("rest rest")
+    doc["sections"].append(sec)
+    assert tabtext.upgrade_tab_layout(doc) == []
+
+
+def test_a_song_opened_by_an_older_upgrade_gets_the_new_pass():
+    doc = resonance_like()
+    doc["tab_layout"] = 2
+    assert tabtext.upgrade_tab_layout(doc)
+
+
+def test_a_riff_name_spans_its_measures():
+    a, b, c = measure(2, E="3 -"), measure(2, E="5 -"), measure(2, E="7 -")
+    a["name"], a["span"] = "Hook", 2
+    doc = tab_song(a, b, c)
+    lick = songmap.find_lick(doc, "Hook")
+    assert lick["lines"][0]["frets"] == ["3", "-", "|", "5", "-"]
+    assert songmap.grid_names(doc) == ["Hook"]
+
+
+def test_riff_names_are_checked_against_each_other():
+    a, b = measure(2, E="3 -"), measure(2, E="5 -")
+    a["name"], b["name"] = "Hook", "Hook"
+    doc = tab_song(a, b)
+    assert songmap.check_tab_name(doc, "Hook", a)
+    assert any("riff name 'Hook'" in w for w in export.check_document(doc)["warnings"])
+
+
+def test_a_linked_copy_does_not_print_the_riff_name_twice():
+    a = measure(2, E="3 -")
+    a["name"] = "Hook"
+    doc = tab_song(a)
+    copy = model.new_section("i2", "Again", instrument=BASS, render="tab")
+    copy["items"] = [model.make_section_ref("intro")]
+    doc["sections"].append(copy)
+    text = "\n".join(export.build_song_lines(doc))
+    assert text.count("Hook") == 1
+    assert "name" not in songmap.linked_measures(doc, copy)[0]
+
+
+def test_the_header_stays_as_wide_as_its_measure():
+    m = measure(2, E="3 -")
+    m["name"] = "AVeryLongRiffName"
+    m["repeat_close"] = 2
+    assert len(render.measure_header(m, 0)) == render.measure_width(m)
+    assert render.measure_header(m, 0).endswith("x2")

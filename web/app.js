@@ -140,6 +140,10 @@ function namedLicks() {
     [s, ...(s.parts || [])].forEach((o) => {
       const n = (o.tab_name || "").trim();
       if (n && measureItems(o).length && !out.some((x) => x.toLowerCase() === n.toLowerCase())) out.push(n);
+      measureItems(o).forEach((m) => {
+        const r = (m.name || "").trim();
+        if (r && !out.some((x) => x.toLowerCase() === r.toLowerCase())) out.push(r);
+      });
     });
   });
   return out;
@@ -1301,7 +1305,7 @@ function renderPartRef(node, sec, box, part) {
     const copy = JSON.parse(JSON.stringify(target));
     Object.keys(part).forEach((k) => { if (k !== "id") delete part[k]; });
     Object.assign(part, copy, { id: part.id });
-    delete part.tab_name;
+    stripTabNames(part);
     if (!part.chart_line && chartItems(part).length) part.chart_line = target.chart_line || "";
     renderParts(node, sec);
     schedulePreviewUpdate();
@@ -1886,6 +1890,47 @@ function rebuildTabGrid(node, sec, body) {
     name.textContent = `M${mi + 1} · ${beats}`;
     name.title = `Measure ${mi + 1}: ${beats} beats`;
     hdr.appendChild(name);
+    if (m.name !== undefined) {
+      // A riff named here: {Name} on any chart line plays these measures.
+      const riff = document.createElement("input");
+      riff.type = "text";
+      riff.className = "tab-riff-name";
+      riff.maxLength = 40;
+      riff.spellcheck = false;
+      riff.value = m.name || "";
+      const span = parseInt(m.span, 10) || 1;
+      riff.title = `A riff starting at measure ${mi + 1}${span > 1 ? ` (${span} measures)` : ""}: `
+        + "play it anywhere as {Name}. Empty it to take the name away.";
+      riff.setAttribute("aria-label", `Riff name at measure ${mi + 1}`);
+      riff.style.width = `${Math.max(6, (m.name || "").length + 2)}ch`;
+      riff.addEventListener("focus", () => { riff._was = (m.name || "").trim(); });
+      riff.addEventListener("input", () => {
+        riff.style.width = `${Math.max(6, riff.value.length + 2)}ch`;
+        const why = tabNameProblem(riff.value.trim(), m);
+        riff.classList.toggle("is-error", !!why);
+        riff.title = why || "Play it anywhere as {" + riff.value.trim() + "}";
+      });
+      riff.addEventListener("change", () => {
+        const now = riff.value.trim();
+        const was = riff._was || "";
+        if (!now) {
+          delete m.name; delete m.span;
+        } else if (!tabNameProblem(now, m)) {
+          m.name = now;
+          if (was && was.toLowerCase() !== now.toLowerCase()) {
+            const n = renameLickRefs(was, now);
+            if (n) toast(`Renamed {${was}} to {${now}} in ${n} place${n === 1 ? "" : "s"}`);
+          }
+        } else {
+          toast(tabNameProblem(now, m));
+          riff.value = m.name || "";
+          return;
+        }
+        renderEditor();
+        schedulePreviewUpdate();
+      });
+      hdr.appendChild(riff);
+    }
     // Room for more notes: +2 / +4 add empty beats to every string of this
     // measure only, so the other measures keep their spacing; − takes
     // empty beats off the end again.
@@ -2058,6 +2103,21 @@ function rebuildTabGrid(node, sec, body) {
   }
   body._owner = sec;
   paintGridSelection(body, sec);
+  const named = measures.findIndex((m) => m._focusName);
+  if (named >= 0) {
+    delete measures[named]._focusName;
+    const inputs = body.querySelectorAll("thead th");
+    const el = inputs[named + 1] && inputs[named + 1].querySelector(".tab-riff-name");
+    if (el) { el.focus(); el.select(); }
+    document.querySelectorAll(".section-card").forEach((card) => renderLickChips(card));
+  }
+}
+
+/** A free riff name: Riff1, Riff2, … the first one the song has not used. */
+function nextRiffName() {
+  for (let n = 1; ; n += 1) {
+    if (!tabNameProblem(`Riff${n}`, null)) return `Riff${n}`;
+  }
 }
 
 /** Keys in a tab cell: moving, selecting, bar lines, copy and paste. */
@@ -2257,6 +2317,11 @@ function splitMeasureAt(owner, g) {
   if (bb.length) b.bars = bb;
   if (m.repeat_open) a.repeat_open = true;
   if (m.repeat_close) b.repeat_close = m.repeat_close;
+  if (m.name) {
+    // The riff keeps its name and now covers both halves.
+    a.name = m.name;
+    a.span = (parseInt(m.span, 10) || 1) + 1;
+  }
   measures.splice(mi, 1, a, b);
   setMeasureItems(owner, measures);
   return true;
@@ -2453,6 +2518,10 @@ function openMeasureMenu(anchor, node, sec, body, mi) {
   item("Split at the selected beat", "Cut this measure in two where the cursor is",
        () => splitMeasureAt(sec, caret), !inside);
   menu.appendChild(Object.assign(document.createElement("div"), { className: "menu-sep" }));
+  item(m.name ? "Riff name: " + m.name : "Name a riff here",
+       "Name this measure as a riff: {Name} on any chart line plays it",
+       () => { if (m.name === undefined) { m.name = nextRiffName(); m._focusName = true; } },
+       !!m.name);
   item(m.repeat_open && repeatTimes(m) ? "Repeat this measure: one more time" : "Repeat this measure ×2",
        "Play this measure more than once: |: … :| ×2",
        () => {
@@ -2464,7 +2533,7 @@ function openMeasureMenu(anchor, node, sec, body, mi) {
   item("Duplicate this measure", "Put a copy of it right after it",
        () => {
          const copy = JSON.parse(JSON.stringify(m));
-         delete copy.repeat_open; delete copy.repeat_close;
+         delete copy.repeat_open; delete copy.repeat_close; delete copy.name; delete copy.span;
          const all = measureItems(sec);
          all.splice(mi + 1, 0, copy);
          setMeasureItems(sec, all);
@@ -2696,6 +2765,9 @@ function tabNameProblem(name, owner) {
       if (o !== owner && (o.tab_name || "").toLowerCase() === key && measureItems(o).length) {
         return "Another tab already has this name.";
       }
+      if (measureItems(o).some((m) => m !== owner && (m.name || "").toLowerCase() === key)) {
+        return "A riff in a tab already has this name.";
+      }
     }
     let clash = false;
     const walk = (items) => (items || []).forEach((it) => {
@@ -2706,6 +2778,14 @@ function tabNameProblem(name, owner) {
     if (clash) return "A lick in this song already has this name.";
   }
   return "";
+}
+
+/** A copy's tab without its names (a name belongs to one tab only). */
+function stripTabNames(owner) {
+  delete owner.tab_name;
+  (owner.items || []).forEach((m) => {
+    if (m.kind === "measure") { delete m.name; delete m.span; }
+  });
 }
 
 /** The section a tab copy plays, when it has no grid of its own. */
@@ -2721,6 +2801,7 @@ function linkedSource(sec) {
 function unlinkTab(sec, source) {
   const ref = chartItems(sec)[0];
   const copy = JSON.parse(JSON.stringify(measureItems(source)));
+  copy.forEach((m) => { delete m.name; delete m.span; });
   const rep = (ref && parseInt(ref.repeat, 10)) || 1;
   if (rep >= 2 && copy.length) {
     copy[0].repeat_open = true;
@@ -3100,9 +3181,10 @@ function duplicateSectionCopy(id, at) {
   const newSec = JSON.parse(JSON.stringify(source));
   newSec.id = newSectionId();
   newSec.name = (source.name || "") + " (copy)";
-  delete newSec.tab_name;
   const stamp = Date.now().toString(36);
-  (newSec.parts || []).forEach((p, n) => { p.id = `p${stamp}${n}`; delete p.tab_name; });
+  (newSec.parts || []).forEach((p, n) => { p.id = `p${stamp}${n}`; });
+  // Names are one per song: the copy plays the same notes without them.
+  [newSec, ...(newSec.parts || [])].forEach(stripTabNames);
   currentDoc.sections.splice(where, 0, newSec);
   renderEditor();
   schedulePreviewUpdate();

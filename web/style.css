@@ -1324,3 +1324,10 @@ body.dragging-section, body.dragging-section * { cursor: grabbing !important; us
 }
 .tab-measure-menu .tab-menu-row button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .tab-measure-menu button:disabled { opacity: 0.45; cursor: default; }
+
+/* A riff named inside a tab, over the measure it starts at. */
+.tab-riff-name {
+  height: 24px; min-width: 6ch; background: var(--input-bg); color: var(--mauve);
+  border: 1px solid var(--mauve); border-radius: 6px; padding: 0 6px; font: 700 12px var(--mono);
+}
+.tab-riff-name.is-error { color: var(--red); border-color: var(--red); }

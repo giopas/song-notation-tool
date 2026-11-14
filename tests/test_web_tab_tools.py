@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import grammar  # noqa: E402
 import model  # noqa: E402
+import tabtext  # noqa: E402
 
 HERE = os.path.dirname(__file__)
 INDEX = open(os.path.join(HERE, "..", "web", "index.html"), encoding="utf-8").read()
@@ -163,7 +164,7 @@ def test_opening_an_old_song_moves_its_tab_into_the_grid(server):
     assert status == 200
     assert [u["section"] for u in doc["_upgraded"]] == ["Intro", "Riff"]
     assert [s["render"] for s in doc["sections"]] == ["tab", "tab"]
-    assert doc["tab_layout"] == 2
+    assert doc["tab_layout"] == tabtext.TAB_LAYOUT_VERSION
     # Only opened, not saved: the file is as it was.
     assert open(path, encoding="utf-8").read() == before
 
@@ -171,7 +172,7 @@ def test_opening_an_old_song_moves_its_tab_into_the_grid(server):
 def test_a_new_song_is_never_upgraded(server):
     call, folder = server
     status, res, _ = call("/api/songs", {"title": "Fresh", "artist": "The Testers"})
-    assert res["doc"]["tab_layout"] == 2
+    assert res["doc"]["tab_layout"] == tabtext.TAB_LAYOUT_VERSION
 
 
 def test_the_pdf_preview_is_served_inline(server):

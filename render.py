@@ -1054,18 +1054,27 @@ def measure_width(m: dict, tok_w: int = TOKEN_W) -> int:
     return len(measure_text(m, "", tok_w))
 
 
+def measure_name(m: dict) -> str:
+    """The riff name a measure starts, or "" (see songmap.measure_riffs)."""
+    return str(m.get("name") or "").strip()
+
+
 def measure_header(m: dict, index: int, tok_w: int = TOKEN_W) -> str:
-    """The text over a measure: its number on the left and, over a repeat
+    """The text over a measure, exactly as wide as the measure: its number
+    and the name of a riff that starts here on the left, and over a repeat
     that ends here, how many times it plays ("x3") on the right."""
     w = measure_width(m, tok_w)
     label = f"M{index + 1}"
+    if measure_name(m):
+        label += " " + measure_name(m)
     n = measure_repeat(m)
-    if n:
-        times = f"x{n}"
-        if len(label) + 1 + len(times) <= w:
-            return label + " " * (w - len(label) - len(times)) + times
-        return (label + " " + times).ljust(w)
-    return label.ljust(w)
+    times = f"x{n}" if n else ""
+    room = w - (len(times) + 1 if times else 0)
+    if len(label) > room and measure_name(m):
+        label = measure_name(m)         # a short measure: the name matters more
+    if len(label) > room:
+        label = label[:max(room, 0)]
+    return label + " " * (w - len(label) - len(times)) + times
 
 
 def grid_mpl(measures, width: int, tok_w: int, prefix_w: int = 4) -> int:

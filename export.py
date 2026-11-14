@@ -669,6 +669,11 @@ def check_document(doc: dict) -> dict:
             if bad:
                 warnings.append(f"[{label}] tab cells that are not "
                                 f"frets: " + ", ".join(bad))
+            for m in songmap.measure_items(holder):
+                why = songmap.check_tab_name(doc, m.get("name", ""), m)
+                if why:
+                    warnings.append(f"[{label}] the riff name {m.get('name')!r} "
+                                    f"cannot be recalled: {why}")
             why = songmap.check_tab_name(doc, holder.get("tab_name", ""), holder)
             if why and songmap.measure_items(holder):
                 warnings.append(f"[{label}] the tab's name "
@@ -1878,6 +1883,11 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
             for i, m_idx in enumerate(batch):
                 m = measures[m_idx]
                 txt(col_x(i), cy, f"M{m_idx + 1}", sz=7 * SS)
+                riff = render.measure_name(m)
+                if riff:
+                    # A riff named inside the grid starts here.
+                    txt(col_x(i) + _helvetica_width(f"M{m_idx + 1} ", 7 * SS), cy,
+                        riff, sz=7 * SS, bold=True)
                 times = render.measure_repeat(m)
                 if times:
                     # Over the closing ":|", how many times the repeat plays.

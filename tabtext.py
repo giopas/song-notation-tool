@@ -9,8 +9,10 @@ Two kinds of older song keep their tab as text rather than in the tab grid
       G|-----5---7-|---------|
       D|---7-------|-5-------|
 
-* a chart line holding nothing but licks, `{G 5 7 5 | D - - 3}`, which is
-  what the **{ tab }** button gave before the grid could grow.
+* a chart line holding nothing but licks and rests,
+  `rest {Riff1 = G 5 7 5 | D - - 3} {Riff2 = ...}`, which is what the
+  **{ tab }** button gave before the grid could grow. Each named lick keeps
+  its name on its measures, so `{Riff1}` elsewhere still plays it.
 
 `upgrade_tab_layout()` turns both into tab grid measures when a song is
 opened. Nothing is lost: a Free section keeps its text (switch it back to
@@ -30,7 +32,9 @@ from constants import INSTRUMENT_STRINGS
 # The version of the tab layout a song was last upgraded to. A song that
 # carries it is never upgraded again, so a section switched back to Free
 # or Chart on purpose stays as it was left.
-TAB_LAYOUT_VERSION = 2
+# 3 (14 November): rests and several named licks on one line convert too;
+# a song opened with 2 gets the new pass once.
+TAB_LAYOUT_VERSION = 3
 
 MAX_BEATS = 64          # the browser grid's longest measure
 _SPLIT_BEATS = 16       # a longer run of text is cut into measures this long
@@ -223,42 +227,60 @@ def _lick_measures(lick: dict, instrument: str):
     return _split_long(beats, cells, strings)
 
 
-def _licks_as_measures(items, instrument):
+def _licks_as_measures(items, instrument, rest_beats=4):
     """Measures for a chart line that holds only licks (alone, repeated, or
-    in a repeated group), with the name of the one named lick. None when
-    something else is on the line."""
-    measures, names = [], []
+    in a repeated group) and rests, or None when something else is on the
+    line. Each named lick keeps its name on its own measures (`name` and
+    `span`), so `{Riff1}` elsewhere still plays just that riff; a rest
+    becomes an empty measure of `rest_beats` beats."""
+    measures = []
 
-    def add(item, repeat):
+    def add(item):
         new = _lick_measures(item, instrument)
         if new is None:
             return False
         if item.get("name"):
-            names.append(item["name"])
-        n = int(item.get("repeat", 1) or 1) * int(repeat or 1)
+            new[0]["name"] = item["name"]
+            if len(new) > 1:
+                new[0]["span"] = len(new)
+        n = int(item.get("repeat", 1) or 1)
         if n >= 2:
             new[0]["repeat_open"] = True
             new[-1]["repeat_close"] = n
         measures.extend(new)
         return True
 
+    def rest():
+        measures.append(_measure(rest_beats, _strings_for(instrument), {}))
+
+    def skip(x):
+        return x.get("kind") == "mark" and x.get("mark") == "line_break"
+
     for it in items or []:
         kind = it.get("kind")
-        if kind == "mark" and it.get("mark") == "line_break":
+        if skip(it):
+            continue
+        if kind == "mark" and it.get("mark") == "rest":
+            rest()
             continue
         if kind == "lick":
-            if not add(it, 1):
+            if not add(it):
                 return None
             continue
         if kind == "group" and not it.get("span"):
-            inner = [x for x in it.get("items", [])
-                     if not (x.get("kind") == "mark" and x.get("mark") == "line_break")]
-            if not inner or any(x.get("kind") != "lick" for x in inner):
+            inner = [x for x in it.get("items", []) if not skip(x)]
+            if not inner or not all(
+                    x.get("kind") == "lick"
+                    or (x.get("kind") == "mark" and x.get("mark") == "rest")
+                    for x in inner):
                 return None
             start = len(measures)
             for x in inner:
-                if not add(x, 1):
-                    return None
+                if x.get("kind") == "lick":
+                    if not add(x):
+                        return None
+                else:
+                    rest()
             rep = int(it.get("repeat", 1) or 1)
             if rep >= 2:
                 measures[start]["repeat_open"] = True
@@ -268,9 +290,10 @@ def _licks_as_measures(items, instrument):
                     measures[-1]["repeat_close"] = rep
             continue
         return None
-    if not measures or len(names) > 1:
-        return None
-    return measures, (names[0] if names else "")
+    if not any(m["strings"] and any(t != "-" for v in m["strings"].values()
+                                    for t in v.split()) for m in measures):
+        return None             # only rests: nothing to put in a grid
+    return measures
 
 
 def measure_close(m: dict) -> int:
@@ -280,7 +303,7 @@ def measure_close(m: dict) -> int:
         return 0
 
 
-def _upgrade_owner(owner: dict, instrument: str) -> str:
+def _upgrade_owner(owner: dict, instrument: str, rest_beats: int = 4) -> str:
     """Upgrade one section or part in place. Returns what happened:
     "text", "licks" or ""."""
     items = owner.get("items") or []
@@ -304,14 +327,11 @@ def _upgrade_owner(owner: dict, instrument: str) -> str:
         return "text"
     if mode in ("chart", "both"):
         chart = [i for i in items if i.get("kind") != "measure"]
-        got = _licks_as_measures(chart, instrument)
-        if not got:
+        measures = _licks_as_measures(chart, instrument, rest_beats)
+        if not measures:
             return ""
-        measures, name = got
         owner["items"] = measures
         owner["render"] = "tab"
-        if name:
-            owner["tab_name"] = name
         return "licks"
     return ""
 
@@ -331,12 +351,19 @@ def upgrade_tab_layout(doc: dict) -> list:
     if int(doc.get("tab_layout", 0) or 0) >= TAB_LAYOUT_VERSION:
         return []
     changed = []
+    # A rest is a bar: as many beats as the time signature's top number.
+    try:
+        rest_beats = int(str((doc.get("meta") or {}).get("time") or "4/4").split("/")[0])
+    except ValueError:
+        rest_beats = 4
+    rest_beats = min(max(rest_beats, 1), MAX_BEATS)
     for sec in doc.get("sections", []) or []:
-        how = _upgrade_owner(sec, sec.get("instrument"))
+        how = _upgrade_owner(sec, sec.get("instrument"), rest_beats)
         if how:
             changed.append({"section": sec.get("name", ""), "part": "", "from": how})
         for part in sec.get("parts") or []:
-            how = _upgrade_owner(part, part.get("instrument") or sec.get("instrument"))
+            how = _upgrade_owner(part, part.get("instrument") or sec.get("instrument"),
+                                 rest_beats)
             if how:
                 changed.append({"section": sec.get("name", ""),
                                 "part": part.get("instrument", ""), "from": how})

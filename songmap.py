@@ -140,6 +140,15 @@ def lick_index(doc: dict) -> dict:
             grid = named_grid_lick(owner, sec)
             if grid is not None:
                 out.setdefault(_ident(grid["name"]), grid)
+            if measure_riffs(owner):
+                import render
+                from constants import INSTRUMENT_STRINGS
+                instrument = owner.get("instrument") or sec.get("instrument")
+                strings = INSTRUMENT_STRINGS.get(instrument, ["e", "B", "G", "D", "A", "E"])
+                for rname, ms in measure_riffs(owner):
+                    lick = render.measures_to_lick(ms, strings, name=rname)
+                    lick["grid"] = True
+                    out.setdefault(_ident(rname), lick)
     for block in (doc.get("blocks") or {}).values():
         collect(block.get("items", []))
     for name, lick in (doc.get("licks") or {}).items():
@@ -189,20 +198,48 @@ def check_tab_name(doc: dict, name: str, owner: dict = None) -> str:
                 continue
             if _ident(o.get("tab_name") or "") == key and measure_items(o):
                 return "another tab grid already has this name"
+        for o in [sec] + list(sec.get("parts") or []):
+            for m in measure_items(o):
+                if m is not owner and _ident(m.get("name") or "") == key:
+                    return "a riff in a tab already has this name"
         for it in _walk_items(sec.get("items", [])):
             if it.get("kind") == "lick" and _ident(it.get("name") or "") == key:
                 return "a lick in this song already has this name"
     return ""
 
 
+def measure_riffs(owner: dict):
+    """The riffs named inside a tab grid: (name, measures) for each measure
+    that carries a "name", the measures being it and the `span` - 1 after
+    it (one measure when span is missing). A grid can hold several, so an
+    intro of Riff1 then Riff2 keeps both names, and `{Riff1}` on a chart
+    line plays only Riff1's measures."""
+    measures = measure_items(owner)
+    out = []
+    for i, m in enumerate(measures):
+        name = str(m.get("name") or "").strip()
+        if not name:
+            continue
+        try:
+            span = max(1, int(m.get("span") or 1))
+        except (TypeError, ValueError):
+            span = 1
+        out.append((name, measures[i:i + span]))
+    return out
+
+
 def grid_names(doc: dict) -> list:
-    """Every named tab grid in the song, in chart order, as written."""
+    """Every named tab grid, and every riff named inside one, in chart
+    order, as written."""
     out = []
     for sec in doc.get("sections", []) or []:
         for owner in [sec] + list(sec.get("parts") or []):
             name = (owner.get("tab_name") or "").strip()
             if name and measure_items(owner) and name not in out:
                 out.append(name)
+            for rname, _ in measure_riffs(owner):
+                if rname not in out:
+                    out.append(rname)
     return out
 
 
@@ -538,6 +575,15 @@ def find_part(doc: dict, section_key: str, part_id: str):
     return None
 
 
+def _unnamed(m: dict) -> dict:
+    """A copy of a measure without a riff name: the original keeps it, so
+    a linked copy does not print the name twice."""
+    out = dict(m, strings=dict(m.get("strings") or {}))
+    out.pop("name", None)
+    out.pop("span", None)
+    return out
+
+
 def linked_measures(doc: dict, sec: dict):
     """The tab grid a section shows when it has none of its own and its
     chart line is only a reference to a section that has one: "same as
@@ -552,8 +598,7 @@ def linked_measures(doc: dict, sec: dict):
     target = find_section(doc, ref.get("section", ""))
     if target is None or target is sec:
         return None
-    measures = [dict(m, strings=dict(m.get("strings") or {}))
-                for m in measure_items(target)]
+    measures = [_unnamed(m) for m in measure_items(target)]
     if not measures:
         return None
     rep = int(ref.get("repeat", 1) or 1)
@@ -599,6 +644,8 @@ def expand_links(doc: dict) -> dict:
                         q = dict(target)
                         q["id"] = p.get("id")
                         q.pop("tab_name", None)
+                        q["items"] = [_unnamed(i) if i.get("kind") == "measure" else i
+                                      for i in target.get("items") or []]
                         parts.append(q)
                         continue
                 parts.append(p)

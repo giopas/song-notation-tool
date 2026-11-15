@@ -212,6 +212,8 @@
         <p class="layout-hint">{Riff1} printed as its tab again, or only its name and count: "Riff1 (x3)".</p>
         <label>Chord shapes <select id="meta-chord-sheet"></select></label>
         <p class="layout-hint">Edit the shapes with Chords in the toolbar.</p>
+        <label>Tab strings <select id="meta-tab-strings"></select></label>
+        <p class="layout-hint">A tab grid prints only the strings you play on, or every string, the empty ones as dashes.</p>
       </div>
 
       <div class="layout-group">
@@ -630,7 +632,9 @@
            checked, and the TXT and PDF exports print it exactly as typed. Use it for a
            section the notation above does not cover.</p>
         <p class="modal-hint">Switch with Chart, Tab, Both and Free in each section's header. The tab grid
-           has its own <strong>+ Measure</strong> button, a length for new measures, and <strong>+2</strong>, <strong>+4</strong> and <strong>−</strong> over each measure to make it longer or shorter.</p>
+           has its own <strong>+ Measure</strong> button, a length for new measures, and <strong>+2</strong>, <strong>+4</strong> and <strong>−</strong> over each measure to make it longer or shorter.
+           <strong>+ New tab line</strong> starts a second tab on a line of its own. A measure's <strong>⋯</strong> menu
+           moves a repeat's <strong>|:</strong> or <strong>:|</strong> to that measure.</p>
       </div>
 
       <div class="modal-actions">
@@ -810,6 +814,7 @@
       <div class="sec-tab-grid hidden">
         <div class="tab-grid-toolbar">
           <button class="btn tab-add-measure" title="Add a measure to this section's tab grid">+ Measure</button>
+          <button class="btn subtle tab-add-line" title="Start a second tab under this one, on a line of its own">+ New tab line</button>
           <label class="tab-beats-label">New measures start with <select class="tab-beats-select"></select></label>
         </div>
         <div class="tab-grid-body"></div>

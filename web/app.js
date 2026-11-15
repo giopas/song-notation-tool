@@ -940,6 +940,8 @@ function renderEditor() {
     currentDoc.chord_sheet || "none";
   document.getElementById("meta-lick-refs").value =
     currentDoc.lick_refs || "tab";
+  document.getElementById("meta-tab-strings").value =
+    currentDoc.tab_strings || "used";
   document.getElementById("btn-layout").disabled = false;
   refreshLayoutPanel();
 
@@ -1145,18 +1147,15 @@ function wireSectionEvents(node, sec, idx) {
   node.addEventListener("focusin", () => setActiveCard(node));
   node.addEventListener("mousedown", () => setActiveCard(node));
 
-  node.querySelector(".tab-add-measure").addEventListener("click", () => {
+  const addSectionMeasure = (newLine) => {
     const s = byId();
     const beats = parseInt(node.querySelector(".tab-beats-select").value, 10) || 8;
-    const strings = stringsForInstrument(s.instrument);
-    const stringMap = {};
-    strings.forEach((st) => { stringMap[st] = ""; });
-    const measures = measureItems(s);
-    measures.push({ kind: "measure", beats, strings: stringMap });
-    setMeasureItems(s, measures);
+    addTabMeasure(s, beats, newLine);
     rebuildTabGrid(node, s);
     schedulePreviewUpdate();
-  });
+  };
+  node.querySelector(".tab-add-measure").addEventListener("click", () => addSectionMeasure(false));
+  node.querySelector(".tab-add-line").addEventListener("click", () => addSectionMeasure(true));
 
   node.querySelector(".tab-beats-select").addEventListener("change", () => {
     // Just changes default for new measures; existing measures keep their beats
@@ -1388,6 +1387,7 @@ function renderParts(node, sec) {
     grid.className = "part-tab-grid";
     grid.innerHTML = '<div class="tab-grid-toolbar">'
       + '<button type="button" class="btn part-add-measure" title="Add a measure to this part\'s tab grid">+ Measure</button>'
+      + '<button type="button" class="btn subtle part-add-line" title="Start a second tab under this one, on a line of its own">+ New tab line</button>'
       + '<label class="tab-beats-label">New measures start with <select class="part-beats-select"></select></label>'
       + '</div><div class="tab-grid-body"></div>';
     const beatsSel = grid.querySelector(".part-beats-select");
@@ -1430,16 +1430,13 @@ function renderParts(node, sec) {
       show();
       schedulePreviewUpdate();
     });
-    grid.querySelector(".part-add-measure").addEventListener("click", () => {
-      const beats = parseInt(beatsSel.value, 10) || 8;
-      const stringMap = {};
-      stringsForInstrument(part.instrument).forEach((st) => { stringMap[st] = ""; });
-      const measures = measureItems(part);
-      measures.push({ kind: "measure", beats, strings: stringMap });
-      setMeasureItems(part, measures);
+    const addPartMeasure = (newLine) => {
+      addTabMeasure(part, parseInt(beatsSel.value, 10) || 8, newLine);
       rebuildTabGrid(row, part, gridBody);
       schedulePreviewUpdate();
-    });
+    };
+    grid.querySelector(".part-add-measure").addEventListener("click", () => addPartMeasure(false));
+    grid.querySelector(".part-add-line").addEventListener("click", () => addPartMeasure(true));
     free.addEventListener("input", () => {
       part.free_text = free.value;
       schedulePreviewUpdate();
@@ -1855,237 +1852,250 @@ function rebuildTabGrid(node, sec, body) {
   const { starts, total } = gridLayout(measures);
   if (body._sel && (body._sel.anchor >= total || body._sel.focus >= total)) body._sel = null;
 
-  const table = document.createElement("table");
-  table.className = "tab-grid-table";
+  // A measure marked new_line starts a separate tab, on a table of its
+  // own under the one before. Cells are still found by their beat (data-g)
+  // across the whole grid, so the keys move from one tab to the next.
+  const segments = gridSegments(measures);
+  const tables = segments.map((seg, si) => {
+    const table = document.createElement("table");
+    table.className = "tab-grid-table" + (si ? " tab-grid-next" : "");
 
-  // Header row: measure numbers, their length, repeats and the tools.
-  const thead = document.createElement("thead");
-  const headerRow = document.createElement("tr");
-  headerRow.appendChild(document.createElement("th")); // empty corner
-  measures.forEach((m, mi) => {
-    const th = document.createElement("th");
-    th.colSpan = m.beats || 8;
-    const beats = m.beats || 8;
-    const hdr = document.createElement("span");
-    hdr.className = "tab-measure-header";
-    // No wider than the measure's own cells (or a little room for the
-    // buttons): the buttons wrap, the cells stay close together.
-    hdr.style.maxWidth = `${Math.max(beats * 40, 150)}px`;
-    if (m.repeat_open) {
-      const open = document.createElement("button");
-      open.type = "button";
-      open.className = "tab-rep-chip";
-      open.textContent = "|:";
-      open.title = "A repeat starts here. Click to remove it.";
-      open.setAttribute("aria-label", `Remove the repeat start at measure ${mi + 1}`);
-      open.addEventListener("click", () => {
-        delete m.repeat_open;
-        rebuildTabGrid(node, sec, body);
-        schedulePreviewUpdate();
-      });
-      hdr.appendChild(open);
-    }
-    const name = document.createElement("span");
-    name.className = "tab-measure-name";
-    name.textContent = `M${mi + 1} · ${beats}`;
-    name.title = `Measure ${mi + 1}: ${beats} beats`;
-    hdr.appendChild(name);
-    if (m.name !== undefined) {
-      // A riff named here: {Name} on any chart line plays these measures.
-      const riff = document.createElement("input");
-      riff.type = "text";
-      riff.className = "tab-riff-name";
-      riff.maxLength = 40;
-      riff.spellcheck = false;
-      riff.value = m.name || "";
-      const span = parseInt(m.span, 10) || 1;
-      riff.title = `A riff starting at measure ${mi + 1}${span > 1 ? ` (${span} measures)` : ""}: `
-        + "play it anywhere as {Name}. Empty it to take the name away.";
-      riff.setAttribute("aria-label", `Riff name at measure ${mi + 1}`);
-      riff.style.width = `${Math.max(6, (m.name || "").length + 2)}ch`;
-      riff.addEventListener("focus", () => { riff._was = (m.name || "").trim(); });
-      riff.addEventListener("input", () => {
-        riff.style.width = `${Math.max(6, riff.value.length + 2)}ch`;
-        const why = tabNameProblem(riff.value.trim(), m);
-        riff.classList.toggle("is-error", !!why);
-        riff.title = why || "Play it anywhere as {" + riff.value.trim() + "}";
-      });
-      riff.addEventListener("change", () => {
-        const now = riff.value.trim();
-        const was = riff._was || "";
-        if (!now) {
-          delete m.name; delete m.span;
-        } else if (!tabNameProblem(now, m)) {
-          m.name = now;
-          if (was && was.toLowerCase() !== now.toLowerCase()) {
-            const n = renameLickRefs(was, now);
-            if (n) toast(`Renamed {${was}} to {${now}} in ${n} place${n === 1 ? "" : "s"}`);
-          }
-        } else {
-          toast(tabNameProblem(now, m));
-          riff.value = m.name || "";
-          return;
-        }
-        renderEditor();
-        schedulePreviewUpdate();
-      });
-      hdr.appendChild(riff);
-    }
-    // Room for more notes: +2 / +4 add empty beats to every string of this
-    // measure only, so the other measures keep their spacing; − takes
-    // empty beats off the end again.
-    const mk = (label, title, fn, disabled) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "tab-size-btn";
-      b.textContent = label;
-      b.title = title;
-      b.setAttribute("aria-label", title);
-      b.disabled = !!disabled;
-      b.addEventListener("click", fn);
-      hdr.appendChild(b);
-      return b;
-    };
-    mk("+2", `Add 2 beats to measure ${mi + 1}`,
-       () => resizeMeasure(node, sec, body, mi, 2), beats >= TAB_BEATS_MAX);
-    mk("+4", `Add 4 beats to measure ${mi + 1}`,
-       () => resizeMeasure(node, sec, body, mi, 4), beats >= TAB_BEATS_MAX);
-    mk("−", `Remove empty beats from the end of measure ${mi + 1}`,
-       () => resizeMeasure(node, sec, body, mi, -2), emptyTail(m, strings) < 1 || beats <= 1);
-    const more = mk("⋯", `More for measure ${mi + 1}: bar lines, repeat, split, copy`,
-       (e) => openMeasureMenu(e.currentTarget, node, sec, body, mi));
-    more.classList.add("tab-measure-more");
-    more.setAttribute("aria-haspopup", "menu");
-    const delBtn = document.createElement("button");
-    delBtn.type = "button";
-    delBtn.className = "tab-del-measure";
-    delBtn.title = "Delete measure " + (mi + 1);
-    delBtn.setAttribute("aria-label", "Delete measure " + (mi + 1));
-    delBtn.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-    delBtn.addEventListener("click", () => {
-      const allMeasures = measureItems(sec);
-      allMeasures.splice(mi, 1);
-      setMeasureItems(sec, allMeasures);
-      body._sel = null;
-      rebuildTabGrid(node, sec, body);
-      schedulePreviewUpdate();
-    });
-    hdr.appendChild(delBtn);
-    const times = repeatTimes(m);
-    if (times) {
-      // How many times the repeat that ends here plays; "no repeat" removes it.
-      const sel = document.createElement("select");
-      sel.className = "tab-rep-times";
-      sel.title = "A repeat ends here: how many times it plays";
-      sel.setAttribute("aria-label", `Repeat ending at measure ${mi + 1}: times played`);
-      const none = document.createElement("option");
-      none.value = "0"; none.textContent = ":| no repeat";
-      sel.appendChild(none);
-      for (let n = 2; n <= Math.max(8, times); n += 1) {
-        const o = document.createElement("option");
-        o.value = String(n); o.textContent = `:| ×${n}`;
-        if (n === times) o.selected = true;
-        sel.appendChild(o);
-      }
-      sel.addEventListener("change", () => {
-        const n = parseInt(sel.value, 10) || 0;
-        if (n >= 2) m.repeat_close = n; else delete m.repeat_close;
-        rebuildTabGrid(node, sec, body);
-        schedulePreviewUpdate();
-      });
-      hdr.appendChild(sel);
-    }
-    th.appendChild(hdr);
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
-
-  // One row per string
-  const tbody = document.createElement("tbody");
-  strings.forEach((st, row) => {
-    const tr = document.createElement("tr");
-    const label = document.createElement("td");
-    label.className = "tab-string-label";
-    label.textContent = st + "|";
-    tr.appendChild(label);
-
-    measures.forEach((m, mi) => {
+    // Header row: measure numbers, their length, repeats and the tools.
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    const corner = document.createElement("th");
+    corner.className = "tab-grid-corner";
+    if (segments.length > 1) corner.textContent = `Tab ${si + 1}`;
+    headerRow.appendChild(corner);
+    seg.forEach((mi) => {
+      const m = measures[mi];
+      const th = document.createElement("th");
+      th.dataset.mi = String(mi);
+      th.colSpan = m.beats || 8;
       const beats = m.beats || 8;
-      const tokens = measureTokens(m, st);
-      const bars = new Set(measureBars(m));
-
-      for (let bi = 0; bi < beats; bi++) {
-        const g = starts[mi] + bi;
-        const td = document.createElement("td");
-        if (bi === 0) td.classList.add("tab-measure-start");
-        if (bars.has(bi)) td.classList.add("tab-bar-before");
-        if (bi === 0 && m.repeat_open) td.classList.add("tab-rep-open");
-        if (bi === beats - 1 && repeatTimes(m)) td.classList.add("tab-rep-close");
-        if (bi > 0) {
-          // Click the gap between two beats to put a bar line there.
-          const hit = document.createElement("span");
-          hit.className = "tab-bar-hit";
-          hit.title = bars.has(bi) ? "Remove this bar line" : "Add a bar line here";
-          hit.addEventListener("mousedown", (e) => e.preventDefault());
-          hit.addEventListener("click", (e) => {
-            e.stopPropagation();
-            toggleBar(sec, mi, bi);
-            rebuildTabGrid(node, sec, body);
-            schedulePreviewUpdate();
-          });
-          td.appendChild(hit);
-        }
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "tab-cell" + (bi === beats - 1 ? " tab-cell-last" : "");
-        input.dataset.g = String(g);
-        input.dataset.row = String(row);
-        if (fresh && fresh.mi === mi && bi >= fresh.from) input.classList.add("tab-cell-new");
-        input.setAttribute("aria-label", `${st} string, measure ${mi + 1}, beat ${bi + 1}`);
-        input.value = tokens[bi] || "-";
-        // A cell with a technique ("7b9r7") grows to show all of it.
-        const fit = () => { input.style.width = Math.max(32, input.value.length * 8 + 12) + "px"; };
-        fit();
-        input.addEventListener("input", fit);
-        // Room for a technique: 5h7, 7b9r7, 12h14^.
-        input.maxLength = 8;
-        input.title = "A fret, - for not played, x for muted; techniques: "
-          + "5h7 hammer-on, 7p5 pull-off, 5/7 or 7\\5 slide, 7b9 bend, 7b9r7 "
-          + "bend and release, 7~ vibrato, 5^ accent. Type | for a bar line after this beat. "
-          + "Shift+click or Shift+arrows to select beats, then copy and paste them.";
-        input.addEventListener("input", () => {
-          setTabCell(sec, mi, bi, st, input.value.trim());
+      const hdr = document.createElement("span");
+      hdr.className = "tab-measure-header";
+      // No wider than the measure's own cells (or a little room for the
+      // buttons): the buttons wrap, the cells stay close together.
+      hdr.style.maxWidth = `${Math.max(beats * 40, 150)}px`;
+      if (m.repeat_open) {
+        const open = document.createElement("button");
+        open.type = "button";
+        open.className = "tab-rep-chip";
+        open.textContent = "|:";
+        open.title = "A repeat starts here. Click to remove it.";
+        open.setAttribute("aria-label", `Remove the repeat start at measure ${mi + 1}`);
+        open.addEventListener("click", () => {
+          delete m.repeat_open;
+          rebuildTabGrid(node, sec, body);
+          schedulePreviewUpdate();
         });
-        input.addEventListener("focus", () => {
-          input.select();
-          body._caret = g;
+        hdr.appendChild(open);
+      }
+      const name = document.createElement("span");
+      name.className = "tab-measure-name";
+      name.textContent = `M${mi + 1} · ${beats}`;
+      name.title = `Measure ${mi + 1}: ${beats} beats`;
+      hdr.appendChild(name);
+      if (m.name !== undefined) {
+        // A riff named here: {Name} on any chart line plays these measures.
+        const riff = document.createElement("input");
+        riff.type = "text";
+        riff.className = "tab-riff-name";
+        riff.maxLength = 40;
+        riff.spellcheck = false;
+        riff.value = m.name || "";
+        const span = parseInt(m.span, 10) || 1;
+        riff.title = `A riff starting at measure ${mi + 1}${span > 1 ? ` (${span} measures)` : ""}: `
+          + "play it anywhere as {Name}. Empty it to take the name away.";
+        riff.setAttribute("aria-label", `Riff name at measure ${mi + 1}`);
+        riff.style.width = `${Math.max(6, (m.name || "").length + 2)}ch`;
+        riff.addEventListener("focus", () => { riff._was = (m.name || "").trim(); });
+        riff.addEventListener("input", () => {
+          riff.style.width = `${Math.max(6, riff.value.length + 2)}ch`;
+          const why = tabNameProblem(riff.value.trim(), m);
+          riff.classList.toggle("is-error", !!why);
+          riff.title = why || "Play it anywhere as {" + riff.value.trim() + "}";
         });
-        input.addEventListener("mousedown", (e) => {
-          if (e.shiftKey && body._caret !== undefined && body._caret !== null) {
-            e.preventDefault();
-            const anchor = body._sel ? body._sel.anchor : body._caret;
-            body._sel = { anchor, focus: g };
-            input.focus();
-            body._caret = g;
-            paintGridSelection(body, sec);
+        riff.addEventListener("change", () => {
+          const now = riff.value.trim();
+          const was = riff._was || "";
+          if (!now) {
+            delete m.name; delete m.span;
+          } else if (!tabNameProblem(now, m)) {
+            m.name = now;
+            if (was && was.toLowerCase() !== now.toLowerCase()) {
+              const n = renameLickRefs(was, now);
+              if (n) toast(`Renamed {${was}} to {${now}} in ${n} place${n === 1 ? "" : "s"}`);
+            }
+          } else {
+            toast(tabNameProblem(now, m));
+            riff.value = m.name || "";
             return;
           }
-          body._sel = null;
-          body._dragFrom = g;
-          paintGridSelection(body, sec);
+          renderEditor();
+          schedulePreviewUpdate();
         });
-        input.addEventListener("keydown", (e) => onTabCellKey(e, node, sec, body, {
-          g, mi, bi, row, st, beats, td, measures, strings, total }));
-        td.appendChild(input);
-        tr.appendChild(td);
+        hdr.appendChild(riff);
       }
+      // Room for more notes: +2 / +4 add empty beats to every string of this
+      // measure only, so the other measures keep their spacing; − takes
+      // empty beats off the end again.
+      const mk = (label, title, fn, disabled) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tab-size-btn";
+        b.textContent = label;
+        b.title = title;
+        b.setAttribute("aria-label", title);
+        b.disabled = !!disabled;
+        b.addEventListener("click", fn);
+        hdr.appendChild(b);
+        return b;
+      };
+      mk("+2", `Add 2 beats to measure ${mi + 1}`,
+         () => resizeMeasure(node, sec, body, mi, 2), beats >= TAB_BEATS_MAX);
+      mk("+4", `Add 4 beats to measure ${mi + 1}`,
+         () => resizeMeasure(node, sec, body, mi, 4), beats >= TAB_BEATS_MAX);
+      mk("−", `Remove empty beats from the end of measure ${mi + 1}`,
+         () => resizeMeasure(node, sec, body, mi, -2), emptyTail(m, strings) < 1 || beats <= 1);
+      const more = mk("⋯", `More for measure ${mi + 1}: bar lines, repeat, split, copy`,
+         (e) => openMeasureMenu(e.currentTarget, node, sec, body, mi));
+      more.classList.add("tab-measure-more");
+      more.setAttribute("aria-haspopup", "menu");
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "tab-del-measure";
+      delBtn.title = "Delete measure " + (mi + 1);
+      delBtn.setAttribute("aria-label", "Delete measure " + (mi + 1));
+      delBtn.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      delBtn.addEventListener("click", () => {
+        const allMeasures = measureItems(sec);
+        allMeasures.splice(mi, 1);
+        setMeasureItems(sec, allMeasures);
+        body._sel = null;
+        rebuildTabGrid(node, sec, body);
+        schedulePreviewUpdate();
+      });
+      hdr.appendChild(delBtn);
+      const times = repeatTimes(m);
+      if (times) {
+        // How many times the repeat that ends here plays; "no repeat" removes it.
+        const sel = document.createElement("select");
+        sel.className = "tab-rep-times";
+        sel.title = "A repeat ends here: how many times it plays";
+        sel.setAttribute("aria-label", `Repeat ending at measure ${mi + 1}: times played`);
+        const none = document.createElement("option");
+        none.value = "0"; none.textContent = ":| no repeat";
+        sel.appendChild(none);
+        for (let n = 2; n <= Math.max(8, times); n += 1) {
+          const o = document.createElement("option");
+          o.value = String(n); o.textContent = `:| ×${n}`;
+          if (n === times) o.selected = true;
+          sel.appendChild(o);
+        }
+        sel.addEventListener("change", () => {
+          const n = parseInt(sel.value, 10) || 0;
+          if (n >= 2) m.repeat_close = n; else delete m.repeat_close;
+          rebuildTabGrid(node, sec, body);
+          schedulePreviewUpdate();
+        });
+        hdr.appendChild(sel);
+      }
+      th.appendChild(hdr);
+      headerRow.appendChild(th);
     });
-    tbody.appendChild(tr);
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // One row per string
+    const tbody = document.createElement("tbody");
+    strings.forEach((st, row) => {
+      const tr = document.createElement("tr");
+      const label = document.createElement("td");
+      label.className = "tab-string-label";
+      label.textContent = st + "|";
+      tr.appendChild(label);
+
+      seg.forEach((mi) => {
+        const m = measures[mi];
+        const beats = m.beats || 8;
+        const tokens = measureTokens(m, st);
+        const bars = new Set(measureBars(m));
+
+        for (let bi = 0; bi < beats; bi++) {
+          const g = starts[mi] + bi;
+          const td = document.createElement("td");
+          if (bi === 0) td.classList.add("tab-measure-start");
+          if (bars.has(bi)) td.classList.add("tab-bar-before");
+          if (bi === 0 && m.repeat_open) td.classList.add("tab-rep-open");
+          if (bi === beats - 1 && repeatTimes(m)) td.classList.add("tab-rep-close");
+          if (bi > 0) {
+            // Click the gap between two beats to put a bar line there.
+            const hit = document.createElement("span");
+            hit.className = "tab-bar-hit";
+            hit.title = bars.has(bi) ? "Remove this bar line" : "Add a bar line here";
+            hit.addEventListener("mousedown", (e) => e.preventDefault());
+            hit.addEventListener("click", (e) => {
+              e.stopPropagation();
+              toggleBar(sec, mi, bi);
+              rebuildTabGrid(node, sec, body);
+              schedulePreviewUpdate();
+            });
+            td.appendChild(hit);
+          }
+          const input = document.createElement("input");
+          input.type = "text";
+          input.className = "tab-cell" + (bi === beats - 1 ? " tab-cell-last" : "");
+          input.dataset.g = String(g);
+          input.dataset.row = String(row);
+          if (fresh && fresh.mi === mi && bi >= fresh.from) input.classList.add("tab-cell-new");
+          input.setAttribute("aria-label", `${st} string, measure ${mi + 1}, beat ${bi + 1}`);
+          input.value = tokens[bi] || "-";
+          // A cell with a technique ("7b9r7") grows to show all of it.
+          const fit = () => { input.style.width = Math.max(32, input.value.length * 8 + 12) + "px"; };
+          fit();
+          input.addEventListener("input", fit);
+          // Room for a technique: 5h7, 7b9r7, 12h14^.
+          input.maxLength = 8;
+          input.title = "A fret, - for not played, x for muted; techniques: "
+            + "5h7 hammer-on, 7p5 pull-off, 5/7 or 7\\5 slide, 7b9 bend, 7b9r7 "
+            + "bend and release, 7~ vibrato, 5^ accent. Type | for a bar line after this beat. "
+            + "Shift+click or Shift+arrows to select beats, then copy and paste them.";
+          input.addEventListener("input", () => {
+            setTabCell(sec, mi, bi, st, input.value.trim());
+          });
+          input.addEventListener("focus", () => {
+            input.select();
+            body._caret = g;
+          });
+          input.addEventListener("mousedown", (e) => {
+            if (e.shiftKey && body._caret !== undefined && body._caret !== null) {
+              e.preventDefault();
+              const anchor = body._sel ? body._sel.anchor : body._caret;
+              body._sel = { anchor, focus: g };
+              input.focus();
+              body._caret = g;
+              paintGridSelection(body, sec);
+              return;
+            }
+            body._sel = null;
+            body._dragFrom = g;
+            paintGridSelection(body, sec);
+          });
+          input.addEventListener("keydown", (e) => onTabCellKey(e, node, sec, body, {
+            g, mi, bi, row, st, beats, td, measures, strings, total }));
+          td.appendChild(input);
+          tr.appendChild(td);
+        }
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    return table;
   });
-  table.appendChild(tbody);
   body.innerHTML = "";
-  body.appendChild(table);
+  tables.forEach((t) => body.appendChild(t));
   // Drag across cells to select beats.
   if (!body._dragWired) {
     body._dragWired = true;
@@ -2106,8 +2116,8 @@ function rebuildTabGrid(node, sec, body) {
   const named = measures.findIndex((m) => m._focusName);
   if (named >= 0) {
     delete measures[named]._focusName;
-    const inputs = body.querySelectorAll("thead th");
-    const el = inputs[named + 1] && inputs[named + 1].querySelector(".tab-riff-name");
+    const th = body.querySelector(`thead th[data-mi="${named}"]`);
+    const el = th && th.querySelector(".tab-riff-name");
     if (el) { el.focus(); el.select(); }
     document.querySelectorAll(".section-card").forEach((card) => renderLickChips(card));
   }
@@ -2261,6 +2271,76 @@ function repeatTimes(m) {
   return n >= 2 ? n : 0;
 }
 
+/**
+ * An empty measure at the end of a tab grid. With `newLine`, it starts a
+ * new tab of its own, printed on a new line (stored as `new_line`).
+ */
+function addTabMeasure(owner, beats, newLine) {
+  const stringMap = {};
+  stringsForInstrument(owner.instrument).forEach((st) => { stringMap[st] = ""; });
+  const measures = measureItems(owner);
+  const m = { kind: "measure", beats, strings: stringMap };
+  if (newLine && measures.length) m.new_line = true;
+  measures.push(m);
+  setMeasureItems(owner, measures);
+}
+
+/** The measures of a grid as separate tabs (render.grid_segments). */
+function gridSegments(measures) {
+  const out = [];
+  measures.forEach((m, i) => {
+    if (!out.length || (i && m.new_line)) out.push([]);
+    out[out.length - 1].push(i);
+  });
+  return out;
+}
+
+/**
+ * The repeats of a grid, as [first, last] measure pairs. A :| with no |:
+ * before it repeats from the first measure, as it prints.
+ */
+function repeatPairs(measures) {
+  const out = [];
+  let open = null;
+  measures.forEach((m, i) => {
+    if (m.repeat_open) open = i;
+    if (repeatTimes(m)) { out.push([open === null ? 0 : open, i]); open = null; }
+  });
+  return out;
+}
+
+/** The repeat whose |: can move to measure `mi`: the first one ending at or after it. */
+function repeatToStartAt(measures, mi) {
+  const p = repeatPairs(measures).find(([, b]) => b >= mi);
+  return p && !(p[0] === mi && measures[mi].repeat_open) ? p : null;
+}
+
+/** The repeat whose :| can move to measure `mi`: the last one starting at or before it. */
+function repeatToEndAt(measures, mi) {
+  const ps = repeatPairs(measures).filter(([a]) => a <= mi);
+  const p = ps[ps.length - 1];
+  return p && p[1] !== mi ? p : null;
+}
+
+/** Move the |: of the repeat around (or after) measure `mi` to it. */
+function moveRepeatStart(measures, mi) {
+  const p = repeatToStartAt(measures, mi);
+  if (!p) return false;
+  delete measures[p[0]].repeat_open;
+  measures[mi].repeat_open = true;
+  return true;
+}
+
+/** Move the :| (and its count) of the repeat around (or before) measure `mi` to it. */
+function moveRepeatEnd(measures, mi) {
+  const p = repeatToEndAt(measures, mi);
+  if (!p) return false;
+  const times = repeatTimes(measures[p[1]]);
+  delete measures[p[1]].repeat_close;
+  measures[mi].repeat_close = times;
+  return true;
+}
+
 /** A bar line before beat `bi` of measure `mi`: on, or off again. */
 function toggleBar(owner, mi, bi) {
   const m = measureItems(owner)[mi];
@@ -2315,6 +2395,7 @@ function splitMeasureAt(owner, g) {
   const bb = bars.filter((x) => x > bi).map((x) => x - bi);
   if (ab.length) a.bars = ab;
   if (bb.length) b.bars = bb;
+  if (m.new_line) a.new_line = true;
   if (m.repeat_open) a.repeat_open = true;
   if (m.repeat_close) b.repeat_close = m.repeat_close;
   if (m.name) {
@@ -2528,12 +2609,29 @@ function openMeasureMenu(anchor, node, sec, body, mi) {
          if (m.repeat_open && repeatTimes(m)) m.repeat_close = repeatTimes(m) + 1;
          else { m.repeat_open = true; m.repeat_close = 2; }
        });
+  const startP = repeatToStartAt(measures, mi);
+  item("Move the repeat start |: here",
+       startP ? `The repeat |: M${startP[0] + 1} … M${startP[1] + 1} :| starts here instead`
+              : "No repeat ends at or after this measure",
+       () => moveRepeatStart(measures, mi), !startP);
+  const endP = repeatToEndAt(measures, mi);
+  item("Move the repeat end :| here",
+       endP ? `The repeat |: M${endP[0] + 1} … M${endP[1] + 1} :| ends here instead`
+            : "No repeat starts at or before this measure",
+       () => moveRepeatEnd(measures, mi), !endP);
+  menu.appendChild(Object.assign(document.createElement("div"), { className: "menu-sep" }));
+  item(m.new_line ? "Join to the tab line before" : "Start a new tab line here",
+       m.new_line ? "Print this measure right after the one before it again"
+                  : "A separate tab from here on, on a line of its own",
+       () => { if (m.new_line) delete m.new_line; else m.new_line = true; },
+       mi === 0);
   item("Copy this measure", "Copy its notes, to paste in any tab grid",
        () => copyTabRange(sec, starts[mi], starts[mi] + (m.beats || 8) - 1));
   item("Duplicate this measure", "Put a copy of it right after it",
        () => {
          const copy = JSON.parse(JSON.stringify(m));
          delete copy.repeat_open; delete copy.repeat_close; delete copy.name; delete copy.span;
+         delete copy.new_line;
          const all = measureItems(sec);
          all.splice(mi + 1, 0, copy);
          setMeasureItems(sec, all);
@@ -4772,6 +4870,7 @@ async function init() {
    ["meta-lyrics-layout", "lyrics_layout", META.lyrics_layouts, "none"],
    ["meta-chord-sheet", "chord_sheet", META.chord_sheets, "none"],
    ["meta-lick-refs", "lick_refs", META.lick_refs, "tab"],
+   ["meta-tab-strings", "tab_strings", META.tab_strings, "used"],
   ].forEach(([id, key, labels, fallback]) => {
     const sel = document.getElementById(id);
     Object.entries(labels || {}).forEach(([value, label]) => {

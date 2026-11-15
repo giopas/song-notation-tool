@@ -906,6 +906,13 @@ body.dragging-section, body.dragging-section * { cursor: grabbing !important; us
   border-left: 2px solid var(--border-strong);
 }
 .tab-grid-table th:first-child { border-left: 0; }
+/* A second tab in the same grid (a measure marked "new line"): its own
+   table, a little apart, so it reads as a separate tab as it prints. */
+.tab-grid-table.tab-grid-next {
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px dashed var(--border-strong);
+}
+.tab-grid-table th.tab-grid-corner { font-weight: 600; vertical-align: bottom; }
 .tab-grid-table td {
   padding: 1px;
 }

@@ -157,7 +157,7 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
   says nothing about how it prints;
 - **Layout** at the bottom of the sidebar: a popover with every print
   setting (Size, Columns, Colour, section names, Lyrics, Recalled licks,
-  Chord shapes), each with a line saying what it does, and a summary of
+  Chord shapes, Tab strings), each with a line saying what it does, and a summary of
   what is set under the button;
 - a chart-line editor for each section, with the same grammar as the
   desktop app's editor bar. As you type, the fret and symbol preview
@@ -206,7 +206,18 @@ Open the URL it prints. The front end (`web/index.html`, `app.js`,
 - repeats in a tab grid: **Repeat ×2** repeats the selected beats (or the
   measure the cursor is in), cutting measures where the repeat starts and
   ends. A repeat shows as **|:** before its first measure (click it to
-  remove it) and **:| ×2** over its last, where the count can be changed;
+  remove it) and **:| ×2** over its last, where the count can be changed.
+  To repeat only part of a tab (from measure 4, say), open the **⋯** menu
+  of the measure it should start or end at: **Move the repeat start |:
+  here** and **Move the repeat end :| here** move the signs of the repeat
+  around it, and the count goes with the **:|**. A **:|** with no **|:**
+  before it repeats from the first measure, as it prints;
+- two tabs in one grid: **+ New tab line** (beside **+ Measure**) adds a
+  measure that starts a second tab, printed on a line of its own under the
+  first, with its own string names. A measure's **⋯** menu has **Start a
+  new tab line here** to split a grid that is already written, and **Join
+  to the tab line before** to undo it. Repeats, riff names and the tab's
+  name still cover the whole grid;
 - a name for a tab (**Name** beside **+ Measure**): it prints over the
   grid, and `{Name}` on any chart line plays the tab there, as a named lick
   does. The name follows the lick rules (a letter first, not starting

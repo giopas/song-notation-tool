@@ -416,7 +416,11 @@ one every 2, 3, 4, 6 or 8 beats, splits the measure, repeats it, copies it
 or duplicates it. Shift+click, Shift with the arrow keys, or a drag selects
 beats: **Copy** and **Paste** (or the usual keys) move them to any tab grid
 in the song, **Repeat ×2** repeats them, and **Name** names the tab so
-`{Name}` plays it on any chart line. The
+`{Name}` plays it on any chart line. The **⋯** menu also moves a repeat's
+**|:** or **:|** to another measure, to repeat from measure 4 rather than
+from the start, and **+ New tab line** starts a second tab on a line of its
+own. **Layout** → **Tab strings** prints every string of a tab, the empty
+ones too, instead of only the strings you play on. The
 render mode decides what prints. Chart prints the chart line, Tab prints
 the grid, and Both prints both, so a grid left behind when you switch a
 section back to Chart stays out of the export, as it stays out of the

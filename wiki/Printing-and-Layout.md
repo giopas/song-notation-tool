@@ -20,6 +20,7 @@ button on a bar along the bottom of its window.
 | Lyrics | Lyrics | `lyrics_layout` |
 | Licks & chords | Recalled licks | `lick_refs` |
 | Licks & chords | Chord shapes | `chord_sheet` |
+| Licks & chords | Tab strings | `tab_strings` (`used` or `all`) |
 | Instruments | Which instruments print | `print_instruments` |
 
 None of them changes a note. They belong to the song and are saved in the

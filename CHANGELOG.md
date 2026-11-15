@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Repeat part of a tab.** A measure's **⋯** menu has **Move the repeat
+  start |: here** and **Move the repeat end :| here**: a repeat that covers
+  the whole tab (or any other stretch) can start at measure 4 instead, or
+  end earlier, without removing it and adding it again. The count moves
+  with the **:|**. A **:|** with no **|:** before it, which repeats from the
+  first measure, can be given a start the same way.
+- **Two tabs in one grid, on lines of their own.** **+ New tab line**
+  beside **+ Measure** (in a section and in a part) adds a measure that
+  starts a second tab; in the editor it is a table of its own, labelled
+  Tab 2, and the TXT and the PDF print it on a new line with its own string
+  names. A measure's **⋯** menu has **Start a new tab line here** and
+  **Join to the tab line before**. Stored as `new_line` on the measure.
+- **Layout → Tab strings: All strings.** A tab grid prints every string of
+  the instrument, the empty ones as dashes, instead of only the strings
+  with a note (the default, unchanged). Stored as `tab_strings` on the
+  song (`used` or `all`); in the browser's Layout panel and the desktop
+  app's Layout dialog.
+
 - The video page has share buttons: the phone's own share sheet, Send on
   WhatsApp and Copy the link. They send the page link, not the file, so in
   WhatsApp the video plays in the browser with nothing to download. The

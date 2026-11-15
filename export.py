@@ -994,7 +994,7 @@ def build_song_lines(doc: dict, instruments=None) -> list[str]:
         measures = songmap.measure_items(sec) if main_prints else []
         if sec.get("render", "chart") in ("tab", "both") and measures:
             body += render.tab_grid_lines(measures, sec.get("instrument"), body_w,
-                                          name=sec.get("tab_name", ""))
+                                          name=sec.get("tab_name", ""), doc=doc)
 
         if sec.get("annotation"):
             body.append(" " * body_indent + f'"{sec["annotation"]}"')
@@ -1708,8 +1708,7 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
                                              width=max(20, int(COL_W_TEXT / CHAR_W)))
         measures = (songmap.measure_items(sec)
                     if main_prints and mode in ("tab", "both") else [])
-        strings = (render.active_strings(
-                    [m.get("strings", {}) for m in measures], all_strings)
+        strings = (render.grid_strings(measures, all_strings, doc)
                    if measures else [])
         # A cell with a technique ("5h7") widens every cell of this grid.
         tok_w = render.tab_token_width(measures)
@@ -1867,9 +1866,8 @@ def _pdf_pages(doc: dict, instruments, orient: str, scale: float,
             color(*_mix(rgb, 0.2))
             txt(col_x0() + SN_W, cy, tab_name, sz=MONO_SZ, bold=True)
             cy -= LINE_H
-        for bs in range(0, len(measures), mpl):
-            batch = list(range(bs, min(bs + mpl, len(measures))))
-            if bs:
+        for bn, batch in enumerate(render.grid_rows(measures, mpl)):
+            if bn:
                 # Clear of the rule under the line before, or the measure
                 # numbers sit on it.
                 cy -= LINE_H * 0.5

@@ -58,6 +58,12 @@ LYRICS_LAYOUT_LABELS = {
 LICK_REF_LABELS = {"tab": "Tab again",
                    "name": "Name only — Riff1 (x3)"}
 
+# Which strings a tab grid prints. "Used" leaves out a string with no note
+# anywhere in the grid (the shorter page); "All" prints every string of the
+# instrument, the empty ones as dashes, the way blank tab paper looks.
+TAB_STRINGS_LABELS = {"used": "Only strings with notes",
+                      "all": "All strings, empty ones too"}
+
 # A page of chord shapes — the voicings you had to work out — printed
 # once at one end of the song rather than beside every chord symbol.
 CHORD_SHEET_LABELS = {"none": "Don't print",

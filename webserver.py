@@ -86,7 +86,7 @@ from constants import (
     APP_VERSION, INSTRUMENT_STRINGS, SECTION_TYPES, RENDER_MODE_LABELS,
     SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
     PDF_COLUMN_LABELS, LYRICS_LAYOUT_LABELS, CHORD_SHEET_LABELS,
-    LICK_REF_LABELS,
+    LICK_REF_LABELS, TAB_STRINGS_LABELS,
     TAB_BEATS_DEFAULT, default_export_name, song_file_stem, song_file_name,
 )
 
@@ -785,6 +785,7 @@ class Handler(BaseHTTPRequestHandler):
                     "lyrics_layouts": LYRICS_LAYOUT_LABELS,
                     "chord_sheets": CHORD_SHEET_LABELS,
                     "lick_refs": LICK_REF_LABELS,
+                    "tab_strings": TAB_STRINGS_LABELS,
                     "color_modes": COLOR_MODE_LABELS,
                     "pdf_scales": PDF_SCALE_LABELS,
                     "pdf_columns": PDF_COLUMN_LABELS,

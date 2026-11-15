@@ -97,7 +97,7 @@ from constants import (
     TAB_BEATS_OPTIONS as _CONST_TAB_BEATS_OPTIONS,
     SECTION_LAYOUT_LABELS, COLOR_MODE_LABELS, PDF_SCALE_LABELS,
     PDF_COLUMN_LABELS, LYRICS_LAYOUT_LABELS, LICK_REF_LABELS,
-    CHORD_SHEET_LABELS,
+    CHORD_SHEET_LABELS, TAB_STRINGS_LABELS,
     default_export_name, song_file_name,
 )
 
@@ -666,7 +666,7 @@ class SongNotationApp(tk.Tk):
     # ==========================================================================
     #  LAYOUT — how the song comes out on paper, bottom left
     # ==========================================================================
-    # (key, label, choices, default, hint) — the same seven settings, in the
+    # (key, label, choices, default, hint) — the same eight settings, in the
     # same groups, as the browser's Layout panel.
     _LAYOUT_SETTINGS = (
         ("Page", [
@@ -693,6 +693,9 @@ class SongNotationApp(tk.Tk):
              "{Riff1} printed as its tab again, or only its name and count."),
             ("chord_sheet", "Chord shapes", CHORD_SHEET_LABELS, "none",
              "Edit the shapes with Chords 🎸 in the toolbar."),
+            ("tab_strings", "Tab strings", TAB_STRINGS_LABELS, "used",
+             "A tab grid prints only the strings you play on, or every "
+             "string, the empty ones as dashes."),
         ]),
     )
     _LYRICS_HINTS = {

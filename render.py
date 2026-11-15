@@ -53,6 +53,46 @@ def active_strings(tab_cells, strings):
     return [st for st in strings if string_has_content(tab_cells, st)]
 
 
+def prints_all_strings(doc) -> bool:
+    """True when the song asks for every string of a tab grid, the empty
+    ones too (Layout > Tab strings > All strings)."""
+    return ((doc or {}).get("tab_strings") or "used") == "all"
+
+
+def grid_strings(measures, strings, doc=None):
+    """The strings a tab grid prints: every one when the song asks for
+    all of them, otherwise only those with a note somewhere in the grid
+    (all of them when the grid is still empty)."""
+    strings = list(strings)
+    if prints_all_strings(doc):
+        return strings
+    return active_strings([m.get("strings", {}) for m in measures or []],
+                          strings) or strings
+
+
+def grid_segments(measures) -> list:
+    """The measures of a tab grid as separate tabs: a measure marked
+    `new_line` starts a new one, on a line of its own. Each tab is a list
+    of measure indices; a grid with no marks is one tab."""
+    out = []
+    for i, m in enumerate(measures or []):
+        if not out or (i and m.get("new_line")):
+            out.append([])
+        out[-1].append(i)
+    return out
+
+
+def grid_rows(measures, mpl: int) -> list:
+    """Which measures print on each line: each tab (grid_segments) cut
+    into lines of at most `mpl` measures, so a new tab always starts a
+    new line."""
+    rows = []
+    for seg in grid_segments(measures):
+        for k in range(0, len(seg), max(1, mpl)):
+            rows.append(seg[k:k + max(1, mpl)])
+    return rows
+
+
 def tab_token_width(measures) -> int:
     """Characters per beat in a tab grid: TOKEN_W, or wider when a cell
     holds a technique ("5h7", "7b9r7"), so every cell of the grid keeps the
@@ -1088,26 +1128,25 @@ def grid_mpl(measures, width: int, tok_w: int, prefix_w: int = 4) -> int:
 
 
 def tab_grid_lines(measures, instrument: str, width: int = DEFAULT_TXT_WIDTH,
-                   name: str = "") -> list:
+                   name: str = "", doc: dict = None) -> list:
     """A tab grid as text: for each line of measures, a header (M1 M2 …)
     and one row per string that has something on it, then a blank line.
     A named grid prints its name on a line above it. The TXT export
     prints a section's grid with this, and a part's grid is built from it
-    too."""
+    too. A measure marked `new_line` starts a new tab on its own line;
+    `doc` says whether empty strings print too (grid_strings)."""
     from constants import INSTRUMENT_STRINGS
     if not measures:
         return []
     all_strings = INSTRUMENT_STRINGS.get(instrument, ["e", "B", "G", "D", "A", "E"])
-    strings = active_strings([m.get("strings", {}) for m in measures],
-                             all_strings) or all_strings
+    strings = grid_strings(measures, all_strings, doc)
     tok_w = tab_token_width(measures)
     mpl = grid_mpl(measures, width, tok_w)
     out = []
     if (name or "").strip():
         out.append(name.strip())
     lab_w = max(len(st) for st in strings)
-    for chunk_start in range(0, len(measures), mpl):
-        chunk = range(chunk_start, min(chunk_start + mpl, len(measures)))
+    for chunk in grid_rows(measures, mpl):
         hdr = " " * (lab_w + 3)
         for m_idx in chunk:
             hdr += measure_header(measures[m_idx], m_idx, tok_w)
@@ -1172,7 +1211,8 @@ def part_rows(doc: dict, sec: dict, part: dict, indent: int = BODY_INDENT,
     if mode in ("tab", "both"):
         measures = [i for i in part.get("items", []) if i.get("kind") == "measure"]
         grid = tab_grid_lines(measures, part.get("instrument") or sec.get("instrument"),
-                              max(20, width - indent), name=part.get("tab_name", ""))
+                              max(20, width - indent), name=part.get("tab_name", ""),
+                              doc=doc)
         while grid and not grid[-1].strip():
             grid.pop()
         rows += [_row(pad + ln if ln else "", ROLE_GRID) for ln in grid]
@@ -1527,7 +1567,7 @@ def estimate_section_lines(section: dict, strings=None, doc: dict = None) -> int
             max_beats = max((m.get("beats", 8) for m in measures), default=8)
             mpl = measures_per_line(len(measures), max_beats)
             n_rows = len(strings) if strings else 4
-            n_groups = -(-len(measures) // mpl)  # ceil division
+            n_groups = len(grid_rows(measures, mpl))
             lines += n_groups * n_rows
             if (section.get("tab_name") or "").strip():
                 lines += 1

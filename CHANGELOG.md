@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.37.0] — 2026-11-16 — Repeat part of a tab, two tabs in one grid
+
+A repeat in a tab grid often ran over the whole tab, from the first measure
+to the last, and moving it meant removing it and adding it again; a song
+needs to repeat from measure 4, say. A section sometimes holds two tabs
+that read better on separate lines, and blank tab paper shows every
+string, the empty ones too. (Asked for on 15 November.)
+
 ### Added
 
 - **Repeat part of a tab.** A measure's **⋯** menu has **Move the repeat
